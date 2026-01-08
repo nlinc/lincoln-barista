@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lincoln Barista</title>
+    <link rel="manifest" href="manifest.json">
+    
+    <meta name="theme-color" content="#6f4e37">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <style>
+        /* --- THEME --- */
+        :root {
+            --primary: #6f4e37;   
+            --accent: #d2b48c;    
+            --dark-bg: #2c241b;      
+            --page-bg: #f8f5f2;   
+            --text-dark: #3e3630;
+            --radius: 12px;
+            
+            /* Extraction Colors */
+            --fast-bg: #e3f2fd; --fast-text: #1565c0; /* Blue = Watery/Fast */
+            --slow-bg: #fbe9e7; --slow-text: #d84315; /* Orange = Tight/Slow */
+            --good-bg: #e8f5e9; --good-text: #2e7d32; /* Green = Golden */
+        }
+
+        /* --- GLOBAL --- */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--page-bg); color: var(--text-dark);
+            padding: 0; margin: 0; display: flex; flex-direction: column; height: 100vh;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* --- HEADERS --- */
+        #top-bar {
+            background-color: var(--dark-bg); color: white;
+            padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 100;
+        }
+        .app-logo { font-weight: 800; font-size: 1.3rem; letter-spacing: -0.5px; }
+        .app-logo span { color: var(--accent); }
+
+        h1, h2, h3 { font-weight: 700; margin: 0; }
+
+        /* --- LAYOUT --- */
+        .view { display: none; padding: 20px; padding-bottom: 120px; max-width: 600px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+        .view.active { display: block; animation: fadeUp 0.3s ease; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- FORMS --- */
+        .form-group { margin-bottom: 20px; }
+        label { display: block; color: var(--primary); font-weight: 700; font-size: 0.85rem; margin-bottom: 6px; text-transform: uppercase; }
+        input, textarea, select {
+            width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: var(--radius);
+            font-size: 1rem; box-sizing: border-box; background: white; -webkit-appearance: none;
+        }
+        input:focus, select:focus { border-color: var(--primary); outline: none; }
+
+        /* --- CARDS & TAGS --- */
+        .bean-card {
+            background: white; border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; border-left: 5px solid transparent;
+            position: relative;
+        }
+        .bean-card.roast-Light { border-left-color: #f1c40f; }
+        .bean-card.roast-Medium { border-left-color: #a0522d; }
+        .bean-card.roast-Dark { border-left-color: #2c241b; }
+        .bean-card.roast-Espresso { border-left-color: #000; }
+
+        .tag-pill {
+            display: inline-block; background: #eee; color: #555; 
+            padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; 
+            margin-right: 5px; margin-top: 5px; cursor: pointer; transition: background 0.2s;
+        }
+        .tag-pill:hover { background: #ddd; }
+        .tag-pill.active { background: var(--primary); color: white; }
+
+        /* --- FILTERS & SORT --- */
+        #filter-bar {
+            display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; white-space: nowrap;
+        }
+        .filter-chip {
+            background: white; border: 1px solid #ddd; color: #666; padding: 6px 12px;
+            border-radius: 20px; font-size: 0.85rem; cursor: pointer;
+        }
+        .filter-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .filter-chip.clear-btn { background: #fee; color: #d32f2f; border-color: #fee; }
+        
+        .sort-select {
+            padding: 6px 10px; border-radius: 8px; border: 1px solid #ddd;
+            font-size: 0.85rem; color: var(--primary); font-weight: 600;
+            background: white; outline: none;
+        }
+
+        /* --- HISTORY LOG ROW (UPDATED) --- */
+        .batch-header {
+            margin-top: 25px; margin-bottom: 8px; font-weight: 800; color: var(--primary); font-size: 0.9rem;
+            border-bottom: 1px solid #ddd; padding-bottom: 4px;
+        }
+        .log-row {
+            background: white; padding: 12px; border-bottom: 1px solid #eee;
+            display: grid; grid-template-columns: 0.6fr 1fr 1fr; align-items: center;
+            font-size: 0.9rem; cursor: pointer;
+        }
+        
+        /* CENTER THE GRIND COLUMN (2nd Child) */
+        .log-row > :nth-child(2) {
+            text-align: center;
+        }
+
+        .log-row:first-child { border-top-left-radius: 8px; border-top-right-radius: 8px; }
+        .log-row:last-child { border-bottom: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
+        .log-row.header { background: #eee; font-weight: bold; font-size: 0.75rem; color: #666; text-transform: uppercase; border-radius: 8px; margin-bottom: 5px; cursor: default; }
+        
+        /* Extraction Analysis Colors */
+        .log-row.ext-fast { background-color: var(--fast-bg); }
+        .log-row.ext-slow { background-color: var(--slow-bg); }
+        .log-row.ext-good { background-color: var(--good-bg); }
+
+        .advice-text { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-top: 4px; }
+        .advice-fast { color: var(--fast-text); }
+        .advice-slow { color: var(--slow-text); }
+        .advice-good { color: var(--good-text); }
+
+        /* --- BUTTONS --- */
+        .btn {
+            background-color: var(--primary); color: white; border: none; padding: 15px;
+            font-size: 1rem; font-weight: 700; cursor: pointer; border-radius: var(--radius); width: 100%;
+            box-shadow: 0 4px 10px rgba(111, 78, 55, 0.3);
+        }
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; width: auto; cursor: pointer; }
+        .btn-secondary { background-color: white; color: #333; border: 2px solid #ddd; box-shadow: none; }
+        .btn-danger { background-color: #fee; color: #d32f2f; border: none; margin-top: 15px; box-shadow: none; }
+        .fab {
+            position: fixed; bottom: 30px; right: 20px;
+            background: var(--primary); color: white; width: 60px; height: 60px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; cursor: pointer; z-index: 90;
+            box-shadow: 0 4px 12px rgba(111, 78, 55, 0.4);
+        }
+
+        /* --- RATING STARS --- */
+        .rating-wrap { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
+        .star { font-size: 2rem; color: #ddd; cursor: pointer; transition: color 0.2s; }
+        .star.selected { color: #f1c40f; }
+        .star.bean-star { font-size: 2.5rem; }
+
+    </style>
+</head>
+<body>
+
+    <div id="top-bar">
+        <div class="app-logo">Lincoln <span>Barista</span></div>
+        <div id="user-display" style="font-size:0.8rem; color:#ccc;"></div>
+    </div>
+
+    <div id="view-login" class="view active" style="text-align: center; padding-top: 25vh;">
+        <h1 style="color:var(--dark-bg);">Lincoln Barista</h1>
+        <div style="font-size: 3rem; margin: 20px 0;">☕</div>
+        <button class="btn" id="btn-login" style="background: #4285F4;">Sign in with Google</button>
+    </div>
+
+    <div id="view-list" class="view">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h2 style="color: var(--primary);">My Beans</h2>
+            <select class="sort-select" onchange="app.setSort(this.value)">
+                <option value="newest" selected>Sort: Newest</option>
+                <option value="name">Sort: A-Z</option>
+                <option value="rating">Sort: Best Rated</option>
+            </select>
+        </div>
+
+        <div id="filter-bar" class="hidden"></div>
+        <div id="bean-list-container"></div>
+        <div class="fab" onclick="app.resetBeanForm(); app.router('edit-bean');">+</div>
+    </div>
+
+    <div id="view-edit-bean" class="view">
+        <h2 id="bean-form-header" style="color: var(--primary); margin-bottom: 20px;">New Bean Profile</h2>
+        <input type="hidden" id="input-bean-id">
+        
+        <div class="form-group">
+            <label>Roaster</label>
+            <input type="text" id="input-roaster" placeholder="e.g. Onyx">
+        </div>
+        <div class="form-group">
+            <label>Bean Name</label>
+            <input type="text" id="input-name" placeholder="e.g. Geometry">
+        </div>
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+            <div class="form-group">
+                <label>Origin</label>
+                <input type="text" id="input-origin" placeholder="e.g. Ethiopia">
+            </div>
+            <div class="form-group">
+                <label>Roast Level</label>
+                <select id="input-roast-level">
+                    <option value="Light">Light</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Dark">Dark</option>
+                    <option value="Espresso">Espresso</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Tasting Notes (Comma separated)</label>
+            <input type="text" id="input-tags" placeholder="Blueberry, Floral, Chocolate">
+        </div>
+
+        <div class="form-group" style="text-align: center; margin-top:30px; background: white; padding: 15px; border-radius: var(--radius); border: 1px solid #eee;">
+            <label>Overall Bag Rating</label>
+            <div class="rating-wrap">
+                <span class="star bean-star" onclick="app.setBeanRating(1)">★</span>
+                <span class="star bean-star" onclick="app.setBeanRating(2)">★</span>
+                <span class="star bean-star" onclick="app.setBeanRating(3)">★</span>
+                <span class="star bean-star" onclick="app.setBeanRating(4)">★</span>
+                <span class="star bean-star" onclick="app.setBeanRating(5)">★</span>
+            </div>
+            <input type="hidden" id="input-bean-rating" value="0">
+        </div>
+
+        <button class="btn" onclick="app.saveBean()">Save Profile</button>
+        <button class="btn btn-secondary" onclick="app.router('list')" style="margin-top: 10px;">Cancel</button>
+        <button class="btn btn-danger hidden" id="btn-delete-bean" onclick="app.deleteBean()">Archive Bean</button>
+    </div>
+
+    <div id="view-detail" class="view">
+        <button class="btn-secondary btn-sm" style="margin-bottom: 15px;" onclick="app.router('list')">← Back</button>
+        
+        <div style="text-align:center;">
+            <div id="detail-roaster" style="font-size:0.9rem; color:var(--primary); font-weight:700; text-transform:uppercase;"></div>
+            <h1 id="detail-name" style="font-size:2rem; margin:0;"></h1>
+            <div id="detail-rating" style="color:#f1c40f; font-size:1.2rem; margin-top:2px;"></div>
+            <div id="detail-meta" style="margin-top:5px; font-size:0.9rem; color:#666;"></div>
+            <div id="detail-tags" style="margin-top:10px;"></div>
+            <div style="margin-top:15px;">
+                <button class="btn-sm btn-secondary" onclick="app.editActiveBean()">✎ Edit Profile</button>
+            </div>
+        </div>
+
+        <div style="background:white; padding:15px; border-radius:12px; margin-top:20px; border:2px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-size:0.75rem; color:#888; text-transform:uppercase; font-weight:700;">Current Bag Date</div>
+                <div id="detail-date" style="font-size:1.1rem; font-weight:700;"></div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="app.promptNewDate()">Update Batch</button>
+        </div>
+        
+        <h3 style="margin-top: 30px; margin-bottom: 10px;">Shot History</h3>
+        <div style="color:#666; font-size:0.75rem; margin-bottom:10px;">Tap a row to edit/rate after tasting.</div>
+        
+        <div class="log-row header">
+            <span>Result</span>
+            <span>Grind</span>
+            <span>Ratio</span>
+        </div>
+        <div id="history-container"></div>
+        <div class="fab" onclick="app.openLogShot()">☕</div>
+    </div>
+
+    <div id="view-log-shot" class="view">
+        <h2 id="log-shot-title" style="color: var(--primary); margin-bottom: 20px;">Log Extraction</h2>
+        <input type="hidden" id="input-log-bean-id">
+        <input type="hidden" id="input-log-shot-id">
+        
+        <div style="text-align:center; margin-bottom:20px; font-size:0.9rem; color:#666;">
+            Batch: <strong id="log-display-date"></strong>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div class="form-group">
+                <label>Grind Setting</label>
+                <input type="text" id="input-shot-grind" inputmode="decimal" placeholder="14">
+            </div>
+            <div class="form-group">
+                <label>Time (Sec)</label>
+                <input type="number" id="input-shot-time" inputmode="decimal" placeholder="30">
+            </div>
+            <div class="form-group">
+                <label>Dose In (g)</label>
+                <input type="number" id="input-shot-dose" inputmode="decimal" placeholder="16">
+            </div>
+            <div class="form-group">
+                <label>Yield Out (g)</label>
+                <input type="number" id="input-shot-yield" inputmode="decimal" placeholder="32">
+            </div>
+        </div>
+
+        <div class="form-group" style="text-align: center;">
+            <label>Rate this Shot (Optional)</label>
+            <div class="rating-wrap">
+                <span class="star shot-star" onclick="app.setShotRating(1)">★</span>
+                <span class="star shot-star" onclick="app.setShotRating(2)">★</span>
+                <span class="star shot-star" onclick="app.setShotRating(3)">★</span>
+                <span class="star shot-star" onclick="app.setShotRating(4)">★</span>
+                <span class="star shot-star" onclick="app.setShotRating(5)">★</span>
+            </div>
+            <input type="hidden" id="input-shot-rating" value="0">
+        </div>
+
+        <button class="btn" id="btn-save-shot" onclick="app.saveShot()">Log It</button>
+        <button class="btn btn-secondary" onclick="app.router('detail')" style="margin-top: 10px;">Cancel</button>
+        <button class="btn btn-danger hidden" id="btn-delete-shot" onclick="app.deleteShot()">Delete Shot</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyAW0-niuOFshWMIjhTsPBrFEPwsK6200G4",
+          authDomain: "espresso-4298d.firebaseapp.com",
+          projectId: "espresso-4298d",
+          storageBucket: "espresso-4298d.firebasestorage.app",
+          messagingSenderId: "697900751526",
+          appId: "1:697900751526:web:402b382cad1337e0d73267",
+          measurementId: "G-WLRK06D2RZ"
+        };
+
+        const appInstance = initializeApp(firebaseConfig);
+        const auth = getAuth(appInstance);
+        const db = getFirestore(appInstance);
+        const provider = new GoogleAuthProvider();
+
+        let currentUser = null;
+        let beans = [];
+        let activeFilters = new Set();
+        let currentSort = 'newest';
+        let currentActiveBean = null;
+        let logsCache = [];
+
+        window.app = {
+            router: (viewName) => {
+                document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+                document.getElementById(`view-${viewName}`).classList.add('active');
+                document.getElementById('top-bar').style.display = (viewName === 'login') ? 'none' : 'flex';
+            },
+
+            login: async () => { try { await signInWithPopup(auth, provider); } catch(e) { alert(e.message); } },
+            logout: () => { if(confirm("Logout?")) signOut(auth).then(() => location.reload()); },
+
+            // --- BEAN MANAGEMENT ---
+            fetchBeans: async () => {
+                const q = query(collection(db, "beans"), where("uid", "==", currentUser.uid));
+                const snapshot = await getDocs(q);
+                beans = [];
+                snapshot.forEach((doc) => beans.push({ id: doc.id, ...doc.data() }));
+                app.renderBeanList();
+            },
+
+            toggleFilter: (tag) => {
+                if(activeFilters.has(tag)) activeFilters.delete(tag);
+                else activeFilters.add(tag);
+                app.renderBeanList();
+            },
+            clearFilters: () => { activeFilters.clear(); app.renderBeanList(); },
+            setSort: (mode) => { currentSort = mode; app.renderBeanList(); },
+
+            renderBeanList: () => {
+                const c = document.getElementById('bean-list-container');
+                const fb = document.getElementById('filter-bar');
+                c.innerHTML = '';
+                
+                let visibleBeans = beans.filter(b => {
+                    if(activeFilters.size === 0) return true;
+                    const beanTags = [b.roastLevel, b.origin, ...(b.tags || [])].map(t => (t||'').toLowerCase());
+                    for(let f of activeFilters) {
+                        if(!beanTags.includes(f.toLowerCase())) return false;
+                    }
+                    return true;
+                });
+
+                if(currentSort === 'name') visibleBeans.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+                else if (currentSort === 'rating') visibleBeans.sort((a,b) => (b.rating || 0) - (a.rating || 0));
+                else if (currentSort === 'newest') visibleBeans.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+                if(activeFilters.size > 0) {
+                    fb.classList.remove('hidden');
+                    fb.innerHTML = `<div class="filter-chip clear-btn" onclick="app.clearFilters()">× Clear</div>`;
+                    activeFilters.forEach(f => { fb.innerHTML += `<div class="filter-chip active" onclick="app.toggleFilter('${f}')">${f}</div>`; });
+                } else { fb.classList.add('hidden'); }
+
+                if(visibleBeans.length === 0) c.innerHTML = "<div style='text-align:center; color:#999; margin-top:40px;'>No matching beans.</div>";
+                
+                visibleBeans.forEach(b => {
+                    const div = document.createElement('div');
+                    div.className = `bean-card roast-${b.roastLevel || 'Medium'}`;
+                    let tagsHtml = '';
+                    if(b.origin) tagsHtml += `<span class="tag-pill" onclick="event.stopPropagation(); app.toggleFilter('${b.origin}')">📍 ${b.origin}</span>`;
+                    if(b.tags && b.tags.length > 0) b.tags.forEach(t => { tagsHtml += `<span class="tag-pill" onclick="event.stopPropagation(); app.toggleFilter('${t}')">#${t}</span>`; });
+                    let ratingHtml = (b.rating && b.rating > 0) ? `<span style="color:#f1c40f; margin-left:8px;">${'★'.repeat(b.rating)}</span>` : '';
+
+                    div.onclick = () => app.loadBeanDetail(b.id);
+                    div.innerHTML = `
+                        <div style="font-size:0.7rem; color:var(--primary); font-weight:700; text-transform:uppercase;">
+                            ${b.roaster} <span style="color:#999; margin-left:5px;">${b.roastLevel || ''}</span> ${ratingHtml}
+                        </div>
+                        <div style="font-weight:700; font-size:1.1rem; margin-bottom:5px;">${b.name}</div>
+                        <div>${tagsHtml}</div>
+                    `;
+                    c.appendChild(div);
+                });
+            },
+
+            // --- FORMS (BEAN) ---
+            resetBeanForm: () => {
+                document.getElementById('input-bean-id').value = '';
+                document.getElementById('input-roaster').value = '';
+                document.getElementById('input-name').value = '';
+                document.getElementById('input-origin').value = '';
+                document.getElementById('input-roast-level').value = 'Medium';
+                document.getElementById('input-tags').value = '';
+                app.setBeanRating(0);
+                document.getElementById('bean-form-header').innerText = "New Bean Profile";
+                document.getElementById('btn-delete-bean').classList.add('hidden');
+            },
+            setBeanRating: (n) => {
+                document.getElementById('input-bean-rating').value = n;
+                document.querySelectorAll('.bean-star').forEach((el, i) => { el.classList.toggle('selected', i < n); });
+            },
+            saveBean: async () => {
+                const id = document.getElementById('input-bean-id').value;
+                const rawTags = document.getElementById('input-tags').value;
+                const data = {
+                    uid: currentUser.uid,
+                    roaster: document.getElementById('input-roaster').value,
+                    name: document.getElementById('input-name').value,
+                    origin: document.getElementById('input-origin').value,
+                    roastLevel: document.getElementById('input-roast-level').value,
+                    tags: rawTags.split(',').map(t => t.trim()).filter(Boolean),
+                    rating: parseInt(document.getElementById('input-bean-rating').value) || 0,
+                    updatedAt: new Date()
+                };
+                if(!data.name) return alert("Name required");
+                if(id) await updateDoc(doc(db, "beans", id), data);
+                else await addDoc(collection(db, "beans"), { ...data, currentRoastDate: new Date().toISOString().split('T')[0], createdAt: new Date() });
+                await app.fetchBeans();
+                app.router('list');
+            },
+            deleteBean: async () => {
+                if(confirm("Archive this bean?")) {
+                    await deleteDoc(doc(db, "beans", document.getElementById('input-bean-id').value));
+                    await app.fetchBeans();
+                    app.router('list');
+                }
+            },
+            promptNewDate: async () => {
+                const newDate = prompt("Enter roast date for the NEW bag (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
+                if (newDate && currentActiveBean) {
+                    await updateDoc(doc(db, "beans", currentActiveBean.id), { currentRoastDate: newDate });
+                    await app.fetchBeans(); 
+                    await app.loadBeanDetail(currentActiveBean.id);
+                }
+            },
+            editActiveBean: () => {
+                const b = currentActiveBean;
+                document.getElementById('bean-form-header').innerText = "Edit Bean";
+                document.getElementById('input-bean-id').value = b.id;
+                document.getElementById('input-roaster').value = b.roaster;
+                document.getElementById('input-name').value = b.name;
+                document.getElementById('input-origin').value = b.origin || '';
+                document.getElementById('input-roast-level').value = b.roastLevel || 'Medium';
+                document.getElementById('input-tags').value = (b.tags || []).join(', ');
+                app.setBeanRating(b.rating || 0);
+                document.getElementById('btn-delete-bean').classList.remove('hidden');
+                app.router('edit-bean');
+            },
+
+            // --- DETAIL & HISTORY LOGIC ---
+            loadBeanDetail: async (id) => {
+                currentActiveBean = beans.find(b => b.id === id);
+                if(!currentActiveBean) return;
+
+                document.getElementById('detail-roaster').innerText = currentActiveBean.roaster;
+                document.getElementById('detail-name').innerText = currentActiveBean.name;
+                const r = currentActiveBean.rating || 0;
+                document.getElementById('detail-rating').innerText = r > 0 ? '★'.repeat(r) : '';
+                
+                let meta = [];
+                if(currentActiveBean.origin) meta.push(currentActiveBean.origin);
+                if(currentActiveBean.roastLevel) meta.push(currentActiveBean.roastLevel + " Roast");
+                document.getElementById('detail-meta').innerText = meta.join(' • ');
+
+                let tagsHtml = (currentActiveBean.tags || []).map(t => `<span class="tag-pill" style="cursor:default; background:#fff; border:1px solid #ddd;">${t}</span>`).join('');
+                document.getElementById('detail-tags').innerHTML = tagsHtml;
+                document.getElementById('detail-date').innerText = currentActiveBean.currentRoastDate || "Set Date";
+
+                // Fetch History
+                const q = query(collection(db, "brew_logs"), where("beanId", "==", id));
+                const snapshot = await getDocs(q);
+                logsCache = [];
+                snapshot.forEach(doc => logsCache.push({ id: doc.id, ...doc.data() }));
+                logsCache.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
+
+                const groups = {};
+                logsCache.forEach(log => {
+                    const k = log.roastDate || "Unknown Batch";
+                    if(!groups[k]) groups[k] = [];
+                    groups[k].push(log);
+                });
+
+                const container = document.getElementById('history-container');
+                container.innerHTML = '';
+                if(logsCache.length === 0) container.innerHTML = "<div style='padding:20px; text-align:center; color:#ccc;'>No shots logged.</div>";
+
+                Object.keys(groups).sort().reverse().forEach(dateKey => {
+                    const h = document.createElement('div');
+                    h.className = 'batch-header';
+                    h.innerText = `BATCH: ${dateKey}`;
+                    container.appendChild(h);
+                    
+                    const groupDiv = document.createElement('div');
+                    groupDiv.style.borderRadius = "8px";
+                    groupDiv.style.boxShadow = "0 2px 5px rgba(0,0,0,0.05)";
+                    
+                    groups[dateKey].forEach(log => {
+                        const row = document.createElement('div');
+                        
+                        // NEW EXTRACTION LOGIC (RATIO BASED)
+                        const dose = parseFloat(log.dose);
+                        const yieldOut = parseFloat(log.yield);
+                        let ratioVal = 0;
+                        if(dose > 0) ratioVal = yieldOut / dose;
+
+                        let extClass = "ext-good";
+                        let advice = "Golden Zone";
+                        let adviceClass = "advice-good";
+                        
+                        if (ratioVal > 2.25) { 
+                            extClass = "ext-fast"; 
+                            advice = "High Yield (Grind Finer)"; 
+                            adviceClass = "advice-fast";
+                        } else if (ratioVal < 1.75) { 
+                            extClass = "ext-slow"; 
+                            advice = "Low Yield (Grind Coarser)"; 
+                            adviceClass = "advice-slow";
+                        }
+
+                        row.className = `log-row ${extClass}`;
+                        row.onclick = () => app.openEditShot(log.id);
+                        
+                        let starDisplay = log.rating > 0 ? `<span style="color:#f1c40f;">${'★'.repeat(log.rating)}</span>` : '';
+
+                        row.innerHTML = `
+                            <div>
+                                <div style="font-weight:700;">${log.time}s</div>
+                                <div class="advice-text ${adviceClass}">${advice}</div>
+                            </div>
+                            <div style="font-weight:700;">${log.grind}</div>
+                            <div>
+                                <div style="color:#666;">1:${ratioVal.toFixed(1)}</div>
+                                <div style="font-size:0.7rem;">${log.dose}g/${log.yield}g ${starDisplay}</div>
+                            </div>
+                        `;
+                        groupDiv.appendChild(row);
+                    });
+                    container.appendChild(groupDiv);
+                });
+                app.router('detail');
+            },
+
+            // --- LOGGING / EDITING SHOTS ---
+            openLogShot: () => {
+                document.getElementById('log-shot-title').innerText = "Log Extraction";
+                document.getElementById('input-log-bean-id').value = currentActiveBean.id;
+                document.getElementById('input-log-shot-id').value = '';
+                document.getElementById('log-display-date').innerText = currentActiveBean.currentRoastDate || "Unknown";
+                
+                // Defaults (16g / 32g)
+                document.getElementById('input-shot-grind').value = '';
+                document.getElementById('input-shot-time').value = '30';
+                document.getElementById('input-shot-dose').value = '16';
+                document.getElementById('input-shot-yield').value = '32';
+                app.setShotRating(0);
+                
+                document.getElementById('btn-save-shot').innerText = "Log It";
+                document.getElementById('btn-delete-shot').classList.add('hidden');
+                app.router('log-shot');
+            },
+
+            openEditShot: (shotId) => {
+                const log = logsCache.find(l => l.id === shotId);
+                if(!log) return;
+
+                document.getElementById('log-shot-title').innerText = "Edit Extraction";
+                document.getElementById('input-log-bean-id').value = currentActiveBean.id;
+                document.getElementById('input-log-shot-id').value = shotId;
+                document.getElementById('log-display-date').innerText = log.roastDate;
+
+                document.getElementById('input-shot-grind').value = log.grind;
+                document.getElementById('input-shot-time').value = log.time;
+                document.getElementById('input-shot-dose').value = log.dose;
+                document.getElementById('input-shot-yield').value = log.yield;
+                app.setShotRating(log.rating || 0);
+
+                document.getElementById('btn-save-shot').innerText = "Update Log";
+                document.getElementById('btn-delete-shot').classList.remove('hidden');
+                app.router('log-shot');
+            },
+
+            setShotRating: (n) => {
+                document.getElementById('input-shot-rating').value = n;
+                document.querySelectorAll('.shot-star').forEach((el, i) => { el.classList.toggle('selected', i < n); });
+            },
+
+            saveShot: async () => {
+                const beanId = document.getElementById('input-log-bean-id').value;
+                const shotId = document.getElementById('input-log-shot-id').value;
+                
+                const data = {
+                    beanId,
+                    uid: currentUser.uid,
+                    grind: document.getElementById('input-shot-grind').value,
+                    time: document.getElementById('input-shot-time').value,
+                    dose: document.getElementById('input-shot-dose').value,
+                    yield: document.getElementById('input-shot-yield').value,
+                    rating: parseInt(document.getElementById('input-shot-rating').value) || 0,
+                };
+
+                if(!data.grind) return alert("Grind setting required!");
+
+                if(shotId) {
+                    await updateDoc(doc(db, "brew_logs", shotId), data);
+                } else {
+                    data.roastDate = currentActiveBean.currentRoastDate || "Unknown";
+                    data.date = new Date();
+                    await addDoc(collection(db, "brew_logs"), data);
+                }
+                
+                await app.loadBeanDetail(beanId);
+            },
+
+            deleteShot: async () => {
+                if(confirm("Delete this shot log?")) {
+                    const shotId = document.getElementById('input-log-shot-id').value;
+                    const beanId = document.getElementById('input-log-bean-id').value;
+                    await deleteDoc(doc(db, "brew_logs", shotId));
+                    await app.loadBeanDetail(beanId);
+                }
+            }
+        };
+
+        onAuthStateChanged(auth, u => {
+            if(u) {
+                currentUser = u;
+                document.getElementById('user-display').innerText = u.displayName;
+                document.getElementById('view-login').style.display='none';
+                app.fetchBeans();
+                app.router('list');
+            } else {
+                app.router('login');
+            }
+        });
+        document.getElementById('btn-login').addEventListener('click', app.login);
+    </script>
+</body>
+</html>
