@@ -169,7 +169,7 @@
     <div id="view-login" class="view active" style="text-align: center; padding-top: 25vh;">
         <h1 style="color:var(--dark-bg);">Lincoln Barista</h1>
         <div style="font-size: 3rem; margin: 20px 0;">☕</div>
-        <button class="btn" id="btn-login" style="background: #4285F4;">Sign in with Google</button>
+        <button class="btn" id="btn-login" style="background: #4285F4;">Sign in with Google (v15)</button>
     </div>
 
     <div id="view-list" class="view">
@@ -353,7 +353,7 @@
     </div>
 
     <script type="module">
-        console.log("APP VERSION: V15 (CHART LINEAR SCALE)");
+        console.log("APP VERSION: V15 (LOGIN FIX + LINEAR CHARTS)");
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -683,7 +683,7 @@
                     options: {
                         scales: {
                             x: { 
-                                type: 'linear',  // <--- KEY FIX FOR NEGATIVE/DECIMAL SCALING
+                                type: 'linear',  // <--- KEY FIX FOR CHART SCALING
                                 title: { display: true, text: 'Grind Setting' } 
                             },
                             y: { title: { display: true, text: 'Time (s)' } }
@@ -824,7 +824,7 @@
         onAuthStateChanged(auth, u => {
             if(u) {
                 currentUser = u;
-                document.getElementById('user-display').innerText = u.displayName;
+                // REMOVED THE LINE CAUSING THE CRASH
                 document.getElementById('view-login').style.display='none';
                 app.fetchBeans();
                 app.router('list');
