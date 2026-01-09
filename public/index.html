@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lincoln Barista v15</title>
+    <title>Lincoln Barista v16</title>
     <link rel="manifest" href="manifest.json">
     
     <meta name="theme-color" content="#6f4e37">
@@ -162,14 +162,14 @@
 <body>
 
     <div id="top-bar">
-        <div class="app-logo">Lincoln <span>Barista v15</span></div>
+        <div class="app-logo">Lincoln <span>Barista v16</span></div>
         <div class="settings-btn" onclick="app.exportData()">⚙️</div>
     </div>
 
     <div id="view-login" class="view active" style="text-align: center; padding-top: 25vh;">
         <h1 style="color:var(--dark-bg);">Lincoln Barista</h1>
         <div style="font-size: 3rem; margin: 20px 0;">☕</div>
-        <button class="btn" id="btn-login" style="background: #4285F4;">Sign in with Google (v15)</button>
+        <button class="btn" id="btn-login" style="background: #4285F4;">Sign in with Google (v16)</button>
     </div>
 
     <div id="view-list" class="view">
@@ -294,7 +294,7 @@
         <h3 style="margin-top: 30px; margin-bottom: 10px;">Shot History</h3>
         
         <div class="chart-wrapper">
-            <div class="chart-title">Dial-In Curve (Grind vs Time)</div>
+            <div class="chart-title">Dial-In Curve (Grind vs Ratio)</div>
             <canvas id="dialInChart" height="150"></canvas>
         </div>
 
@@ -353,7 +353,7 @@
     </div>
 
     <script type="module">
-        console.log("APP VERSION: V15 (LOGIN FIX + LINEAR CHARTS)");
+        console.log("APP VERSION: V16 (RATIO CHART)");
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -662,18 +662,22 @@
                 snapshot.forEach(doc => logsCache.push({ id: doc.id, ...doc.data() }));
                 logsCache.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
 
-                // RENDER DIAL-IN CHART (Grind vs Time)
+                // RENDER DIAL-IN CHART (Grind vs RATIO) - UPDATED V16
                 if(dialInChartInstance) dialInChartInstance.destroy();
+                
                 const chartData = logsCache
-                    .filter(l => l.roastDate === roastDate && !isNaN(l.grind) && !isNaN(l.time))
-                    .map(l => ({ x: parseFloat(l.grind), y: parseFloat(l.time) }))
+                    .filter(l => l.roastDate === roastDate && !isNaN(l.grind) && l.dose > 0 && l.yield > 0)
+                    .map(l => ({ 
+                        x: parseFloat(l.grind), 
+                        y: parseFloat(l.yield) / parseFloat(l.dose) // CALCULATE RATIO
+                    }))
                     .sort((a,b) => a.x - b.x);
 
                 dialInChartInstance = new Chart(document.getElementById('dialInChart'), {
                     type: 'line',
                     data: {
                         datasets: [{
-                            label: 'Time (s)',
+                            label: 'Ratio (1:x)',
                             data: chartData,
                             borderColor: '#6f4e37',
                             backgroundColor: '#d2b48c',
@@ -683,10 +687,14 @@
                     options: {
                         scales: {
                             x: { 
-                                type: 'linear',  // <--- KEY FIX FOR CHART SCALING
+                                type: 'linear', 
                                 title: { display: true, text: 'Grind Setting' } 
                             },
-                            y: { title: { display: true, text: 'Time (s)' } }
+                            y: { 
+                                title: { display: true, text: 'Ratio (1:x)' },
+                                suggestedMin: 1.0,
+                                suggestedMax: 3.0
+                            }
                         }
                     }
                 });
