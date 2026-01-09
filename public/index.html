@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lincoln Barista v14.1</title>
+    <title>Lincoln Barista v15</title>
     <link rel="manifest" href="manifest.json">
     
     <meta name="theme-color" content="#6f4e37">
@@ -162,7 +162,7 @@
 <body>
 
     <div id="top-bar">
-        <div class="app-logo">Lincoln <span>Barista v14.1</span></div>
+        <div class="app-logo">Lincoln <span>Barista v15</span></div>
         <div class="settings-btn" onclick="app.exportData()">⚙️</div>
     </div>
 
@@ -353,7 +353,7 @@
     </div>
 
     <script type="module">
-        console.log("APP VERSION: V14.1 (FIXED LOGIN)");
+        console.log("APP VERSION: V15 (CHART LINEAR SCALE)");
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -399,23 +399,19 @@
             exportData: async () => {
                 if(!confirm("Download all data as CSV?")) return;
                 
-                // Fetch ALL Logs
                 const qLogs = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
                 const snapLogs = await getDocs(qLogs);
                 let csvContent = "data:text/csv;charset=utf-8,Type,Date,Roaster,Bean,Grind,Time,Dose,Yield,Rating\n";
                 
-                // Map Bean IDs to Names
                 const beanMap = {};
                 beans.forEach(b => beanMap[b.id] = { name: b.name, roaster: b.roaster });
 
                 snapLogs.forEach(doc => {
                     const l = doc.data();
                     const b = beanMap[l.beanId] || { name: "Unknown", roaster: "Unknown" };
-                    // Handle commas in names
                     const cleanName = `"${b.name.replace(/"/g, '""')}"`;
                     const cleanRoaster = `"${b.roaster.replace(/"/g, '""')}"`;
                     const dateStr = l.date ? new Date(l.date.seconds * 1000).toISOString().split('T')[0] : "Unknown";
-                    
                     csvContent += `Shot,${dateStr},${cleanRoaster},${cleanName},${l.grind},${l.time},${l.dose},${l.yield},${l.rating}\n`;
                 });
 
@@ -668,11 +664,10 @@
 
                 // RENDER DIAL-IN CHART (Grind vs Time)
                 if(dialInChartInstance) dialInChartInstance.destroy();
-                // Filter logs to current batch and valid numbers
                 const chartData = logsCache
                     .filter(l => l.roastDate === roastDate && !isNaN(l.grind) && !isNaN(l.time))
                     .map(l => ({ x: parseFloat(l.grind), y: parseFloat(l.time) }))
-                    .sort((a,b) => a.x - b.x); // Sort by grind for line
+                    .sort((a,b) => a.x - b.x);
 
                 dialInChartInstance = new Chart(document.getElementById('dialInChart'), {
                     type: 'line',
@@ -687,7 +682,10 @@
                     },
                     options: {
                         scales: {
-                            x: { title: { display: true, text: 'Grind Setting' } },
+                            x: { 
+                                type: 'linear',  // <--- KEY FIX FOR NEGATIVE/DECIMAL SCALING
+                                title: { display: true, text: 'Grind Setting' } 
+                            },
                             y: { title: { display: true, text: 'Time (s)' } }
                         }
                     }
@@ -826,7 +824,7 @@
         onAuthStateChanged(auth, u => {
             if(u) {
                 currentUser = u;
-                // REMOVED THE LINE CAUSING THE CRASH
+                document.getElementById('user-display').innerText = u.displayName;
                 document.getElementById('view-login').style.display='none';
                 app.fetchBeans();
                 app.router('list');
