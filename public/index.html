@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lincoln Barista</title>
+    <title>Lincoln Barista v12</title>
     <link rel="manifest" href="manifest.json">
     
     <meta name="theme-color" content="#6f4e37">
@@ -151,7 +151,7 @@
 <body>
 
     <div id="top-bar">
-        <div class="app-logo">Lincoln <span>Barista</span></div>
+        <div class="app-logo">Lincoln <span>Barista v12</span></div>
         <div id="user-display" style="font-size:0.8rem; color:#ccc;"></div>
     </div>
 
@@ -307,6 +307,8 @@
     </div>
 
     <script type="module">
+        console.log("APP VERSION: V12 (SAFE CLICK ENABLED)"); // DEBUG LOG
+
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
