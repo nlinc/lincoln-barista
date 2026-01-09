@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lincoln Barista v13</title>
+    <title>Lincoln Barista v14</title>
     <link rel="manifest" href="manifest.json">
     
     <meta name="theme-color" content="#6f4e37">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         /* --- THEME --- */
@@ -21,9 +23,9 @@
             --radius: 12px;
             
             /* Extraction Colors */
-            --fast-bg: #e3f2fd; --fast-text: #1565c0; /* Blue = Watery/Fast */
-            --slow-bg: #fbe9e7; --slow-text: #d84315; /* Orange = Tight/Slow */
-            --good-bg: #e8f5e9; --good-text: #2e7d32; /* Green = Golden */
+            --fast-bg: #e3f2fd; --fast-text: #1565c0;
+            --slow-bg: #fbe9e7; --slow-text: #d84315;
+            --good-bg: #e8f5e9; --good-text: #2e7d32;
         }
 
         /* --- GLOBAL --- */
@@ -42,6 +44,7 @@
         }
         .app-logo { font-weight: 800; font-size: 1.3rem; letter-spacing: -0.5px; }
         .app-logo span { color: var(--accent); }
+        .settings-btn { font-size: 1.5rem; cursor: pointer; }
 
         h1, h2, h3 { font-weight: 700; margin: 0; }
 
@@ -61,6 +64,11 @@
             font-size: 1rem; box-sizing: border-box; background: white; -webkit-appearance: none;
         }
         input:focus, select:focus { border-color: var(--primary); outline: none; }
+
+        /* SLIDERS FOR FLAVOR */
+        .range-wrap { margin-bottom: 15px; }
+        .range-header { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 600; color: #666; margin-bottom: 5px; }
+        input[type=range] { width: 100%; padding: 0; margin: 0; }
 
         /* --- CARDS & TAGS --- */
         .bean-card {
@@ -98,6 +106,10 @@
             background: white; outline: none;
         }
 
+        /* --- CHARTS --- */
+        .chart-wrapper { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .chart-title { font-size: 0.8rem; font-weight: 700; color: #888; text-transform: uppercase; margin-bottom: 10px; text-align: center; }
+
         /* --- HISTORY LOG ROW --- */
         .batch-header {
             margin-top: 25px; margin-bottom: 8px; font-weight: 800; color: var(--primary); font-size: 0.9rem;
@@ -108,15 +120,11 @@
             display: grid; grid-template-columns: 0.6fr 1fr 1fr; align-items: center;
             font-size: 0.9rem; cursor: pointer;
         }
-        
-        /* Center Grind Column */
         .log-row > :nth-child(2) { text-align: center; }
-
         .log-row:first-child { border-top-left-radius: 8px; border-top-right-radius: 8px; }
         .log-row:last-child { border-bottom: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
         .log-row.header { background: #eee; font-weight: bold; font-size: 0.75rem; color: #666; text-transform: uppercase; border-radius: 8px; margin-bottom: 5px; cursor: default; }
         
-        /* Extraction Analysis Colors */
         .log-row.ext-fast { background-color: var(--fast-bg); }
         .log-row.ext-slow { background-color: var(--slow-bg); }
         .log-row.ext-good { background-color: var(--good-bg); }
@@ -154,8 +162,8 @@
 <body>
 
     <div id="top-bar">
-        <div class="app-logo">Lincoln <span>Barista v13</span></div>
-        <div id="user-display" style="font-size:0.8rem; color:#ccc;"></div>
+        <div class="app-logo">Lincoln <span>Barista v14</span></div>
+        <div class="settings-btn" onclick="app.exportData()">⚙️</div>
     </div>
 
     <div id="view-login" class="view active" style="text-align: center; padding-top: 25vh;">
@@ -209,11 +217,36 @@
         </div>
 
         <div class="form-group">
-            <label>Tasting Notes (Comma separated)</label>
+            <label>Tasting Notes</label>
             <input type="text" id="input-tags" placeholder="Blueberry, Floral, Chocolate">
         </div>
 
-        <div class="form-group" style="text-align: center; margin-top:30px; background: white; padding: 15px; border-radius: var(--radius); border: 1px solid #eee;">
+        <div class="form-group" style="background:white; padding:15px; border-radius:12px; border:1px solid #eee;">
+            <label style="margin-bottom:15px;">Flavor Profile</label>
+            
+            <div class="range-wrap">
+                <div class="range-header"><span>Acidity</span><span id="val-acidity">3</span></div>
+                <input type="range" id="input-acidity" min="1" max="5" value="3" oninput="document.getElementById('val-acidity').innerText=this.value">
+            </div>
+            <div class="range-wrap">
+                <div class="range-header"><span>Sweetness</span><span id="val-sweetness">3</span></div>
+                <input type="range" id="input-sweetness" min="1" max="5" value="3" oninput="document.getElementById('val-sweetness').innerText=this.value">
+            </div>
+            <div class="range-wrap">
+                <div class="range-header"><span>Body</span><span id="val-body">3</span></div>
+                <input type="range" id="input-body" min="1" max="5" value="3" oninput="document.getElementById('val-body').innerText=this.value">
+            </div>
+            <div class="range-wrap">
+                <div class="range-header"><span>Bitterness</span><span id="val-bitterness">3</span></div>
+                <input type="range" id="input-bitterness" min="1" max="5" value="3" oninput="document.getElementById('val-bitterness').innerText=this.value">
+            </div>
+            <div class="range-wrap">
+                <div class="range-header"><span>Finish</span><span id="val-finish">3</span></div>
+                <input type="range" id="input-finish" min="1" max="5" value="3" oninput="document.getElementById('val-finish').innerText=this.value">
+            </div>
+        </div>
+
+        <div class="form-group" style="text-align: center; margin-top:10px; background: white; padding: 15px; border-radius: var(--radius); border: 1px solid #eee;">
             <label>Overall Bag Rating</label>
             <div class="rating-wrap">
                 <span class="star bean-star" onclick="app.setBeanRating(1)">★</span>
@@ -244,17 +277,27 @@
             </div>
         </div>
 
+        <div class="chart-wrapper" style="margin-top:20px;">
+            <div class="chart-title">Flavor Profile</div>
+            <canvas id="radarChart" height="200"></canvas>
+        </div>
+
         <div style="background:white; padding:15px; border-radius:12px; margin-top:20px; border:2px solid #eee; display:flex; justify-content:space-between; align-items:center;">
             <div>
                 <div style="font-size:0.75rem; color:#888; text-transform:uppercase; font-weight:700;">Current Bag Date</div>
                 <div id="detail-date" style="font-size:1.1rem; font-weight:700;"></div>
+                <div id="detail-age" style="font-size:0.8rem; color:var(--primary); font-weight:600;"></div>
             </div>
             <button class="btn btn-secondary btn-sm" onclick="app.promptNewDate()">Update Batch</button>
         </div>
         
         <h3 style="margin-top: 30px; margin-bottom: 10px;">Shot History</h3>
-        <div style="color:#666; font-size:0.75rem; margin-bottom:10px;">Tap a row to edit/rate after tasting.</div>
         
+        <div class="chart-wrapper">
+            <div class="chart-title">Dial-In Curve (Grind vs Time)</div>
+            <canvas id="dialInChart" height="150"></canvas>
+        </div>
+
         <div class="log-row header">
             <span>Result</span>
             <span>Grind</span>
@@ -310,7 +353,7 @@
     </div>
 
     <script type="module">
-        console.log("APP VERSION: V13 (SECURE QUERY)"); 
+        console.log("APP VERSION: V14 (CHARTS ENABLED)");
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -337,6 +380,10 @@
         let currentSort = 'newest';
         let currentActiveBean = null;
         let logsCache = [];
+        
+        // Chart Instances
+        let radarChartInstance = null;
+        let dialInChartInstance = null;
 
         window.app = {
             router: (viewName) => {
@@ -347,6 +394,39 @@
 
             login: async () => { try { await signInWithPopup(auth, provider); } catch(e) { alert(e.message); } },
             logout: () => { if(confirm("Logout?")) signOut(auth).then(() => location.reload()); },
+
+            // --- DATA EXPORT ---
+            exportData: async () => {
+                if(!confirm("Download all data as CSV?")) return;
+                
+                // Fetch ALL Logs
+                const qLogs = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
+                const snapLogs = await getDocs(qLogs);
+                let csvContent = "data:text/csv;charset=utf-8,Type,Date,Roaster,Bean,Grind,Time,Dose,Yield,Rating\n";
+                
+                // Map Bean IDs to Names
+                const beanMap = {};
+                beans.forEach(b => beanMap[b.id] = { name: b.name, roaster: b.roaster });
+
+                snapLogs.forEach(doc => {
+                    const l = doc.data();
+                    const b = beanMap[l.beanId] || { name: "Unknown", roaster: "Unknown" };
+                    // Handle commas in names
+                    const cleanName = `"${b.name.replace(/"/g, '""')}"`;
+                    const cleanRoaster = `"${b.roaster.replace(/"/g, '""')}"`;
+                    const dateStr = l.date ? new Date(l.date.seconds * 1000).toISOString().split('T')[0] : "Unknown";
+                    
+                    csvContent += `Shot,${dateStr},${cleanRoaster},${cleanName},${l.grind},${l.time},${l.dose},${l.yield},${l.rating}\n`;
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "lincoln_barista_export.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            },
 
             // --- BEAN MANAGEMENT ---
             fetchBeans: async () => {
@@ -371,22 +451,17 @@
                 c.innerHTML = '';
                 fb.innerHTML = '';
 
-                // 1. FILTER
                 let visibleBeans = beans.filter(b => {
                     if(activeFilters.size === 0) return true;
                     const beanTags = [b.roastLevel, b.origin, ...(b.tags || [])].map(t => (t||'').toLowerCase());
-                    for(let f of activeFilters) {
-                        if(!beanTags.includes(f.toLowerCase())) return false;
-                    }
+                    for(let f of activeFilters) { if(!beanTags.includes(f.toLowerCase())) return false; }
                     return true;
                 });
 
-                // 2. SORT
                 if(currentSort === 'name') visibleBeans.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
                 else if (currentSort === 'rating') visibleBeans.sort((a,b) => (b.rating || 0) - (a.rating || 0));
                 else if (currentSort === 'newest') visibleBeans.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
-                // 3. RENDER FILTER BAR
                 if(activeFilters.size > 0) {
                     fb.classList.remove('hidden');
                     const clearBtn = document.createElement('div');
@@ -401,13 +476,10 @@
                         chip.onclick = () => app.toggleFilter(f);
                         fb.appendChild(chip);
                     });
-                } else {
-                    fb.classList.add('hidden');
-                }
+                } else { fb.classList.add('hidden'); }
 
                 if(visibleBeans.length === 0) c.innerHTML = "<div style='text-align:center; color:#999; margin-top:40px;'>No matching beans.</div>";
                 
-                // 4. RENDER BEAN CARDS
                 visibleBeans.forEach(b => {
                     const div = document.createElement('div');
                     div.className = `bean-card roast-${b.roastLevel || 'Medium'}`;
@@ -422,17 +494,13 @@
                     const tagContainer = div.querySelector('.tags-container');
                     if(b.origin) {
                         const t = document.createElement('span');
-                        t.className = 'tag-pill';
-                        t.innerText = `📍 ${b.origin}`;
-                        t.onclick = (e) => { e.stopPropagation(); app.toggleFilter(b.origin); };
+                        t.className = 'tag-pill'; t.innerText = `📍 ${b.origin}`; t.onclick = (e) => { e.stopPropagation(); app.toggleFilter(b.origin); };
                         tagContainer.appendChild(t);
                     }
                     if(b.tags && b.tags.length > 0) {
                         b.tags.forEach(tagText => {
                             const t = document.createElement('span');
-                            t.className = 'tag-pill';
-                            t.innerText = `#${tagText}`;
-                            t.onclick = (e) => { e.stopPropagation(); app.toggleFilter(tagText); };
+                            t.className = 'tag-pill'; t.innerText = `#${tagText}`; t.onclick = (e) => { e.stopPropagation(); app.toggleFilter(tagText); };
                             tagContainer.appendChild(t);
                         });
                     }
@@ -449,6 +517,13 @@
                 document.getElementById('input-origin').value = '';
                 document.getElementById('input-roast-level').value = 'Medium';
                 document.getElementById('input-tags').value = '';
+                
+                // Reset Flavors
+                ['acidity','sweetness','body','bitterness','finish'].forEach(k => {
+                    document.getElementById(`input-${k}`).value = 3;
+                    document.getElementById(`val-${k}`).innerText = 3;
+                });
+
                 app.setBeanRating(0);
                 document.getElementById('bean-form-header').innerText = "New Bean Profile";
                 document.getElementById('btn-delete-bean').classList.add('hidden');
@@ -460,6 +535,14 @@
             saveBean: async () => {
                 const id = document.getElementById('input-bean-id').value;
                 const rawTags = document.getElementById('input-tags').value;
+                const flavor = {
+                    acidity: document.getElementById('input-acidity').value,
+                    sweetness: document.getElementById('input-sweetness').value,
+                    body: document.getElementById('input-body').value,
+                    bitterness: document.getElementById('input-bitterness').value,
+                    finish: document.getElementById('input-finish').value
+                };
+
                 const data = {
                     uid: currentUser.uid,
                     roaster: document.getElementById('input-roaster').value,
@@ -468,6 +551,7 @@
                     roastLevel: document.getElementById('input-roast-level').value,
                     tags: rawTags.split(',').map(t => t.trim()).filter(Boolean),
                     rating: parseInt(document.getElementById('input-bean-rating').value) || 0,
+                    flavor: flavor,
                     updatedAt: new Date()
                 };
                 if(!data.name) return alert("Name required");
@@ -500,6 +584,14 @@
                 document.getElementById('input-origin').value = b.origin || '';
                 document.getElementById('input-roast-level').value = b.roastLevel || 'Medium';
                 document.getElementById('input-tags').value = (b.tags || []).join(', ');
+                
+                // Load Flavors
+                const f = b.flavor || { acidity:3, sweetness:3, body:3, bitterness:3, finish:3 };
+                ['acidity','sweetness','body','bitterness','finish'].forEach(k => {
+                    document.getElementById(`input-${k}`).value = f[k];
+                    document.getElementById(`val-${k}`).innerText = f[k];
+                });
+
                 app.setBeanRating(b.rating || 0);
                 document.getElementById('btn-delete-bean').classList.remove('hidden');
                 app.router('edit-bean');
@@ -525,92 +617,138 @@
                 if(currentActiveBean.tags) {
                     currentActiveBean.tags.forEach(t => {
                         const sp = document.createElement('span');
-                        sp.className = 'tag-pill';
-                        sp.innerText = t;
-                        sp.style.cursor = 'default';
-                        sp.style.background = '#fff';
-                        sp.style.border = '1px solid #ddd';
+                        sp.className = 'tag-pill'; sp.innerText = t; sp.style.cursor = 'default'; sp.style.background = '#fff'; sp.style.border = '1px solid #ddd';
                         tagsContainer.appendChild(sp);
                     });
                 }
                 
-                document.getElementById('detail-date').innerText = currentActiveBean.currentRoastDate || "Set Date";
+                // DAYS OFF ROAST CALC
+                const roastDate = currentActiveBean.currentRoastDate || "Unknown";
+                document.getElementById('detail-date').innerText = roastDate;
+                if(roastDate !== "Unknown") {
+                    const diff = new Date() - new Date(roastDate);
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    document.getElementById('detail-age').innerText = `${days} days rest`;
+                } else {
+                    document.getElementById('detail-age').innerText = "";
+                }
 
-                // --- FIXED QUERY FOR SECURITY RULES ---
-                // We MUST include 'where uid == currentUser.uid' to match the security rules.
+                // RENDER RADAR CHART
+                if(radarChartInstance) radarChartInstance.destroy();
+                const f = currentActiveBean.flavor || { acidity:0, sweetness:0, body:0, bitterness:0, finish:0 };
+                radarChartInstance = new Chart(document.getElementById('radarChart'), {
+                    type: 'radar',
+                    data: {
+                        labels: ['Acidity', 'Sweetness', 'Body', 'Bitterness', 'Finish'],
+                        datasets: [{
+                            label: 'Flavor Profile',
+                            data: [f.acidity, f.sweetness, f.body, f.bitterness, f.finish],
+                            backgroundColor: 'rgba(111, 78, 55, 0.2)',
+                            borderColor: '#6f4e37',
+                            pointBackgroundColor: '#6f4e37',
+                        }]
+                    },
+                    options: {
+                        scales: { r: { min: 0, max: 5, ticks: { display: false } } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+
+                // Fetch History
                 const q = query(
                     collection(db, "brew_logs"), 
                     where("beanId", "==", id),
                     where("uid", "==", currentUser.uid) 
                 );
                 
-                try {
-                    const snapshot = await getDocs(q);
-                    logsCache = [];
-                    snapshot.forEach(doc => logsCache.push({ id: doc.id, ...doc.data() }));
-                    logsCache.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
+                const snapshot = await getDocs(q);
+                logsCache = [];
+                snapshot.forEach(doc => logsCache.push({ id: doc.id, ...doc.data() }));
+                logsCache.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
 
-                    const groups = {};
-                    logsCache.forEach(log => {
-                        const k = log.roastDate || "Unknown Batch";
-                        if(!groups[k]) groups[k] = [];
-                        groups[k].push(log);
+                // RENDER DIAL-IN CHART (Grind vs Time)
+                if(dialInChartInstance) dialInChartInstance.destroy();
+                // Filter logs to current batch and valid numbers
+                const chartData = logsCache
+                    .filter(l => l.roastDate === roastDate && !isNaN(l.grind) && !isNaN(l.time))
+                    .map(l => ({ x: parseFloat(l.grind), y: parseFloat(l.time) }))
+                    .sort((a,b) => a.x - b.x); // Sort by grind for line
+
+                dialInChartInstance = new Chart(document.getElementById('dialInChart'), {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'Time (s)',
+                            data: chartData,
+                            borderColor: '#6f4e37',
+                            backgroundColor: '#d2b48c',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            x: { title: { display: true, text: 'Grind Setting' } },
+                            y: { title: { display: true, text: 'Time (s)' } }
+                        }
+                    }
+                });
+
+                const groups = {};
+                logsCache.forEach(log => {
+                    const k = log.roastDate || "Unknown Batch";
+                    if(!groups[k]) groups[k] = [];
+                    groups[k].push(log);
+                });
+
+                const container = document.getElementById('history-container');
+                container.innerHTML = '';
+                if(logsCache.length === 0) container.innerHTML = "<div style='padding:20px; text-align:center; color:#ccc;'>No shots logged.</div>";
+
+                Object.keys(groups).sort().reverse().forEach(dateKey => {
+                    const h = document.createElement('div');
+                    h.className = 'batch-header';
+                    h.innerText = `BATCH: ${dateKey}`;
+                    container.appendChild(h);
+                    const groupDiv = document.createElement('div');
+                    groupDiv.style.borderRadius = "8px";
+                    groupDiv.style.boxShadow = "0 2px 5px rgba(0,0,0,0.05)";
+                    groups[dateKey].forEach(log => {
+                        const row = document.createElement('div');
+                        const dose = parseFloat(log.dose);
+                        const yieldOut = parseFloat(log.yield);
+                        let ratioVal = 0;
+                        if(dose > 0) ratioVal = yieldOut / dose;
+
+                        let extClass = "ext-good";
+                        let advice = "Golden Zone";
+                        let adviceClass = "advice-good";
+                        
+                        if (ratioVal > 2.25) { 
+                            extClass = "ext-fast"; advice = "High Yield (Grind Finer)"; adviceClass = "advice-fast";
+                        } else if (ratioVal < 1.75) { 
+                            extClass = "ext-slow"; advice = "Low Yield (Grind Coarser)"; adviceClass = "advice-slow";
+                        }
+
+                        row.className = `log-row ${extClass}`;
+                        row.onclick = () => app.openEditShot(log.id);
+                        
+                        let starDisplay = log.rating > 0 ? `<span style="color:#f1c40f;">${'★'.repeat(log.rating)}</span>` : '';
+
+                        row.innerHTML = `
+                            <div>
+                                <div style="font-weight:700;">${log.time}s</div>
+                                <div class="advice-text ${adviceClass}">${advice}</div>
+                            </div>
+                            <div style="font-weight:700;">${log.grind}</div>
+                            <div>
+                                <div style="color:#666;">1:${ratioVal.toFixed(1)}</div>
+                                <div style="font-size:0.7rem;">${log.dose}g/${log.yield}g ${starDisplay}</div>
+                            </div>
+                        `;
+                        groupDiv.appendChild(row);
                     });
-
-                    const container = document.getElementById('history-container');
-                    container.innerHTML = '';
-                    if(logsCache.length === 0) container.innerHTML = "<div style='padding:20px; text-align:center; color:#ccc;'>No shots logged.</div>";
-
-                    Object.keys(groups).sort().reverse().forEach(dateKey => {
-                        const h = document.createElement('div');
-                        h.className = 'batch-header';
-                        h.innerText = `BATCH: ${dateKey}`;
-                        container.appendChild(h);
-                        const groupDiv = document.createElement('div');
-                        groupDiv.style.borderRadius = "8px";
-                        groupDiv.style.boxShadow = "0 2px 5px rgba(0,0,0,0.05)";
-                        groups[dateKey].forEach(log => {
-                            const row = document.createElement('div');
-                            const dose = parseFloat(log.dose);
-                            const yieldOut = parseFloat(log.yield);
-                            let ratioVal = 0;
-                            if(dose > 0) ratioVal = yieldOut / dose;
-
-                            let extClass = "ext-good";
-                            let advice = "Golden Zone";
-                            let adviceClass = "advice-good";
-                            
-                            if (ratioVal > 2.25) { 
-                                extClass = "ext-fast"; advice = "High Yield (Grind Finer)"; adviceClass = "advice-fast";
-                            } else if (ratioVal < 1.75) { 
-                                extClass = "ext-slow"; advice = "Low Yield (Grind Coarser)"; adviceClass = "advice-slow";
-                            }
-
-                            row.className = `log-row ${extClass}`;
-                            row.onclick = () => app.openEditShot(log.id);
-                            
-                            let starDisplay = log.rating > 0 ? `<span style="color:#f1c40f;">${'★'.repeat(log.rating)}</span>` : '';
-
-                            row.innerHTML = `
-                                <div>
-                                    <div style="font-weight:700;">${log.time}s</div>
-                                    <div class="advice-text ${adviceClass}">${advice}</div>
-                                </div>
-                                <div style="font-weight:700;">${log.grind}</div>
-                                <div>
-                                    <div style="color:#666;">1:${ratioVal.toFixed(1)}</div>
-                                    <div style="font-size:0.7rem;">${log.dose}g/${log.yield}g ${starDisplay}</div>
-                                </div>
-                            `;
-                            groupDiv.appendChild(row);
-                        });
-                        container.appendChild(groupDiv);
-                    });
-                } catch (err) {
-                    console.error("Error loading logs:", err);
-                    alert("Error loading logs: " + err.message);
-                }
-                
+                    container.appendChild(groupDiv);
+                });
                 app.router('detail');
             },
 
