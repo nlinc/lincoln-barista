@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lincoln Barista v14</title>
+    <title>Lincoln Barista v14.1</title>
     <link rel="manifest" href="manifest.json">
     
     <meta name="theme-color" content="#6f4e37">
@@ -162,7 +162,7 @@
 <body>
 
     <div id="top-bar">
-        <div class="app-logo">Lincoln <span>Barista v14</span></div>
+        <div class="app-logo">Lincoln <span>Barista v14.1</span></div>
         <div class="settings-btn" onclick="app.exportData()">⚙️</div>
     </div>
 
@@ -353,7 +353,7 @@
     </div>
 
     <script type="module">
-        console.log("APP VERSION: V14 (CHARTS ENABLED)");
+        console.log("APP VERSION: V14.1 (FIXED LOGIN)");
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -826,7 +826,7 @@
         onAuthStateChanged(auth, u => {
             if(u) {
                 currentUser = u;
-                document.getElementById('user-display').innerText = u.displayName;
+                // REMOVED THE LINE CAUSING THE CRASH
                 document.getElementById('view-login').style.display='none';
                 app.fetchBeans();
                 app.router('list');
