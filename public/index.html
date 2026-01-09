@@ -95,7 +95,7 @@
             background: white; outline: none;
         }
 
-        /* --- HISTORY LOG ROW (UPDATED) --- */
+        /* --- HISTORY LOG ROW --- */
         .batch-header {
             margin-top: 25px; margin-bottom: 8px; font-weight: 800; color: var(--primary); font-size: 0.9rem;
             border-bottom: 1px solid #ddd; padding-bottom: 4px;
@@ -106,10 +106,8 @@
             font-size: 0.9rem; cursor: pointer;
         }
         
-        /* CENTER THE GRIND COLUMN (2nd Child) */
-        .log-row > :nth-child(2) {
-            text-align: center;
-        }
+        /* Center Grind Column */
+        .log-row > :nth-child(2) { text-align: center; }
 
         .log-row:first-child { border-top-left-radius: 8px; border-top-right-radius: 8px; }
         .log-row:last-child { border-bottom: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
@@ -365,8 +363,10 @@
             renderBeanList: () => {
                 const c = document.getElementById('bean-list-container');
                 const fb = document.getElementById('filter-bar');
-                c.innerHTML = '';
-                
+                c.innerHTML = ''; // Clear existing
+                fb.innerHTML = ''; // Clear filters
+
+                // 1. FILTER
                 let visibleBeans = beans.filter(b => {
                     if(activeFilters.size === 0) return true;
                     const beanTags = [b.roastLevel, b.origin, ...(b.tags || [])].map(t => (t||'').toLowerCase());
@@ -376,34 +376,74 @@
                     return true;
                 });
 
+                // 2. SORT
                 if(currentSort === 'name') visibleBeans.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
                 else if (currentSort === 'rating') visibleBeans.sort((a,b) => (b.rating || 0) - (a.rating || 0));
                 else if (currentSort === 'newest') visibleBeans.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
+                // 3. RENDER FILTER BAR (SAFE DOM CREATION)
                 if(activeFilters.size > 0) {
                     fb.classList.remove('hidden');
-                    fb.innerHTML = `<div class="filter-chip clear-btn" onclick="app.clearFilters()">× Clear</div>`;
-                    activeFilters.forEach(f => { fb.innerHTML += `<div class="filter-chip active" onclick="app.toggleFilter('${f}')">${f}</div>`; });
-                } else { fb.classList.add('hidden'); }
+                    
+                    // Clear Button
+                    const clearBtn = document.createElement('div');
+                    clearBtn.className = 'filter-chip clear-btn';
+                    clearBtn.innerText = '× Clear';
+                    clearBtn.onclick = () => app.clearFilters();
+                    fb.appendChild(clearBtn);
+
+                    // Active Filters
+                    activeFilters.forEach(f => {
+                        const chip = document.createElement('div');
+                        chip.className = 'filter-chip active';
+                        chip.innerText = f;
+                        chip.onclick = () => app.toggleFilter(f);
+                        fb.appendChild(chip);
+                    });
+                } else {
+                    fb.classList.add('hidden');
+                }
 
                 if(visibleBeans.length === 0) c.innerHTML = "<div style='text-align:center; color:#999; margin-top:40px;'>No matching beans.</div>";
                 
+                // 4. RENDER BEAN CARDS (SAFE DOM CREATION)
                 visibleBeans.forEach(b => {
                     const div = document.createElement('div');
                     div.className = `bean-card roast-${b.roastLevel || 'Medium'}`;
-                    let tagsHtml = '';
-                    if(b.origin) tagsHtml += `<span class="tag-pill" onclick="event.stopPropagation(); app.toggleFilter('${b.origin}')">📍 ${b.origin}</span>`;
-                    if(b.tags && b.tags.length > 0) b.tags.forEach(t => { tagsHtml += `<span class="tag-pill" onclick="event.stopPropagation(); app.toggleFilter('${t}')">#${t}</span>`; });
+                    
+                    // Build Card Content
                     let ratingHtml = (b.rating && b.rating > 0) ? `<span style="color:#f1c40f; margin-left:8px;">${'★'.repeat(b.rating)}</span>` : '';
-
-                    div.onclick = () => app.loadBeanDetail(b.id);
+                    
                     div.innerHTML = `
                         <div style="font-size:0.7rem; color:var(--primary); font-weight:700; text-transform:uppercase;">
                             ${b.roaster} <span style="color:#999; margin-left:5px;">${b.roastLevel || ''}</span> ${ratingHtml}
                         </div>
                         <div style="font-weight:700; font-size:1.1rem; margin-bottom:5px;">${b.name}</div>
-                        <div>${tagsHtml}</div>
+                        <div class="tags-container"></div>
                     `;
+
+                    // Add Tags safely via DOM methods
+                    const tagContainer = div.querySelector('.tags-container');
+                    
+                    if(b.origin) {
+                        const t = document.createElement('span');
+                        t.className = 'tag-pill';
+                        t.innerText = `📍 ${b.origin}`;
+                        t.onclick = (e) => { e.stopPropagation(); app.toggleFilter(b.origin); };
+                        tagContainer.appendChild(t);
+                    }
+
+                    if(b.tags && b.tags.length > 0) {
+                        b.tags.forEach(tagText => {
+                            const t = document.createElement('span');
+                            t.className = 'tag-pill';
+                            t.innerText = `#${tagText}`;
+                            t.onclick = (e) => { e.stopPropagation(); app.toggleFilter(tagText); };
+                            tagContainer.appendChild(t);
+                        });
+                    }
+
+                    div.onclick = () => app.loadBeanDetail(b.id);
                     c.appendChild(div);
                 });
             },
@@ -487,8 +527,21 @@
                 if(currentActiveBean.roastLevel) meta.push(currentActiveBean.roastLevel + " Roast");
                 document.getElementById('detail-meta').innerText = meta.join(' • ');
 
-                let tagsHtml = (currentActiveBean.tags || []).map(t => `<span class="tag-pill" style="cursor:default; background:#fff; border:1px solid #ddd;">${t}</span>`).join('');
-                document.getElementById('detail-tags').innerHTML = tagsHtml;
+                // Build Detail Tags Safely
+                const tagsContainer = document.getElementById('detail-tags');
+                tagsContainer.innerHTML = '';
+                if(currentActiveBean.tags) {
+                    currentActiveBean.tags.forEach(t => {
+                        const sp = document.createElement('span');
+                        sp.className = 'tag-pill';
+                        sp.innerText = t;
+                        sp.style.cursor = 'default';
+                        sp.style.background = '#fff';
+                        sp.style.border = '1px solid #ddd';
+                        tagsContainer.appendChild(sp);
+                    });
+                }
+                
                 document.getElementById('detail-date').innerText = currentActiveBean.currentRoastDate || "Set Date";
 
                 // Fetch History
