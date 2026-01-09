@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lincoln Barista v12</title>
+    <title>Lincoln Barista v13</title>
     <link rel="manifest" href="manifest.json">
     
     <meta name="theme-color" content="#6f4e37">
@@ -49,6 +49,9 @@
         .view { display: none; padding: 20px; padding-bottom: 120px; max-width: 600px; margin: 0 auto; width: 100%; box-sizing: border-box; }
         .view.active { display: block; animation: fadeUp 0.3s ease; }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* UTILS */
+        .hidden { display: none !important; }
 
         /* --- FORMS --- */
         .form-group { margin-bottom: 20px; }
@@ -151,7 +154,7 @@
 <body>
 
     <div id="top-bar">
-        <div class="app-logo">Lincoln <span>Barista v12</span></div>
+        <div class="app-logo">Lincoln <span>Barista v13</span></div>
         <div id="user-display" style="font-size:0.8rem; color:#ccc;"></div>
     </div>
 
@@ -307,7 +310,7 @@
     </div>
 
     <script type="module">
-        console.log("APP VERSION: V12 (SAFE CLICK ENABLED)"); // DEBUG LOG
+        console.log("APP VERSION: V13 (SECURE QUERY)"); 
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -365,8 +368,8 @@
             renderBeanList: () => {
                 const c = document.getElementById('bean-list-container');
                 const fb = document.getElementById('filter-bar');
-                c.innerHTML = ''; // Clear existing
-                fb.innerHTML = ''; // Clear filters
+                c.innerHTML = '';
+                fb.innerHTML = '';
 
                 // 1. FILTER
                 let visibleBeans = beans.filter(b => {
@@ -383,18 +386,14 @@
                 else if (currentSort === 'rating') visibleBeans.sort((a,b) => (b.rating || 0) - (a.rating || 0));
                 else if (currentSort === 'newest') visibleBeans.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
-                // 3. RENDER FILTER BAR (SAFE DOM CREATION)
+                // 3. RENDER FILTER BAR
                 if(activeFilters.size > 0) {
                     fb.classList.remove('hidden');
-                    
-                    // Clear Button
                     const clearBtn = document.createElement('div');
                     clearBtn.className = 'filter-chip clear-btn';
                     clearBtn.innerText = '× Clear';
                     clearBtn.onclick = () => app.clearFilters();
                     fb.appendChild(clearBtn);
-
-                    // Active Filters
                     activeFilters.forEach(f => {
                         const chip = document.createElement('div');
                         chip.className = 'filter-chip active';
@@ -408,14 +407,11 @@
 
                 if(visibleBeans.length === 0) c.innerHTML = "<div style='text-align:center; color:#999; margin-top:40px;'>No matching beans.</div>";
                 
-                // 4. RENDER BEAN CARDS (SAFE DOM CREATION)
+                // 4. RENDER BEAN CARDS
                 visibleBeans.forEach(b => {
                     const div = document.createElement('div');
                     div.className = `bean-card roast-${b.roastLevel || 'Medium'}`;
-                    
-                    // Build Card Content
                     let ratingHtml = (b.rating && b.rating > 0) ? `<span style="color:#f1c40f; margin-left:8px;">${'★'.repeat(b.rating)}</span>` : '';
-                    
                     div.innerHTML = `
                         <div style="font-size:0.7rem; color:var(--primary); font-weight:700; text-transform:uppercase;">
                             ${b.roaster} <span style="color:#999; margin-left:5px;">${b.roastLevel || ''}</span> ${ratingHtml}
@@ -423,10 +419,7 @@
                         <div style="font-weight:700; font-size:1.1rem; margin-bottom:5px;">${b.name}</div>
                         <div class="tags-container"></div>
                     `;
-
-                    // Add Tags safely via DOM methods
                     const tagContainer = div.querySelector('.tags-container');
-                    
                     if(b.origin) {
                         const t = document.createElement('span');
                         t.className = 'tag-pill';
@@ -434,7 +427,6 @@
                         t.onclick = (e) => { e.stopPropagation(); app.toggleFilter(b.origin); };
                         tagContainer.appendChild(t);
                     }
-
                     if(b.tags && b.tags.length > 0) {
                         b.tags.forEach(tagText => {
                             const t = document.createElement('span');
@@ -444,7 +436,6 @@
                             tagContainer.appendChild(t);
                         });
                     }
-
                     div.onclick = () => app.loadBeanDetail(b.id);
                     c.appendChild(div);
                 });
@@ -529,7 +520,6 @@
                 if(currentActiveBean.roastLevel) meta.push(currentActiveBean.roastLevel + " Roast");
                 document.getElementById('detail-meta').innerText = meta.join(' • ');
 
-                // Build Detail Tags Safely
                 const tagsContainer = document.getElementById('detail-tags');
                 tagsContainer.innerHTML = '';
                 if(currentActiveBean.tags) {
@@ -546,77 +536,81 @@
                 
                 document.getElementById('detail-date').innerText = currentActiveBean.currentRoastDate || "Set Date";
 
-                // Fetch History
-                const q = query(collection(db, "brew_logs"), where("beanId", "==", id));
-                const snapshot = await getDocs(q);
-                logsCache = [];
-                snapshot.forEach(doc => logsCache.push({ id: doc.id, ...doc.data() }));
-                logsCache.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
+                // --- FIXED QUERY FOR SECURITY RULES ---
+                // We MUST include 'where uid == currentUser.uid' to match the security rules.
+                const q = query(
+                    collection(db, "brew_logs"), 
+                    where("beanId", "==", id),
+                    where("uid", "==", currentUser.uid) 
+                );
+                
+                try {
+                    const snapshot = await getDocs(q);
+                    logsCache = [];
+                    snapshot.forEach(doc => logsCache.push({ id: doc.id, ...doc.data() }));
+                    logsCache.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
 
-                const groups = {};
-                logsCache.forEach(log => {
-                    const k = log.roastDate || "Unknown Batch";
-                    if(!groups[k]) groups[k] = [];
-                    groups[k].push(log);
-                });
-
-                const container = document.getElementById('history-container');
-                container.innerHTML = '';
-                if(logsCache.length === 0) container.innerHTML = "<div style='padding:20px; text-align:center; color:#ccc;'>No shots logged.</div>";
-
-                Object.keys(groups).sort().reverse().forEach(dateKey => {
-                    const h = document.createElement('div');
-                    h.className = 'batch-header';
-                    h.innerText = `BATCH: ${dateKey}`;
-                    container.appendChild(h);
-                    
-                    const groupDiv = document.createElement('div');
-                    groupDiv.style.borderRadius = "8px";
-                    groupDiv.style.boxShadow = "0 2px 5px rgba(0,0,0,0.05)";
-                    
-                    groups[dateKey].forEach(log => {
-                        const row = document.createElement('div');
-                        
-                        // NEW EXTRACTION LOGIC (RATIO BASED)
-                        const dose = parseFloat(log.dose);
-                        const yieldOut = parseFloat(log.yield);
-                        let ratioVal = 0;
-                        if(dose > 0) ratioVal = yieldOut / dose;
-
-                        let extClass = "ext-good";
-                        let advice = "Golden Zone";
-                        let adviceClass = "advice-good";
-                        
-                        if (ratioVal > 2.25) { 
-                            extClass = "ext-fast"; 
-                            advice = "High Yield (Grind Finer)"; 
-                            adviceClass = "advice-fast";
-                        } else if (ratioVal < 1.75) { 
-                            extClass = "ext-slow"; 
-                            advice = "Low Yield (Grind Coarser)"; 
-                            adviceClass = "advice-slow";
-                        }
-
-                        row.className = `log-row ${extClass}`;
-                        row.onclick = () => app.openEditShot(log.id);
-                        
-                        let starDisplay = log.rating > 0 ? `<span style="color:#f1c40f;">${'★'.repeat(log.rating)}</span>` : '';
-
-                        row.innerHTML = `
-                            <div>
-                                <div style="font-weight:700;">${log.time}s</div>
-                                <div class="advice-text ${adviceClass}">${advice}</div>
-                            </div>
-                            <div style="font-weight:700;">${log.grind}</div>
-                            <div>
-                                <div style="color:#666;">1:${ratioVal.toFixed(1)}</div>
-                                <div style="font-size:0.7rem;">${log.dose}g/${log.yield}g ${starDisplay}</div>
-                            </div>
-                        `;
-                        groupDiv.appendChild(row);
+                    const groups = {};
+                    logsCache.forEach(log => {
+                        const k = log.roastDate || "Unknown Batch";
+                        if(!groups[k]) groups[k] = [];
+                        groups[k].push(log);
                     });
-                    container.appendChild(groupDiv);
-                });
+
+                    const container = document.getElementById('history-container');
+                    container.innerHTML = '';
+                    if(logsCache.length === 0) container.innerHTML = "<div style='padding:20px; text-align:center; color:#ccc;'>No shots logged.</div>";
+
+                    Object.keys(groups).sort().reverse().forEach(dateKey => {
+                        const h = document.createElement('div');
+                        h.className = 'batch-header';
+                        h.innerText = `BATCH: ${dateKey}`;
+                        container.appendChild(h);
+                        const groupDiv = document.createElement('div');
+                        groupDiv.style.borderRadius = "8px";
+                        groupDiv.style.boxShadow = "0 2px 5px rgba(0,0,0,0.05)";
+                        groups[dateKey].forEach(log => {
+                            const row = document.createElement('div');
+                            const dose = parseFloat(log.dose);
+                            const yieldOut = parseFloat(log.yield);
+                            let ratioVal = 0;
+                            if(dose > 0) ratioVal = yieldOut / dose;
+
+                            let extClass = "ext-good";
+                            let advice = "Golden Zone";
+                            let adviceClass = "advice-good";
+                            
+                            if (ratioVal > 2.25) { 
+                                extClass = "ext-fast"; advice = "High Yield (Grind Finer)"; adviceClass = "advice-fast";
+                            } else if (ratioVal < 1.75) { 
+                                extClass = "ext-slow"; advice = "Low Yield (Grind Coarser)"; adviceClass = "advice-slow";
+                            }
+
+                            row.className = `log-row ${extClass}`;
+                            row.onclick = () => app.openEditShot(log.id);
+                            
+                            let starDisplay = log.rating > 0 ? `<span style="color:#f1c40f;">${'★'.repeat(log.rating)}</span>` : '';
+
+                            row.innerHTML = `
+                                <div>
+                                    <div style="font-weight:700;">${log.time}s</div>
+                                    <div class="advice-text ${adviceClass}">${advice}</div>
+                                </div>
+                                <div style="font-weight:700;">${log.grind}</div>
+                                <div>
+                                    <div style="color:#666;">1:${ratioVal.toFixed(1)}</div>
+                                    <div style="font-size:0.7rem;">${log.dose}g/${log.yield}g ${starDisplay}</div>
+                                </div>
+                            `;
+                            groupDiv.appendChild(row);
+                        });
+                        container.appendChild(groupDiv);
+                    });
+                } catch (err) {
+                    console.error("Error loading logs:", err);
+                    alert("Error loading logs: " + err.message);
+                }
+                
                 app.router('detail');
             },
 
@@ -626,14 +620,11 @@
                 document.getElementById('input-log-bean-id').value = currentActiveBean.id;
                 document.getElementById('input-log-shot-id').value = '';
                 document.getElementById('log-display-date').innerText = currentActiveBean.currentRoastDate || "Unknown";
-                
-                // Defaults (16g / 32g)
                 document.getElementById('input-shot-grind').value = '';
                 document.getElementById('input-shot-time').value = '30';
                 document.getElementById('input-shot-dose').value = '16';
                 document.getElementById('input-shot-yield').value = '32';
                 app.setShotRating(0);
-                
                 document.getElementById('btn-save-shot').innerText = "Log It";
                 document.getElementById('btn-delete-shot').classList.add('hidden');
                 app.router('log-shot');
@@ -642,18 +633,15 @@
             openEditShot: (shotId) => {
                 const log = logsCache.find(l => l.id === shotId);
                 if(!log) return;
-
                 document.getElementById('log-shot-title').innerText = "Edit Extraction";
                 document.getElementById('input-log-bean-id').value = currentActiveBean.id;
                 document.getElementById('input-log-shot-id').value = shotId;
                 document.getElementById('log-display-date').innerText = log.roastDate;
-
                 document.getElementById('input-shot-grind').value = log.grind;
                 document.getElementById('input-shot-time').value = log.time;
                 document.getElementById('input-shot-dose').value = log.dose;
                 document.getElementById('input-shot-yield').value = log.yield;
                 app.setShotRating(log.rating || 0);
-
                 document.getElementById('btn-save-shot').innerText = "Update Log";
                 document.getElementById('btn-delete-shot').classList.remove('hidden');
                 app.router('log-shot');
@@ -667,7 +655,6 @@
             saveShot: async () => {
                 const beanId = document.getElementById('input-log-bean-id').value;
                 const shotId = document.getElementById('input-log-shot-id').value;
-                
                 const data = {
                     beanId,
                     uid: currentUser.uid,
@@ -677,9 +664,7 @@
                     yield: document.getElementById('input-shot-yield').value,
                     rating: parseInt(document.getElementById('input-shot-rating').value) || 0,
                 };
-
                 if(!data.grind) return alert("Grind setting required!");
-
                 if(shotId) {
                     await updateDoc(doc(db, "brew_logs", shotId), data);
                 } else {
@@ -687,7 +672,6 @@
                     data.date = new Date();
                     await addDoc(collection(db, "brew_logs"), data);
                 }
-                
                 await app.loadBeanDetail(beanId);
             },
 
