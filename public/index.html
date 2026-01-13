@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lincoln Barista v16</title>
+    <title>Lincoln Barista v17</title>
     <link rel="manifest" href="manifest.json">
     
     <meta name="theme-color" content="#6f4e37">
@@ -64,11 +64,6 @@
             font-size: 1rem; box-sizing: border-box; background: white; -webkit-appearance: none;
         }
         input:focus, select:focus { border-color: var(--primary); outline: none; }
-
-        /* SLIDERS FOR FLAVOR */
-        .range-wrap { margin-bottom: 15px; }
-        .range-header { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 600; color: #666; margin-bottom: 5px; }
-        input[type=range] { width: 100%; padding: 0; margin: 0; }
 
         /* --- CARDS & TAGS --- */
         .bean-card {
@@ -162,14 +157,14 @@
 <body>
 
     <div id="top-bar">
-        <div class="app-logo">Lincoln <span>Barista v16</span></div>
+        <div class="app-logo">Lincoln <span>Barista v17</span></div>
         <div class="settings-btn" onclick="app.exportData()">⚙️</div>
     </div>
 
     <div id="view-login" class="view active" style="text-align: center; padding-top: 25vh;">
         <h1 style="color:var(--dark-bg);">Lincoln Barista</h1>
         <div style="font-size: 3rem; margin: 20px 0;">☕</div>
-        <button class="btn" id="btn-login" style="background: #4285F4;">Sign in with Google (v16)</button>
+        <button class="btn" id="btn-login" style="background: #4285F4;">Sign in with Google (v17)</button>
     </div>
 
     <div id="view-list" class="view">
@@ -221,32 +216,7 @@
             <input type="text" id="input-tags" placeholder="Blueberry, Floral, Chocolate">
         </div>
 
-        <div class="form-group" style="background:white; padding:15px; border-radius:12px; border:1px solid #eee;">
-            <label style="margin-bottom:15px;">Flavor Profile</label>
-            
-            <div class="range-wrap">
-                <div class="range-header"><span>Acidity</span><span id="val-acidity">3</span></div>
-                <input type="range" id="input-acidity" min="1" max="5" value="3" oninput="document.getElementById('val-acidity').innerText=this.value">
-            </div>
-            <div class="range-wrap">
-                <div class="range-header"><span>Sweetness</span><span id="val-sweetness">3</span></div>
-                <input type="range" id="input-sweetness" min="1" max="5" value="3" oninput="document.getElementById('val-sweetness').innerText=this.value">
-            </div>
-            <div class="range-wrap">
-                <div class="range-header"><span>Body</span><span id="val-body">3</span></div>
-                <input type="range" id="input-body" min="1" max="5" value="3" oninput="document.getElementById('val-body').innerText=this.value">
-            </div>
-            <div class="range-wrap">
-                <div class="range-header"><span>Bitterness</span><span id="val-bitterness">3</span></div>
-                <input type="range" id="input-bitterness" min="1" max="5" value="3" oninput="document.getElementById('val-bitterness').innerText=this.value">
-            </div>
-            <div class="range-wrap">
-                <div class="range-header"><span>Finish</span><span id="val-finish">3</span></div>
-                <input type="range" id="input-finish" min="1" max="5" value="3" oninput="document.getElementById('val-finish').innerText=this.value">
-            </div>
-        </div>
-
-        <div class="form-group" style="text-align: center; margin-top:10px; background: white; padding: 15px; border-radius: var(--radius); border: 1px solid #eee;">
+        <div class="form-group" style="text-align: center; margin-top:30px; background: white; padding: 15px; border-radius: var(--radius); border: 1px solid #eee;">
             <label>Overall Bag Rating</label>
             <div class="rating-wrap">
                 <span class="star bean-star" onclick="app.setBeanRating(1)">★</span>
@@ -275,11 +245,6 @@
             <div style="margin-top:15px;">
                 <button class="btn-sm btn-secondary" onclick="app.editActiveBean()">✎ Edit Profile</button>
             </div>
-        </div>
-
-        <div class="chart-wrapper" style="margin-top:20px;">
-            <div class="chart-title">Flavor Profile</div>
-            <canvas id="radarChart" height="200"></canvas>
         </div>
 
         <div style="background:white; padding:15px; border-radius:12px; margin-top:20px; border:2px solid #eee; display:flex; justify-content:space-between; align-items:center;">
@@ -353,7 +318,7 @@
     </div>
 
     <script type="module">
-        console.log("APP VERSION: V16 (RATIO CHART)");
+        console.log("APP VERSION: V17 (REMOVED RADAR)");
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -381,8 +346,7 @@
         let currentActiveBean = null;
         let logsCache = [];
         
-        // Chart Instances
-        let radarChartInstance = null;
+        // Chart Instance
         let dialInChartInstance = null;
 
         window.app = {
@@ -513,13 +477,6 @@
                 document.getElementById('input-origin').value = '';
                 document.getElementById('input-roast-level').value = 'Medium';
                 document.getElementById('input-tags').value = '';
-                
-                // Reset Flavors
-                ['acidity','sweetness','body','bitterness','finish'].forEach(k => {
-                    document.getElementById(`input-${k}`).value = 3;
-                    document.getElementById(`val-${k}`).innerText = 3;
-                });
-
                 app.setBeanRating(0);
                 document.getElementById('bean-form-header').innerText = "New Bean Profile";
                 document.getElementById('btn-delete-bean').classList.add('hidden');
@@ -531,14 +488,7 @@
             saveBean: async () => {
                 const id = document.getElementById('input-bean-id').value;
                 const rawTags = document.getElementById('input-tags').value;
-                const flavor = {
-                    acidity: document.getElementById('input-acidity').value,
-                    sweetness: document.getElementById('input-sweetness').value,
-                    body: document.getElementById('input-body').value,
-                    bitterness: document.getElementById('input-bitterness').value,
-                    finish: document.getElementById('input-finish').value
-                };
-
+                
                 const data = {
                     uid: currentUser.uid,
                     roaster: document.getElementById('input-roaster').value,
@@ -547,7 +497,6 @@
                     roastLevel: document.getElementById('input-roast-level').value,
                     tags: rawTags.split(',').map(t => t.trim()).filter(Boolean),
                     rating: parseInt(document.getElementById('input-bean-rating').value) || 0,
-                    flavor: flavor,
                     updatedAt: new Date()
                 };
                 if(!data.name) return alert("Name required");
@@ -581,13 +530,6 @@
                 document.getElementById('input-roast-level').value = b.roastLevel || 'Medium';
                 document.getElementById('input-tags').value = (b.tags || []).join(', ');
                 
-                // Load Flavors
-                const f = b.flavor || { acidity:3, sweetness:3, body:3, bitterness:3, finish:3 };
-                ['acidity','sweetness','body','bitterness','finish'].forEach(k => {
-                    document.getElementById(`input-${k}`).value = f[k];
-                    document.getElementById(`val-${k}`).innerText = f[k];
-                });
-
                 app.setBeanRating(b.rating || 0);
                 document.getElementById('btn-delete-bean').classList.remove('hidden');
                 app.router('edit-bean');
@@ -628,27 +570,6 @@
                 } else {
                     document.getElementById('detail-age').innerText = "";
                 }
-
-                // RENDER RADAR CHART
-                if(radarChartInstance) radarChartInstance.destroy();
-                const f = currentActiveBean.flavor || { acidity:0, sweetness:0, body:0, bitterness:0, finish:0 };
-                radarChartInstance = new Chart(document.getElementById('radarChart'), {
-                    type: 'radar',
-                    data: {
-                        labels: ['Acidity', 'Sweetness', 'Body', 'Bitterness', 'Finish'],
-                        datasets: [{
-                            label: 'Flavor Profile',
-                            data: [f.acidity, f.sweetness, f.body, f.bitterness, f.finish],
-                            backgroundColor: 'rgba(111, 78, 55, 0.2)',
-                            borderColor: '#6f4e37',
-                            pointBackgroundColor: '#6f4e37',
-                        }]
-                    },
-                    options: {
-                        scales: { r: { min: 0, max: 5, ticks: { display: false } } },
-                        plugins: { legend: { display: false } }
-                    }
-                });
 
                 // Fetch History
                 const q = query(
@@ -832,7 +753,6 @@
         onAuthStateChanged(auth, u => {
             if(u) {
                 currentUser = u;
-                // REMOVED THE LINE CAUSING THE CRASH
                 document.getElementById('view-login').style.display='none';
                 app.fetchBeans();
                 app.router('list');
