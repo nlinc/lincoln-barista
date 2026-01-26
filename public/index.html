@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lincoln Barista v17</title>
+    <title>Lincoln Barista v18</title>
     <link rel="manifest" href="manifest.json">
     
     <meta name="theme-color" content="#6f4e37">
@@ -157,14 +157,14 @@
 <body>
 
     <div id="top-bar">
-        <div class="app-logo">Lincoln <span>Barista v17</span></div>
+        <div class="app-logo">Lincoln <span>Barista v18</span></div>
         <div class="settings-btn" onclick="app.exportData()">⚙️</div>
     </div>
 
     <div id="view-login" class="view active" style="text-align: center; padding-top: 25vh;">
         <h1 style="color:var(--dark-bg);">Lincoln Barista</h1>
         <div style="font-size: 3rem; margin: 20px 0;">☕</div>
-        <button class="btn" id="btn-login" style="background: #4285F4;">Sign in with Google (v17)</button>
+        <button class="btn" id="btn-login" style="background: #4285F4;">Sign in with Google (v18)</button>
     </div>
 
     <div id="view-list" class="view">
@@ -259,7 +259,7 @@
         <h3 style="margin-top: 30px; margin-bottom: 10px;">Shot History</h3>
         
         <div class="chart-wrapper">
-            <div class="chart-title">Dial-In Curve (Grind vs Ratio)</div>
+            <div class="chart-title">Dial-In Curve (Grind vs Avg Ratio)</div>
             <canvas id="dialInChart" height="150"></canvas>
         </div>
 
@@ -318,7 +318,7 @@
     </div>
 
     <script type="module">
-        console.log("APP VERSION: V17 (REMOVED RADAR)");
+        console.log("APP VERSION: V18 (AVERAGED CHART)");
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -583,22 +583,33 @@
                 snapshot.forEach(doc => logsCache.push({ id: doc.id, ...doc.data() }));
                 logsCache.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
 
-                // RENDER DIAL-IN CHART (Grind vs RATIO) - UPDATED V16
+                // RENDER DIAL-IN CHART (Grind vs RATIO) - V18 AVERAGED
                 if(dialInChartInstance) dialInChartInstance.destroy();
                 
-                const chartData = logsCache
-                    .filter(l => l.roastDate === roastDate && !isNaN(l.grind) && l.dose > 0 && l.yield > 0)
-                    .map(l => ({ 
-                        x: parseFloat(l.grind), 
-                        y: parseFloat(l.yield) / parseFloat(l.dose) // CALCULATE RATIO
-                    }))
-                    .sort((a,b) => a.x - b.x);
+                // Group by Grind Setting
+                const grouped = {};
+                logsCache.forEach(l => {
+                    if(l.roastDate !== roastDate || isNaN(l.grind) || l.dose <= 0 || l.yield <= 0) return;
+                    
+                    const grind = parseFloat(l.grind);
+                    const ratio = parseFloat(l.yield) / parseFloat(l.dose);
+
+                    if(!grouped[grind]) grouped[grind] = { total: 0, count: 0 };
+                    grouped[grind].total += ratio;
+                    grouped[grind].count++;
+                });
+
+                // Convert Groups to Average Points
+                const chartData = Object.keys(grouped).map(k => ({
+                    x: parseFloat(k),
+                    y: grouped[k].total / grouped[k].count
+                })).sort((a,b) => a.x - b.x);
 
                 dialInChartInstance = new Chart(document.getElementById('dialInChart'), {
                     type: 'line',
                     data: {
                         datasets: [{
-                            label: 'Ratio (1:x)',
+                            label: 'Avg Ratio (1:x)',
                             data: chartData,
                             borderColor: '#6f4e37',
                             backgroundColor: '#d2b48c',
@@ -612,7 +623,7 @@
                                 title: { display: true, text: 'Grind Setting' } 
                             },
                             y: { 
-                                title: { display: true, text: 'Ratio (1:x)' },
+                                title: { display: true, text: 'Avg Ratio (1:x)' },
                                 suggestedMin: 1.0,
                                 suggestedMax: 3.0
                             }
