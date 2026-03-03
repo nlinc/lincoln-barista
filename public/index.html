@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lincoln Barista v18</title>
+    <title>Lincoln Barista v19</title>
     <link rel="manifest" href="manifest.json">
     
     <meta name="theme-color" content="#6f4e37">
@@ -157,14 +157,14 @@
 <body>
 
     <div id="top-bar">
-        <div class="app-logo">Lincoln <span>Barista v18</span></div>
+        <div class="app-logo">Lincoln <span>Barista v19</span></div>
         <div class="settings-btn" onclick="app.exportData()">⚙️</div>
     </div>
 
     <div id="view-login" class="view active" style="text-align: center; padding-top: 25vh;">
         <h1 style="color:var(--dark-bg);">Lincoln Barista</h1>
         <div style="font-size: 3rem; margin: 20px 0;">☕</div>
-        <button class="btn" id="btn-login" style="background: #4285F4;">Sign in with Google (v18)</button>
+        <button class="btn" id="btn-login" style="background: #4285F4;">Sign in with Google</button>
     </div>
 
     <div id="view-list" class="view">
@@ -318,7 +318,7 @@
     </div>
 
     <script type="module">
-        console.log("APP VERSION: V18 (AVERAGED CHART)");
+        console.log("APP VERSION: V19 (CHART X-AXIS FIX)");
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -583,7 +583,7 @@
                 snapshot.forEach(doc => logsCache.push({ id: doc.id, ...doc.data() }));
                 logsCache.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
 
-                // RENDER DIAL-IN CHART (Grind vs RATIO) - V18 AVERAGED
+                // RENDER DIAL-IN CHART (Grind vs RATIO) - V19 AXIS FIX
                 if(dialInChartInstance) dialInChartInstance.destroy();
                 
                 // Group by Grind Setting
@@ -620,7 +620,13 @@
                         scales: {
                             x: { 
                                 type: 'linear', 
-                                title: { display: true, text: 'Grind Setting' } 
+                                title: { display: true, text: 'Grind Setting' },
+                                ticks: {
+                                    stepSize: 0.1, // FORCE .1 STEPS
+                                    callback: function(value) {
+                                        return value.toFixed(1); // STRICTLY 1 DECIMAL
+                                    }
+                                }
                             },
                             y: { 
                                 title: { display: true, text: 'Avg Ratio (1:x)' },
