@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lincoln Barista v20</title>
+    <title>Lincoln Barista v21</title>
     <link rel="manifest" href="manifest.json">
     
     <meta name="theme-color" content="#6f4e37">
@@ -157,7 +157,7 @@
 <body>
 
     <div id="top-bar">
-        <div class="app-logo">Lincoln <span>Barista v20</span></div>
+        <div class="app-logo">Lincoln <span>Barista v21</span></div>
         <div class="settings-btn" onclick="app.exportData()">⚙️</div>
     </div>
 
@@ -318,7 +318,7 @@
     </div>
 
     <script type="module">
-        console.log("APP VERSION: V20 (NATIVE BACK SWIPE)");
+        console.log("APP VERSION: V21 (SAVE FIX)");
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -349,13 +349,11 @@
         let dialInChartInstance = null;
 
         window.app = {
-            // UPDATED ROUTER: Now supports browser history (Android Back Swipe)
             router: (viewName, addToHistory = true) => {
                 document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
                 document.getElementById(`view-${viewName}`).classList.add('active');
                 document.getElementById('top-bar').style.display = (viewName === 'login') ? 'none' : 'flex';
                 
-                // Push the view to the phone's history so swipe back works
                 if (addToHistory) {
                     if (viewName === 'list' && !history.state) {
                         history.replaceState({ view: viewName }, "", "#" + viewName);
@@ -505,14 +503,13 @@
                 if(id) await updateDoc(doc(db, "beans", id), data);
                 else await addDoc(collection(db, "beans"), { ...data, currentRoastDate: new Date().toISOString().split('T')[0], createdAt: new Date() });
                 await app.fetchBeans();
-                // Navigate back (emulate swipe)
-                history.back();
+                app.router('list'); // <-- FIXED
             },
             deleteBean: async () => {
                 if(confirm("Archive this bean?")) {
                     await deleteDoc(doc(db, "beans", document.getElementById('input-bean-id').value));
                     await app.fetchBeans();
-                    app.router('list');
+                    app.router('list'); // <-- FIXED
                 }
             },
             promptNewDate: async () => {
@@ -681,10 +678,7 @@
                     container.appendChild(groupDiv);
                 });
                 
-                // Only route if we aren't already there (prevents double history push)
-                if (window.location.hash !== '#detail') {
-                    app.router('detail');
-                }
+                app.router('detail'); // <-- FIXED
             },
 
             openLogShot: () => {
@@ -739,9 +733,7 @@
                     data.date = new Date();
                     await addDoc(collection(db, "brew_logs"), data);
                 }
-                await app.loadBeanDetail(beanId);
-                // Navigate back
-                history.back();
+                await app.loadBeanDetail(beanId); // <-- FIXED (This puts you on the Detail screen)
             },
 
             deleteShot: async () => {
@@ -749,8 +741,7 @@
                     const shotId = document.getElementById('input-log-shot-id').value;
                     const beanId = document.getElementById('input-log-bean-id').value;
                     await deleteDoc(doc(db, "brew_logs", shotId));
-                    await app.loadBeanDetail(beanId);
-                    history.back();
+                    await app.loadBeanDetail(beanId); // <-- FIXED
                 }
             }
         };
@@ -758,22 +749,10 @@
         // --- LISTEN FOR NATIVE SWIPE BACK ---
         window.addEventListener('popstate', (event) => {
             if (event.state && event.state.view) {
-                // User swiped back, render the previous view WITHOUT adding to history again
+                // User swiped back, render previous view
                 app.router(event.state.view, false);
             } else {
-                // If they go all the way back, show the list
                 if (currentUser) app.router('list', false);
-            }
-        });
-
-        // Also wire up the visual "Back" buttons to use the history
-        document.querySelectorAll('.btn-secondary').forEach(btn => {
-            if(btn.innerText.includes('Cancel') || btn.innerText.includes('Back')) {
-                // Override the inline onclick
-                btn.onclick = (e) => {
-                    e.preventDefault();
-                    history.back(); 
-                };
             }
         });
 
@@ -782,7 +761,7 @@
                 currentUser = u;
                 document.getElementById('view-login').style.display='none';
                 app.fetchBeans();
-                app.router('list'); // Pushes initial state
+                app.router('list'); 
             } else {
                 app.router('login');
             }
