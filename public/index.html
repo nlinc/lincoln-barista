@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lincoln Barista v22</title>
+    <title>Lincoln Barista v23</title>
     <link rel="manifest" href="manifest.json">
     
     <meta name="theme-color" content="#6f4e37">
@@ -69,12 +69,16 @@
         .bean-card {
             background: white; border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; border-left: 5px solid transparent;
-            position: relative;
+            position: relative; display: flex; gap: 15px; align-items: center;
         }
         .bean-card.roast-Light { border-left-color: #f1c40f; }
         .bean-card.roast-Medium { border-left-color: #a0522d; }
         .bean-card.roast-Dark { border-left-color: #2c241b; }
         .bean-card.roast-Espresso { border-left-color: #000; }
+
+        .bean-card-thumb {
+            width: 60px; height: 60px; border-radius: 8px; object-fit: cover; background: #eee; flex-shrink: 0;
+        }
 
         .tag-pill {
             display: inline-block; background: #eee; color: #555; 
@@ -83,6 +87,8 @@
         }
         .tag-pill:hover { background: #ddd; }
         .tag-pill.active { background: var(--primary); color: white; }
+        .tag-pill.removable { padding-right: 8px; }
+        .tag-pill.removable span { margin-left: 5px; color: #999; font-weight: bold; }
 
         /* --- FILTERS & SORT --- */
         #filter-bar {
@@ -157,7 +163,7 @@
 <body>
 
     <div id="top-bar">
-        <div class="app-logo">Lincoln <span>Barista v22</span></div>
+        <div class="app-logo">Lincoln <span>Barista v23</span></div>
         <div class="settings-btn" onclick="app.exportData()">⚙️</div>
     </div>
 
@@ -186,10 +192,27 @@
         <h2 id="bean-form-header" style="color: var(--primary); margin-bottom: 20px;">New Bean Profile</h2>
         <input type="hidden" id="input-bean-id">
         
-        <div class="form-group">
-            <label>Roaster</label>
-            <input type="text" id="input-roaster" placeholder="e.g. Onyx">
+        <div class="form-group" style="text-align: center; background: white; padding: 15px; border-radius: var(--radius); border: 1px solid #eee;">
+            <label>Bag Photo</label>
+            <img id="edit-image-preview" src="" style="display:none; width:100%; max-height:250px; object-fit:contain; border-radius:8px; margin-bottom:15px;">
+            <label class="btn btn-secondary" style="display:block; cursor:pointer;">
+                📷 Take/Upload Photo
+                <input type="file" accept="image/*" capture="environment" id="input-bean-image" style="display:none;" onchange="app.handleImageUpload(event)">
+            </label>
+            <button class="btn-sm btn-danger hidden" id="btn-remove-image" onclick="app.removeImage()" style="margin-top:10px;">Remove Photo</button>
         </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+            <div class="form-group">
+                <label>Roaster</label>
+                <input type="text" id="input-roaster" placeholder="e.g. Onyx">
+            </div>
+            <div class="form-group">
+                <label>Location</label>
+                <input type="text" id="input-roaster-location" placeholder="e.g. Rogers, AR">
+            </div>
+        </div>
+
         <div class="form-group">
             <label>Bean Name</label>
             <input type="text" id="input-name" placeholder="e.g. Geometry">
@@ -213,7 +236,11 @@
 
         <div class="form-group">
             <label>Tasting Notes</label>
-            <input type="text" id="input-tags" placeholder="Blueberry, Floral, Chocolate">
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="input-new-tag" placeholder="e.g. Blueberry" onkeydown="if(event.key === 'Enter') { event.preventDefault(); app.addTag(); }">
+                <button class="btn btn-secondary btn-sm" onclick="app.addTag()">Add</button>
+            </div>
+            <div id="editing-tags-container" style="margin-top:10px;"></div>
         </div>
 
         <div class="form-group" style="text-align: center; margin-top:30px; background: white; padding: 15px; border-radius: var(--radius); border: 1px solid #eee;">
@@ -228,7 +255,7 @@
             <input type="hidden" id="input-bean-rating" value="0">
         </div>
 
-        <button class="btn" onclick="app.saveBean()">Save Profile</button>
+        <button class="btn" id="btn-save-bean" onclick="app.saveBean()">Save Profile</button>
         <button class="btn btn-secondary" onclick="app.router('list')" style="margin-top: 10px;">Cancel</button>
         <button class="btn btn-danger hidden" id="btn-delete-bean" onclick="app.deleteBean()">Archive Bean</button>
     </div>
@@ -237,11 +264,18 @@
         <button class="btn-secondary btn-sm" style="margin-bottom: 15px;" onclick="app.router('list')">← Back</button>
         
         <div style="text-align:center;">
+            <img id="detail-image" src="" style="display:none; width:150px; height:150px; object-fit:cover; border-radius:12px; margin: 0 auto 15px auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            
             <div id="detail-roaster" style="font-size:0.9rem; color:var(--primary); font-weight:700; text-transform:uppercase;"></div>
+            <div id="detail-location" style="font-size:0.75rem; color:#888; margin-bottom:5px;"></div>
+            
             <h1 id="detail-name" style="font-size:2rem; margin:0;"></h1>
+            
             <div id="detail-rating" style="color:#f1c40f; font-size:1.2rem; margin-top:2px;"></div>
             <div id="detail-meta" style="margin-top:5px; font-size:0.9rem; color:#666;"></div>
+            
             <div id="detail-tags" style="margin-top:10px;"></div>
+            
             <div style="margin-top:15px;">
                 <button class="btn-sm btn-secondary" onclick="app.editActiveBean()">✎ Edit Profile</button>
             </div>
@@ -318,7 +352,7 @@
     </div>
 
     <script type="module">
-        console.log("APP VERSION: V22 (SAVE DEBUG)");
+        console.log("APP VERSION: V23 (CAMERA & PILLS)");
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -345,8 +379,11 @@
         let currentSort = 'newest';
         let currentActiveBean = null;
         let logsCache = [];
-        
         let dialInChartInstance = null;
+
+        // V23 STATE VARIABLES
+        let currentEditingTags = [];
+        let currentEditingImage = null; // Base64 String
 
         window.app = {
             router: (viewName, addToHistory = true) => {
@@ -365,6 +402,73 @@
 
             login: async () => { try { await signInWithPopup(auth, provider); } catch(e) { alert(e.message); } },
             logout: () => { if(confirm("Logout?")) signOut(auth).then(() => location.reload()); },
+
+            // --- V23: IMAGE COMPRESSION ENGINE ---
+            handleImageUpload: async (event) => {
+                const file = event.target.files[0];
+                if(!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        // Create a canvas to resize the image
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 500; // Resize to 500px wide
+                        const scaleSize = MAX_WIDTH / img.width;
+                        canvas.width = MAX_WIDTH;
+                        canvas.height = img.height * scaleSize;
+
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        // Compress to JPEG at 70% quality (safe for Firestore)
+                        currentEditingImage = canvas.toDataURL('image/jpeg', 0.7);
+                        
+                        // Show Preview
+                        const preview = document.getElementById('edit-image-preview');
+                        preview.src = currentEditingImage;
+                        preview.style.display = 'block';
+                        document.getElementById('btn-remove-image').classList.remove('hidden');
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            },
+
+            removeImage: () => {
+                currentEditingImage = null;
+                document.getElementById('input-bean-image').value = '';
+                document.getElementById('edit-image-preview').style.display = 'none';
+                document.getElementById('btn-remove-image').classList.add('hidden');
+            },
+
+            // --- V23: PILL TAG ENGINE ---
+            addTag: () => {
+                const input = document.getElementById('input-new-tag');
+                const tag = input.value.trim();
+                if(tag && !currentEditingTags.includes(tag)) {
+                    currentEditingTags.push(tag);
+                    input.value = '';
+                    app.renderEditingTags();
+                }
+            },
+            
+            removeTag: (index) => {
+                currentEditingTags.splice(index, 1);
+                app.renderEditingTags();
+            },
+
+            renderEditingTags: () => {
+                const container = document.getElementById('editing-tags-container');
+                container.innerHTML = '';
+                currentEditingTags.forEach((tag, i) => {
+                    const pill = document.createElement('span');
+                    pill.className = 'tag-pill removable active';
+                    pill.innerHTML = `${tag} <span onclick="app.removeTag(${i})">×</span>`;
+                    container.appendChild(pill);
+                });
+            },
 
             exportData: async () => {
                 if(!confirm("Download all data as CSV?")) return;
@@ -414,7 +518,7 @@
 
                 let visibleBeans = beans.filter(b => {
                     if(activeFilters.size === 0) return true;
-                    const beanTags = [b.roastLevel, b.origin, ...(b.tags || [])].map(t => (t||'').toLowerCase());
+                    const beanTags = [b.roastLevel, b.origin, b.roasterLocation, ...(b.tags || [])].map(t => (t||'').toLowerCase());
                     for(let f of activeFilters) { if(!beanTags.includes(f.toLowerCase())) return false; }
                     return true;
                 });
@@ -445,14 +549,22 @@
                     const div = document.createElement('div');
                     div.className = `bean-card roast-${b.roastLevel || 'Medium'}`;
                     let ratingHtml = (b.rating && b.rating > 0) ? `<span style="color:#f1c40f; margin-left:8px;">${'★'.repeat(b.rating)}</span>` : '';
+                    
+                    // Thumbnail HTML
+                    let thumbHtml = b.image ? `<img src="${b.image}" class="bean-card-thumb">` : `<div class="bean-card-thumb" style="display:flex; align-items:center; justify-content:center; font-size:1.5rem;">☕</div>`;
+
                     div.innerHTML = `
-                        <div style="font-size:0.7rem; color:var(--primary); font-weight:700; text-transform:uppercase;">
-                            ${b.roaster} <span style="color:#999; margin-left:5px;">${b.roastLevel || ''}</span> ${ratingHtml}
+                        ${thumbHtml}
+                        <div style="flex-grow:1;">
+                            <div style="font-size:0.7rem; color:var(--primary); font-weight:700; text-transform:uppercase;">
+                                ${b.roaster} <span style="color:#999; margin-left:5px;">${b.roastLevel || ''}</span> ${ratingHtml}
+                            </div>
+                            <div style="font-weight:700; font-size:1.1rem; margin-bottom:5px;">${b.name}</div>
+                            <div class="tags-container"></div>
                         </div>
-                        <div style="font-weight:700; font-size:1.1rem; margin-bottom:5px;">${b.name}</div>
-                        <div class="tags-container"></div>
                     `;
                     const tagContainer = div.querySelector('.tags-container');
+                    
                     if(b.origin) {
                         const t = document.createElement('span');
                         t.className = 'tag-pill'; t.innerText = `📍 ${b.origin}`; t.onclick = (e) => { e.stopPropagation(); app.toggleFilter(b.origin); };
@@ -473,38 +585,60 @@
             resetBeanForm: () => {
                 document.getElementById('input-bean-id').value = '';
                 document.getElementById('input-roaster').value = '';
+                document.getElementById('input-roaster-location').value = '';
                 document.getElementById('input-name').value = '';
                 document.getElementById('input-origin').value = '';
                 document.getElementById('input-roast-level').value = 'Medium';
-                document.getElementById('input-tags').value = '';
+                
+                currentEditingTags = [];
+                app.renderEditingTags();
+                app.removeImage();
+
                 app.setBeanRating(0);
                 document.getElementById('bean-form-header').innerText = "New Bean Profile";
                 document.getElementById('btn-delete-bean').classList.add('hidden');
+                document.getElementById('btn-save-bean').innerText = "Save Profile";
             },
+            
             setBeanRating: (n) => {
                 document.getElementById('input-bean-rating').value = n;
                 document.querySelectorAll('.bean-star').forEach((el, i) => { el.classList.toggle('selected', i < n); });
             },
+
             saveBean: async () => {
-                const id = document.getElementById('input-bean-id').value;
-                const rawTags = document.getElementById('input-tags').value;
+                const btn = document.getElementById('btn-save-bean');
+                const originalText = btn.innerText;
                 
-                const data = {
-                    uid: currentUser.uid,
-                    roaster: document.getElementById('input-roaster').value,
-                    name: document.getElementById('input-name').value,
-                    origin: document.getElementById('input-origin').value,
-                    roastLevel: document.getElementById('input-roast-level').value,
-                    tags: rawTags.split(',').map(t => t.trim()).filter(Boolean),
-                    rating: parseInt(document.getElementById('input-bean-rating').value) || 0,
-                    updatedAt: new Date()
-                };
-                if(!data.name) return alert("Name required");
-                if(id) await updateDoc(doc(db, "beans", id), data);
-                else await addDoc(collection(db, "beans"), { ...data, currentRoastDate: new Date().toISOString().split('T')[0], createdAt: new Date() });
-                await app.fetchBeans();
-                app.router('list');
+                try {
+                    btn.innerText = "Saving...";
+                    const id = document.getElementById('input-bean-id').value;
+                    
+                    const data = {
+                        uid: currentUser.uid,
+                        roaster: document.getElementById('input-roaster').value,
+                        roasterLocation: document.getElementById('input-roaster-location').value,
+                        name: document.getElementById('input-name').value,
+                        origin: document.getElementById('input-origin').value,
+                        roastLevel: document.getElementById('input-roast-level').value,
+                        tags: currentEditingTags, // Use the new pill array
+                        rating: parseInt(document.getElementById('input-bean-rating').value) || 0,
+                        image: currentEditingImage, // Store Base64 Image
+                        updatedAt: new Date()
+                    };
+
+                    if(!data.name) { btn.innerText = originalText; return alert("Name required"); }
+                    
+                    if(id) await updateDoc(doc(db, "beans", id), data);
+                    else await addDoc(collection(db, "beans"), { ...data, currentRoastDate: new Date().toISOString().split('T')[0], createdAt: new Date() });
+                    
+                    await app.fetchBeans();
+                    history.back();
+                } catch(e) {
+                    alert("Error saving: " + e.message);
+                    btn.innerText = originalText;
+                }
             },
+
             deleteBean: async () => {
                 if(confirm("Archive this bean?")) {
                     await deleteDoc(doc(db, "beans", document.getElementById('input-bean-id').value));
@@ -520,18 +654,35 @@
                     await app.loadBeanDetail(currentActiveBean.id);
                 }
             },
+
             editActiveBean: () => {
                 const b = currentActiveBean;
                 document.getElementById('bean-form-header').innerText = "Edit Bean";
                 document.getElementById('input-bean-id').value = b.id;
                 document.getElementById('input-roaster').value = b.roaster;
+                document.getElementById('input-roaster-location').value = b.roasterLocation || '';
                 document.getElementById('input-name').value = b.name;
                 document.getElementById('input-origin').value = b.origin || '';
                 document.getElementById('input-roast-level').value = b.roastLevel || 'Medium';
-                document.getElementById('input-tags').value = (b.tags || []).join(', ');
+                
+                // Set existing tags
+                currentEditingTags = b.tags ? [...b.tags] : [];
+                app.renderEditingTags();
+
+                // Set existing image
+                if(b.image) {
+                    currentEditingImage = b.image;
+                    const preview = document.getElementById('edit-image-preview');
+                    preview.src = currentEditingImage;
+                    preview.style.display = 'block';
+                    document.getElementById('btn-remove-image').classList.remove('hidden');
+                } else {
+                    app.removeImage();
+                }
                 
                 app.setBeanRating(b.rating || 0);
                 document.getElementById('btn-delete-bean').classList.remove('hidden');
+                document.getElementById('btn-save-bean').innerText = "Update Profile";
                 app.router('edit-bean');
             },
 
@@ -539,7 +690,17 @@
                 currentActiveBean = beans.find(b => b.id === id);
                 if(!currentActiveBean) return;
 
+                // Handle Header Image
+                const imgEl = document.getElementById('detail-image');
+                if(currentActiveBean.image) {
+                    imgEl.src = currentActiveBean.image;
+                    imgEl.style.display = 'block';
+                } else {
+                    imgEl.style.display = 'none';
+                }
+
                 document.getElementById('detail-roaster').innerText = currentActiveBean.roaster;
+                document.getElementById('detail-location').innerText = currentActiveBean.roasterLocation ? `📍 ${currentActiveBean.roasterLocation}` : '';
                 document.getElementById('detail-name').innerText = currentActiveBean.name;
                 const r = currentActiveBean.rating || 0;
                 document.getElementById('detail-rating').innerText = r > 0 ? '★'.repeat(r) : '';
@@ -717,11 +878,6 @@
                 app.router('log-shot');
             },
 
-            setShotRating: (n) => {
-                document.getElementById('input-shot-rating').value = n;
-                document.querySelectorAll('.shot-star').forEach((el, i) => { el.classList.toggle('selected', i < n); });
-            },
-
             saveShot: async () => {
                 const btn = document.getElementById('btn-save-shot');
                 const originalText = btn.innerText;
@@ -732,7 +888,6 @@
                     const beanId = document.getElementById('input-log-bean-id').value;
                     const shotId = document.getElementById('input-log-shot-id').value;
                     
-                    // Safety check if user refreshed page while on form
                     if(!currentActiveBean && beanId) {
                         currentActiveBean = beans.find(b => b.id === beanId);
                     }
