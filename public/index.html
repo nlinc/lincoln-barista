@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lincoln Barista v23</title>
+    <title>Lincoln Barista v24</title>
     <link rel="manifest" href="manifest.json">
     
     <meta name="theme-color" content="#6f4e37">
@@ -163,7 +163,7 @@
 <body>
 
     <div id="top-bar">
-        <div class="app-logo">Lincoln <span>Barista v23</span></div>
+        <div class="app-logo">Lincoln <span>Barista v24</span></div>
         <div class="settings-btn" onclick="app.exportData()">⚙️</div>
     </div>
 
@@ -265,17 +265,12 @@
         
         <div style="text-align:center;">
             <img id="detail-image" src="" style="display:none; width:150px; height:150px; object-fit:cover; border-radius:12px; margin: 0 auto 15px auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-            
             <div id="detail-roaster" style="font-size:0.9rem; color:var(--primary); font-weight:700; text-transform:uppercase;"></div>
             <div id="detail-location" style="font-size:0.75rem; color:#888; margin-bottom:5px;"></div>
-            
             <h1 id="detail-name" style="font-size:2rem; margin:0;"></h1>
-            
             <div id="detail-rating" style="color:#f1c40f; font-size:1.2rem; margin-top:2px;"></div>
             <div id="detail-meta" style="margin-top:5px; font-size:0.9rem; color:#666;"></div>
-            
             <div id="detail-tags" style="margin-top:10px;"></div>
-            
             <div style="margin-top:15px;">
                 <button class="btn-sm btn-secondary" onclick="app.editActiveBean()">✎ Edit Profile</button>
             </div>
@@ -352,7 +347,7 @@
     </div>
 
     <script type="module">
-        console.log("APP VERSION: V23 (CAMERA & PILLS)");
+        console.log("APP VERSION: V24 (BULLETPROOF CHART MATH)");
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -380,10 +375,8 @@
         let currentActiveBean = null;
         let logsCache = [];
         let dialInChartInstance = null;
-
-        // V23 STATE VARIABLES
         let currentEditingTags = [];
-        let currentEditingImage = null; // Base64 String
+        let currentEditingImage = null; 
 
         window.app = {
             router: (viewName, addToHistory = true) => {
@@ -403,7 +396,6 @@
             login: async () => { try { await signInWithPopup(auth, provider); } catch(e) { alert(e.message); } },
             logout: () => { if(confirm("Logout?")) signOut(auth).then(() => location.reload()); },
 
-            // --- V23: IMAGE COMPRESSION ENGINE ---
             handleImageUpload: async (event) => {
                 const file = event.target.files[0];
                 if(!file) return;
@@ -412,9 +404,8 @@
                 reader.onload = (e) => {
                     const img = new Image();
                     img.onload = () => {
-                        // Create a canvas to resize the image
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 500; // Resize to 500px wide
+                        const MAX_WIDTH = 500; 
                         const scaleSize = MAX_WIDTH / img.width;
                         canvas.width = MAX_WIDTH;
                         canvas.height = img.height * scaleSize;
@@ -422,10 +413,7 @@
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                         
-                        // Compress to JPEG at 70% quality (safe for Firestore)
                         currentEditingImage = canvas.toDataURL('image/jpeg', 0.7);
-                        
-                        // Show Preview
                         const preview = document.getElementById('edit-image-preview');
                         preview.src = currentEditingImage;
                         preview.style.display = 'block';
@@ -443,7 +431,6 @@
                 document.getElementById('btn-remove-image').classList.add('hidden');
             },
 
-            // --- V23: PILL TAG ENGINE ---
             addTag: () => {
                 const input = document.getElementById('input-new-tag');
                 const tag = input.value.trim();
@@ -549,8 +536,6 @@
                     const div = document.createElement('div');
                     div.className = `bean-card roast-${b.roastLevel || 'Medium'}`;
                     let ratingHtml = (b.rating && b.rating > 0) ? `<span style="color:#f1c40f; margin-left:8px;">${'★'.repeat(b.rating)}</span>` : '';
-                    
-                    // Thumbnail HTML
                     let thumbHtml = b.image ? `<img src="${b.image}" class="bean-card-thumb">` : `<div class="bean-card-thumb" style="display:flex; align-items:center; justify-content:center; font-size:1.5rem;">☕</div>`;
 
                     div.innerHTML = `
@@ -620,9 +605,9 @@
                         name: document.getElementById('input-name').value,
                         origin: document.getElementById('input-origin').value,
                         roastLevel: document.getElementById('input-roast-level').value,
-                        tags: currentEditingTags, // Use the new pill array
+                        tags: currentEditingTags,
                         rating: parseInt(document.getElementById('input-bean-rating').value) || 0,
-                        image: currentEditingImage, // Store Base64 Image
+                        image: currentEditingImage,
                         updatedAt: new Date()
                     };
 
@@ -632,7 +617,7 @@
                     else await addDoc(collection(db, "beans"), { ...data, currentRoastDate: new Date().toISOString().split('T')[0], createdAt: new Date() });
                     
                     await app.fetchBeans();
-                    history.back();
+                    app.router('list');
                 } catch(e) {
                     alert("Error saving: " + e.message);
                     btn.innerText = originalText;
@@ -665,11 +650,9 @@
                 document.getElementById('input-origin').value = b.origin || '';
                 document.getElementById('input-roast-level').value = b.roastLevel || 'Medium';
                 
-                // Set existing tags
                 currentEditingTags = b.tags ? [...b.tags] : [];
                 app.renderEditingTags();
 
-                // Set existing image
                 if(b.image) {
                     currentEditingImage = b.image;
                     const preview = document.getElementById('edit-image-preview');
@@ -690,7 +673,6 @@
                 currentActiveBean = beans.find(b => b.id === id);
                 if(!currentActiveBean) return;
 
-                // Handle Header Image
                 const imgEl = document.getElementById('detail-image');
                 if(currentActiveBean.image) {
                     imgEl.src = currentActiveBean.image;
@@ -739,13 +721,23 @@
 
                     if(dialInChartInstance) dialInChartInstance.destroy();
                     const grouped = {};
+                    
+                    // V24: SAFE DATA PARSING FOR CHART
                     logsCache.forEach(l => {
-                        if(l.roastDate !== roastDate || isNaN(l.grind) || l.dose <= 0 || l.yield <= 0) return;
-                        const grind = parseFloat(l.grind);
-                        const ratio = parseFloat(l.yield) / parseFloat(l.dose);
-                        if(!grouped[grind]) grouped[grind] = { total: 0, count: 0 };
-                        grouped[grind].total += ratio;
-                        grouped[grind].count++;
+                        if(l.roastDate !== roastDate) return;
+                        
+                        const grindVal = parseFloat(l.grind);
+                        const doseVal = parseFloat(l.dose);
+                        const yieldVal = parseFloat(l.yield);
+                        
+                        // STRICT CHECK: If any of these are empty, words, or 0, skip the chart math so we don't crash
+                        if(isNaN(grindVal) || isNaN(doseVal) || isNaN(yieldVal) || doseVal <= 0 || yieldVal <= 0) return;
+                        
+                        const ratio = yieldVal / doseVal;
+                        
+                        if(!grouped[grindVal]) grouped[grindVal] = { total: 0, count: 0 };
+                        grouped[grindVal].total += ratio;
+                        grouped[grindVal].count++;
                     });
 
                     const chartData = Object.keys(grouped).map(k => ({
@@ -769,16 +761,9 @@
                                 x: { 
                                     type: 'linear', 
                                     title: { display: true, text: 'Grind Setting' },
-                                    ticks: {
-                                        stepSize: 0.1, 
-                                        callback: function(value) { return value.toFixed(1); }
-                                    }
+                                    ticks: { stepSize: 0.1, callback: function(value) { return value.toFixed(1); } }
                                 },
-                                y: { 
-                                    title: { display: true, text: 'Avg Ratio (1:x)' },
-                                    suggestedMin: 1.0,
-                                    suggestedMax: 3.0
-                                }
+                                y: { title: { display: true, text: 'Avg Ratio (1:x)' }, suggestedMin: 1.0, suggestedMax: 3.0 }
                             }
                         }
                     });
@@ -802,12 +787,17 @@
                         const groupDiv = document.createElement('div');
                         groupDiv.style.borderRadius = "8px";
                         groupDiv.style.boxShadow = "0 2px 5px rgba(0,0,0,0.05)";
+                        
                         groups[dateKey].forEach(log => {
                             const row = document.createElement('div');
+                            
+                            // SAFE PARSING FOR LIST VIEW
                             const dose = parseFloat(log.dose);
                             const yieldOut = parseFloat(log.yield);
                             let ratioVal = 0;
-                            if(dose > 0) ratioVal = yieldOut / dose;
+                            if(!isNaN(dose) && !isNaN(yieldOut) && dose > 0) {
+                                ratioVal = yieldOut / dose;
+                            }
 
                             let extClass = "ext-good";
                             let advice = "Golden Zone";
@@ -815,8 +805,10 @@
                             
                             if (ratioVal > 2.25) { 
                                 extClass = "ext-fast"; advice = "High Yield (Grind Finer)"; adviceClass = "advice-fast";
-                            } else if (ratioVal < 1.75) { 
+                            } else if (ratioVal < 1.75 && ratioVal > 0) { 
                                 extClass = "ext-slow"; advice = "Low Yield (Grind Coarser)"; adviceClass = "advice-slow";
+                            } else if (ratioVal === 0) {
+                                advice = "Incomplete Data"; extClass = "ext-good"; adviceClass = "advice-good";
                             }
 
                             row.className = `log-row ${extClass}`;
@@ -826,13 +818,13 @@
 
                             row.innerHTML = `
                                 <div>
-                                    <div style="font-weight:700;">${log.time}s</div>
+                                    <div style="font-weight:700;">${log.time || '--'}s</div>
                                     <div class="advice-text ${adviceClass}">${advice}</div>
                                 </div>
-                                <div style="font-weight:700;">${log.grind}</div>
+                                <div style="font-weight:700;">${log.grind || '--'}</div>
                                 <div>
                                     <div style="color:#666;">1:${ratioVal.toFixed(1)}</div>
-                                    <div style="font-size:0.7rem;">${log.dose}g/${log.yield}g ${starDisplay}</div>
+                                    <div style="font-size:0.7rem;">${log.dose || '-'}g/${log.yield || '-'}g ${starDisplay}</div>
                                 </div>
                             `;
                             groupDiv.appendChild(row);
@@ -840,7 +832,8 @@
                         container.appendChild(groupDiv);
                     });
                 } catch(err) {
-                    console.error(err);
+                    console.error("V24 ERROR IN LOAD:", err);
+                    alert("There was an issue rendering the chart: " + err.message);
                 }
                 
                 app.router('detail');
@@ -934,7 +927,6 @@
             }
         };
 
-        // --- LISTEN FOR NATIVE SWIPE BACK ---
         window.addEventListener('popstate', (event) => {
             if (event.state && event.state.view) {
                 app.router(event.state.view, false);
