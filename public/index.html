@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lincoln Barista v26</title>
+    <title>Lincoln Barista v27</title>
     <link rel="manifest" href="manifest.json">
     
     <meta name="theme-color" content="#6f4e37">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -163,7 +164,7 @@
 <body>
 
     <div id="top-bar">
-        <div class="app-logo">Lincoln <span>Barista v26</span></div>
+        <div class="app-logo">Lincoln <span>Barista v27</span></div>
         <div class="settings-btn" onclick="app.exportData()">⚙️</div>
     </div>
 
@@ -347,7 +348,7 @@
     </div>
 
     <script type="module">
-        console.log("APP VERSION: V26 (RESTORED RATING FUNCTION)");
+        console.log("APP VERSION: V27 (RESTORED NAVIGATION)");
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -835,6 +836,10 @@
                         });
                         container.appendChild(groupDiv);
                     });
+                    
+                    // V27 FIX: Re-added the missing router call so the page actually turns
+                    app.router('detail'); 
+                    
                 } catch(err) {
                     console.error(err);
                 }
@@ -862,17 +867,16 @@
                 document.getElementById('input-log-bean-id').value = currentActiveBean ? currentActiveBean.id : log.beanId;
                 document.getElementById('input-log-shot-id').value = shotId;
                 document.getElementById('log-display-date').innerText = log.roastDate;
-                document.getElementById('input-shot-grind').value = log.grind || '';
-                document.getElementById('input-shot-time').value = log.time || '';
-                document.getElementById('input-shot-dose').value = log.dose || '';
-                document.getElementById('input-shot-yield').value = log.yield || '';
+                document.getElementById('input-shot-grind').value = log.grind;
+                document.getElementById('input-shot-time').value = log.time;
+                document.getElementById('input-shot-dose').value = log.dose;
+                document.getElementById('input-shot-yield').value = log.yield;
                 app.setShotRating(log.rating || 0);
                 document.getElementById('btn-save-shot').innerText = "Update Log";
                 document.getElementById('btn-delete-shot').classList.remove('hidden');
                 app.router('log-shot');
             },
 
-            // --- V26 FIX: RESTORED RATING FUNCTION ---
             setShotRating: (n) => {
                 document.getElementById('input-shot-rating').value = n;
                 document.querySelectorAll('.shot-star').forEach((el, i) => { el.classList.toggle('selected', i < n); });
