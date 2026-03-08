@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lincoln Barista v28</title>
+    <title>Lincoln Barista v29</title>
     <link rel="manifest" href="manifest.json">
     
     <meta name="theme-color" content="#6f4e37">
@@ -162,7 +162,7 @@
 <body>
 
     <div id="top-bar">
-        <div class="app-logo">Lincoln <span>Barista v28</span></div>
+        <div class="app-logo">Lincoln <span>Barista v29</span></div>
         <div class="settings-btn" onclick="app.exportData()">⚙️</div>
     </div>
 
@@ -240,8 +240,8 @@
         </div>
 
         <div class="form-group">
-            <label>5-Bean Weight (g) <span style="font-weight:normal; color:#888;">Density Check</span></label>
-            <input type="text" inputmode="decimal" id="input-five-bean-weight" placeholder="e.g. 0.85">
+            <label>10-Bean Weight (g) <span style="font-weight:normal; color:#888;">Density Check</span></label>
+            <input type="text" inputmode="decimal" id="input-ten-bean-weight" placeholder="e.g. 1.70">
         </div>
 
         <div class="form-group">
@@ -298,7 +298,7 @@
         <h3 style="margin-top: 30px; margin-bottom: 10px;">Shot History</h3>
         
         <div class="chart-wrapper" style="padding: 10px;">
-            <div class="chart-title">Dial-In Summary</div>
+            <div class="chart-title">Dial-In Summary <br><span style="font-size:0.6rem; color:#999; font-weight:normal;">(Ranked closest to 1:2.0)</span></div>
             <table style="width:100%; border-collapse: collapse; font-size:0.85rem; text-align:center;">
                 <thead>
                     <tr style="border-bottom: 2px solid #eee; color: var(--primary);">
@@ -356,7 +356,7 @@
     </div>
 
     <script type="module">
-        console.log("APP VERSION: V28 (TABLES & DENSITY)");
+        console.log("APP VERSION: V29 (SMART SORT & 10-BEAN)");
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -495,10 +495,9 @@
                 beans = [];
                 snapshot.forEach((doc) => beans.push({ id: doc.id, ...doc.data() }));
                 app.renderBeanList();
-                app.fetchGlobalStats(); // Calculate stats after fetching beans
+                app.fetchGlobalStats(); 
             },
 
-            // --- V28: GLOBAL STATS ENGINE ---
             fetchGlobalStats: async () => {
                 try {
                     const q = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
@@ -521,7 +520,7 @@
                     
                     const sortedGrinds = Object.entries(grindCounts)
                         .sort((a,b) => b[1] - a[1])
-                        .slice(0, 3); // Get Top 3
+                        .slice(0, 3);
                     
                     const statsCard = document.getElementById('global-stats-card');
                     const statsContent = document.getElementById('global-stats-content');
@@ -626,7 +625,7 @@
                 document.getElementById('input-name').value = '';
                 document.getElementById('input-origin').value = '';
                 document.getElementById('input-roast-level').value = 'Medium';
-                document.getElementById('input-five-bean-weight').value = '';
+                document.getElementById('input-ten-bean-weight').value = '';
                 
                 currentEditingTags = [];
                 app.renderEditingTags();
@@ -658,7 +657,7 @@
                         name: document.getElementById('input-name').value,
                         origin: document.getElementById('input-origin').value,
                         roastLevel: document.getElementById('input-roast-level').value,
-                        fiveBeanWeight: document.getElementById('input-five-bean-weight').value.trim(),
+                        tenBeanWeight: document.getElementById('input-ten-bean-weight').value.trim(),
                         tags: currentEditingTags,
                         rating: parseInt(document.getElementById('input-bean-rating').value) || 0,
                         image: currentEditingImage,
@@ -703,7 +702,9 @@
                 document.getElementById('input-name').value = b.name;
                 document.getElementById('input-origin').value = b.origin || '';
                 document.getElementById('input-roast-level').value = b.roastLevel || 'Medium';
-                document.getElementById('input-five-bean-weight').value = b.fiveBeanWeight || '';
+                
+                // Fallback to old 5-bean weight if 10-bean doesn't exist yet
+                document.getElementById('input-ten-bean-weight').value = b.tenBeanWeight || b.fiveBeanWeight || '';
                 
                 currentEditingTags = b.tags ? [...b.tags] : [];
                 app.renderEditingTags();
@@ -753,8 +754,14 @@
                     let meta = [];
                     if(currentActiveBean.origin) meta.push(currentActiveBean.origin);
                     if(currentActiveBean.roastLevel) meta.push(currentActiveBean.roastLevel + " Roast");
-                    // V28: Display Density Weight
-                    if(currentActiveBean.fiveBeanWeight) meta.push(`⚖️ 5-Bean Wt: ${currentActiveBean.fiveBeanWeight}g`);
+                    
+                    // Display 10-Bean or fall back to 5-Bean for older entries
+                    if(currentActiveBean.tenBeanWeight) {
+                        meta.push(`⚖️ 10-Bean Wt: ${currentActiveBean.tenBeanWeight}g`);
+                    } else if(currentActiveBean.fiveBeanWeight) {
+                        meta.push(`⚖️ 5-Bean Wt: ${currentActiveBean.fiveBeanWeight}g`);
+                    }
+                    
                     document.getElementById('detail-meta').innerText = meta.join(' • ');
 
                     const tagsContainer = document.getElementById('detail-tags');
@@ -783,7 +790,7 @@
                     snapshot.forEach(doc => logsCache.push({ id: doc.id, ...doc.data() }));
                     logsCache.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
 
-                    // V28: SUMMARY TABLE INSTEAD OF CHART
+                    // V29: SMART SORTED DIAL-IN SUMMARY TABLE
                     const grouped = {};
                     logsCache.forEach(l => {
                         if(l.roastDate !== roastDate) return;
@@ -815,20 +822,38 @@
                     const summaryTbody = document.getElementById('dial-in-table-body');
                     summaryTbody.innerHTML = '';
                     
-                    const sortedGrinds = Object.keys(grouped).map(Number).sort((a,b) => a - b);
+                    // Create Array to Sort by closeness to 2.0
+                    const tableData = Object.keys(grouped).map(gStr => {
+                        const g = parseFloat(gStr);
+                        const group = grouped[gStr];
+                        const avgRatio = group.ratioCount > 0 ? (group.totalRatio / group.ratioCount) : null;
+                        const ratioDiff = avgRatio !== null ? Math.abs(avgRatio - 2.0) : 999;
+                        
+                        return {
+                            grind: g,
+                            avgRatio: avgRatio,
+                            avgTime: group.timeCount > 0 ? Math.round(group.totalTime / group.timeCount) + 's' : '--',
+                            count: group.count,
+                            ratioDiff: ratioDiff
+                        };
+                    });
                     
-                    if(sortedGrinds.length > 0) {
-                        sortedGrinds.forEach(g => {
-                            const group = grouped[g];
-                            const avgRatio = group.ratioCount > 0 ? (group.totalRatio / group.ratioCount).toFixed(1) : '--';
-                            const avgTime = group.timeCount > 0 ? Math.round(group.totalTime / group.timeCount) + 's' : '--';
+                    // Sort by ratioDiff (closest to 2.0 first)
+                    tableData.sort((a, b) => a.ratioDiff - b.ratioDiff);
+                    
+                    if(tableData.length > 0) {
+                        tableData.forEach((row, index) => {
+                            // Highlight the top row (closest to 2.0) if it has a valid ratio
+                            const isTop = index === 0 && row.avgRatio !== null;
+                            const rowStyle = isTop ? "border-bottom: 1px solid #eee; background-color: var(--good-bg);" : "border-bottom: 1px solid #eee;";
+                            const ratioDisplay = row.avgRatio !== null ? `1:${row.avgRatio.toFixed(1)}` : '--';
                             
                             summaryTbody.innerHTML += `
-                                <tr style="border-bottom: 1px solid #eee;">
-                                    <td style="padding: 10px 5px; font-weight: bold;">${g.toFixed(1)}</td>
-                                    <td style="padding: 10px 5px; color:#666;">1:${avgRatio}</td>
-                                    <td style="padding: 10px 5px; color:#666;">${avgTime}</td>
-                                    <td style="padding: 10px 5px; color:#888;">${group.count}</td>
+                                <tr style="${rowStyle}">
+                                    <td style="padding: 10px 5px; font-weight: bold; color: ${isTop ? 'var(--good-text)' : 'inherit'};">${row.grind.toFixed(1)}</td>
+                                    <td style="padding: 10px 5px; color:${isTop ? 'var(--good-text)' : '#666'};">${ratioDisplay}</td>
+                                    <td style="padding: 10px 5px; color:${isTop ? 'var(--good-text)' : '#666'};">${row.avgTime}</td>
+                                    <td style="padding: 10px 5px; color:${isTop ? 'var(--good-text)' : '#888'};">${row.count}</td>
                                 </tr>
                             `;
                         });
