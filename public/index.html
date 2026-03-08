@@ -3,15 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lincoln Barista v27</title>
+    <title>Lincoln Barista v28</title>
     <link rel="manifest" href="manifest.json">
     
     <meta name="theme-color" content="#6f4e37">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         /* --- THEME --- */
@@ -108,7 +106,7 @@
             background: white; outline: none;
         }
 
-        /* --- CHARTS --- */
+        /* --- CHARTS/TABLES --- */
         .chart-wrapper { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .chart-title { font-size: 0.8rem; font-weight: 700; color: #888; text-transform: uppercase; margin-bottom: 10px; text-align: center; }
 
@@ -164,7 +162,7 @@
 <body>
 
     <div id="top-bar">
-        <div class="app-logo">Lincoln <span>Barista v27</span></div>
+        <div class="app-logo">Lincoln <span>Barista v28</span></div>
         <div class="settings-btn" onclick="app.exportData()">⚙️</div>
     </div>
 
@@ -175,6 +173,12 @@
     </div>
 
     <div id="view-list" class="view">
+        
+        <div id="global-stats-card" class="chart-wrapper hidden" style="margin-bottom: 15px; padding: 12px; font-size: 0.85rem; border: 1px solid var(--accent);">
+            <div style="font-weight: 700; color: var(--primary); margin-bottom: 5px; text-transform: uppercase;">Global Stats</div>
+            <div id="global-stats-content"></div>
+        </div>
+
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
             <h2 style="color: var(--primary);">My Beans</h2>
             <select class="sort-select" onchange="app.setSort(this.value)">
@@ -236,6 +240,11 @@
         </div>
 
         <div class="form-group">
+            <label>5-Bean Weight (g) <span style="font-weight:normal; color:#888;">Density Check</span></label>
+            <input type="text" inputmode="decimal" id="input-five-bean-weight" placeholder="e.g. 0.85">
+        </div>
+
+        <div class="form-group">
             <label>Tasting Notes</label>
             <div style="display:flex; gap:10px;">
                 <input type="text" id="input-new-tag" placeholder="e.g. Blueberry" onkeydown="if(event.key === 'Enter') { event.preventDefault(); app.addTag(); }">
@@ -288,9 +297,20 @@
         
         <h3 style="margin-top: 30px; margin-bottom: 10px;">Shot History</h3>
         
-        <div class="chart-wrapper">
-            <div class="chart-title">Dial-In Curve (Grind vs Avg Ratio)</div>
-            <canvas id="dialInChart" height="150"></canvas>
+        <div class="chart-wrapper" style="padding: 10px;">
+            <div class="chart-title">Dial-In Summary</div>
+            <table style="width:100%; border-collapse: collapse; font-size:0.85rem; text-align:center;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #eee; color: var(--primary);">
+                        <th style="padding: 8px 5px;">Grind</th>
+                        <th style="padding: 8px 5px;">Avg Ratio</th>
+                        <th style="padding: 8px 5px;">Avg Time</th>
+                        <th style="padding: 8px 5px;">Shots</th>
+                    </tr>
+                </thead>
+                <tbody id="dial-in-table-body">
+                    </tbody>
+            </table>
         </div>
 
         <div class="log-row header">
@@ -330,25 +350,13 @@
             </div>
         </div>
 
-        <div class="form-group" style="text-align: center;">
-            <label>Rate this Shot (Optional)</label>
-            <div class="rating-wrap">
-                <span class="star shot-star" onclick="app.setShotRating(1)">★</span>
-                <span class="star shot-star" onclick="app.setShotRating(2)">★</span>
-                <span class="star shot-star" onclick="app.setShotRating(3)">★</span>
-                <span class="star shot-star" onclick="app.setShotRating(4)">★</span>
-                <span class="star shot-star" onclick="app.setShotRating(5)">★</span>
-            </div>
-            <input type="hidden" id="input-shot-rating" value="0">
-        </div>
-
         <button class="btn" id="btn-save-shot" onclick="app.saveShot()">Log It</button>
         <button class="btn btn-secondary" onclick="app.router('detail')" style="margin-top: 10px;">Cancel</button>
         <button class="btn btn-danger hidden" id="btn-delete-shot" onclick="app.deleteShot()">Delete Shot</button>
     </div>
 
     <script type="module">
-        console.log("APP VERSION: V27 (RESTORED NAVIGATION)");
+        console.log("APP VERSION: V28 (TABLES & DENSITY)");
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -375,7 +383,6 @@
         let currentSort = 'newest';
         let currentActiveBean = null;
         let logsCache = [];
-        let dialInChartInstance = null;
         let currentEditingTags = [];
         let currentEditingImage = null; 
 
@@ -462,7 +469,7 @@
                 if(!confirm("Download all data as CSV?")) return;
                 const qLogs = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
                 const snapLogs = await getDocs(qLogs);
-                let csvContent = "data:text/csv;charset=utf-8,Type,Date,Roaster,Bean,Grind,Time,Dose,Yield,Rating\n";
+                let csvContent = "data:text/csv;charset=utf-8,Type,Date,Roaster,Bean,Grind,Time,Dose,Yield\n";
                 const beanMap = {};
                 beans.forEach(b => beanMap[b.id] = { name: b.name, roaster: b.roaster });
                 snapLogs.forEach(doc => {
@@ -471,7 +478,7 @@
                     const cleanName = `"${b.name.replace(/"/g, '""')}"`;
                     const cleanRoaster = `"${b.roaster.replace(/"/g, '""')}"`;
                     const dateStr = l.date ? new Date(l.date.seconds * 1000).toISOString().split('T')[0] : "Unknown";
-                    csvContent += `Shot,${dateStr},${cleanRoaster},${cleanName},${l.grind},${l.time},${l.dose},${l.yield},${l.rating}\n`;
+                    csvContent += `Shot,${dateStr},${cleanRoaster},${cleanName},${l.grind},${l.time},${l.dose},${l.yield}\n`;
                 });
                 const encodedUri = encodeURI(csvContent);
                 const link = document.createElement("a");
@@ -488,6 +495,50 @@
                 beans = [];
                 snapshot.forEach((doc) => beans.push({ id: doc.id, ...doc.data() }));
                 app.renderBeanList();
+                app.fetchGlobalStats(); // Calculate stats after fetching beans
+            },
+
+            // --- V28: GLOBAL STATS ENGINE ---
+            fetchGlobalStats: async () => {
+                try {
+                    const q = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
+                    const snapshot = await getDocs(q);
+                    
+                    const grindCounts = {};
+                    let totalShots = 0;
+                    
+                    snapshot.forEach(doc => {
+                        const l = doc.data();
+                        if(l.grind) {
+                            const gNum = parseFloat(l.grind);
+                            if(!isNaN(gNum)) {
+                                const gKey = gNum.toFixed(1);
+                                grindCounts[gKey] = (grindCounts[gKey] || 0) + 1;
+                                totalShots++;
+                            }
+                        }
+                    });
+                    
+                    const sortedGrinds = Object.entries(grindCounts)
+                        .sort((a,b) => b[1] - a[1])
+                        .slice(0, 3); // Get Top 3
+                    
+                    const statsCard = document.getElementById('global-stats-card');
+                    const statsContent = document.getElementById('global-stats-content');
+                    
+                    if(totalShots > 0) {
+                        statsCard.classList.remove('hidden');
+                        let topGrindsHtml = sortedGrinds.map(entry => `<b>${entry[0]}</b> <span style="color:#888;">(${entry[1]}x)</span>`).join(', &nbsp;');
+                        statsContent.innerHTML = `
+                            <div style="margin-bottom:6px;"><b>Total Shots Logged:</b> ${totalShots}</div>
+                            <div><b>Most Used Grinds:</b> <br> ${topGrindsHtml}</div>
+                        `;
+                    } else {
+                        statsCard.classList.add('hidden');
+                    }
+                } catch(e) {
+                    console.error("Error loading global stats", e);
+                }
             },
 
             toggleFilter: (tag) => {
@@ -575,6 +626,7 @@
                 document.getElementById('input-name').value = '';
                 document.getElementById('input-origin').value = '';
                 document.getElementById('input-roast-level').value = 'Medium';
+                document.getElementById('input-five-bean-weight').value = '';
                 
                 currentEditingTags = [];
                 app.renderEditingTags();
@@ -606,6 +658,7 @@
                         name: document.getElementById('input-name').value,
                         origin: document.getElementById('input-origin').value,
                         roastLevel: document.getElementById('input-roast-level').value,
+                        fiveBeanWeight: document.getElementById('input-five-bean-weight').value.trim(),
                         tags: currentEditingTags,
                         rating: parseInt(document.getElementById('input-bean-rating').value) || 0,
                         image: currentEditingImage,
@@ -650,6 +703,7 @@
                 document.getElementById('input-name').value = b.name;
                 document.getElementById('input-origin').value = b.origin || '';
                 document.getElementById('input-roast-level').value = b.roastLevel || 'Medium';
+                document.getElementById('input-five-bean-weight').value = b.fiveBeanWeight || '';
                 
                 currentEditingTags = b.tags ? [...b.tags] : [];
                 app.renderEditingTags();
@@ -699,6 +753,8 @@
                     let meta = [];
                     if(currentActiveBean.origin) meta.push(currentActiveBean.origin);
                     if(currentActiveBean.roastLevel) meta.push(currentActiveBean.roastLevel + " Roast");
+                    // V28: Display Density Weight
+                    if(currentActiveBean.fiveBeanWeight) meta.push(`⚖️ 5-Bean Wt: ${currentActiveBean.fiveBeanWeight}g`);
                     document.getElementById('detail-meta').innerText = meta.join(' • ');
 
                     const tagsContainer = document.getElementById('detail-tags');
@@ -727,53 +783,60 @@
                     snapshot.forEach(doc => logsCache.push({ id: doc.id, ...doc.data() }));
                     logsCache.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
 
-                    if(dialInChartInstance) dialInChartInstance.destroy();
+                    // V28: SUMMARY TABLE INSTEAD OF CHART
                     const grouped = {};
-                    
                     logsCache.forEach(l => {
                         if(l.roastDate !== roastDate) return;
                         
                         const grindVal = parseFloat(l.grind);
                         const doseVal = parseFloat(l.dose);
                         const yieldVal = parseFloat(l.yield);
+                        const timeVal = parseFloat(l.time);
                         
-                        if(isNaN(grindVal) || isNaN(doseVal) || isNaN(yieldVal) || doseVal <= 0 || yieldVal <= 0) return;
+                        if(isNaN(grindVal)) return;
                         
-                        const ratio = yieldVal / doseVal;
+                        if(!grouped[grindVal]) {
+                            grouped[grindVal] = { totalRatio: 0, ratioCount: 0, totalTime: 0, timeCount: 0, count: 0 };
+                        }
                         
-                        if(!grouped[grindVal]) grouped[grindVal] = { total: 0, count: 0 };
-                        grouped[grindVal].total += ratio;
+                        if(!isNaN(doseVal) && !isNaN(yieldVal) && doseVal > 0) {
+                            grouped[grindVal].totalRatio += (yieldVal / doseVal);
+                            grouped[grindVal].ratioCount++;
+                        }
+
+                        if(!isNaN(timeVal)) {
+                            grouped[grindVal].totalTime += timeVal;
+                            grouped[grindVal].timeCount++;
+                        }
+
                         grouped[grindVal].count++;
                     });
 
-                    const chartData = Object.keys(grouped).map(k => ({
-                        x: parseFloat(k),
-                        y: grouped[k].total / grouped[k].count
-                    })).sort((a,b) => a.x - b.x);
+                    const summaryTbody = document.getElementById('dial-in-table-body');
+                    summaryTbody.innerHTML = '';
+                    
+                    const sortedGrinds = Object.keys(grouped).map(Number).sort((a,b) => a - b);
+                    
+                    if(sortedGrinds.length > 0) {
+                        sortedGrinds.forEach(g => {
+                            const group = grouped[g];
+                            const avgRatio = group.ratioCount > 0 ? (group.totalRatio / group.ratioCount).toFixed(1) : '--';
+                            const avgTime = group.timeCount > 0 ? Math.round(group.totalTime / group.timeCount) + 's' : '--';
+                            
+                            summaryTbody.innerHTML += `
+                                <tr style="border-bottom: 1px solid #eee;">
+                                    <td style="padding: 10px 5px; font-weight: bold;">${g.toFixed(1)}</td>
+                                    <td style="padding: 10px 5px; color:#666;">1:${avgRatio}</td>
+                                    <td style="padding: 10px 5px; color:#666;">${avgTime}</td>
+                                    <td style="padding: 10px 5px; color:#888;">${group.count}</td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        summaryTbody.innerHTML = `<tr><td colspan="4" style="padding:15px; color:#ccc;">Log shots to see summary</td></tr>`;
+                    }
 
-                    dialInChartInstance = new Chart(document.getElementById('dialInChart'), {
-                        type: 'line',
-                        data: {
-                            datasets: [{
-                                label: 'Avg Ratio (1:x)',
-                                data: chartData,
-                                borderColor: '#6f4e37',
-                                backgroundColor: '#d2b48c',
-                                tension: 0.1
-                            }]
-                        },
-                        options: {
-                            scales: {
-                                x: { 
-                                    type: 'linear', 
-                                    title: { display: true, text: 'Grind Setting' },
-                                    ticks: { stepSize: 0.1, callback: function(value) { return value.toFixed(1); } }
-                                },
-                                y: { title: { display: true, text: 'Avg Ratio (1:x)' }, suggestedMin: 1.0, suggestedMax: 3.0 }
-                            }
-                        }
-                    });
-
+                    // RENDER INDIVIDUAL LOGS
                     const groups = {};
                     logsCache.forEach(log => {
                         const k = log.roastDate || "Unknown Batch";
@@ -819,8 +882,6 @@
                             row.className = `log-row ${extClass}`;
                             row.onclick = () => app.openEditShot(log.id);
                             
-                            let starDisplay = log.rating > 0 ? `<span style="color:#f1c40f;">${'★'.repeat(log.rating)}</span>` : '';
-
                             row.innerHTML = `
                                 <div>
                                     <div style="font-weight:700;">${log.time || '--'}s</div>
@@ -829,7 +890,7 @@
                                 <div style="font-weight:700;">${log.grind || '--'}</div>
                                 <div>
                                     <div style="color:#666;">1:${ratioVal.toFixed(1)}</div>
-                                    <div style="font-size:0.7rem;">${log.dose || '-'}g/${log.yield || '-'}g ${starDisplay}</div>
+                                    <div style="font-size:0.7rem;">${log.dose || '-'}g/${log.yield || '-'}g</div>
                                 </div>
                             `;
                             groupDiv.appendChild(row);
@@ -837,7 +898,6 @@
                         container.appendChild(groupDiv);
                     });
                     
-                    // V27 FIX: Re-added the missing router call so the page actually turns
                     app.router('detail'); 
                     
                 } catch(err) {
@@ -854,7 +914,7 @@
                 document.getElementById('input-shot-time').value = '30';
                 document.getElementById('input-shot-dose').value = '16';
                 document.getElementById('input-shot-yield').value = '32';
-                app.setShotRating(0);
+                
                 document.getElementById('btn-save-shot').innerText = "Log It";
                 document.getElementById('btn-delete-shot').classList.add('hidden');
                 app.router('log-shot');
@@ -867,19 +927,14 @@
                 document.getElementById('input-log-bean-id').value = currentActiveBean ? currentActiveBean.id : log.beanId;
                 document.getElementById('input-log-shot-id').value = shotId;
                 document.getElementById('log-display-date').innerText = log.roastDate;
-                document.getElementById('input-shot-grind').value = log.grind;
-                document.getElementById('input-shot-time').value = log.time;
-                document.getElementById('input-shot-dose').value = log.dose;
-                document.getElementById('input-shot-yield').value = log.yield;
-                app.setShotRating(log.rating || 0);
+                document.getElementById('input-shot-grind').value = log.grind || '';
+                document.getElementById('input-shot-time').value = log.time || '';
+                document.getElementById('input-shot-dose').value = log.dose || '';
+                document.getElementById('input-shot-yield').value = log.yield || '';
+                
                 document.getElementById('btn-save-shot').innerText = "Update Log";
                 document.getElementById('btn-delete-shot').classList.remove('hidden');
                 app.router('log-shot');
-            },
-
-            setShotRating: (n) => {
-                document.getElementById('input-shot-rating').value = n;
-                document.querySelectorAll('.shot-star').forEach((el, i) => { el.classList.toggle('selected', i < n); });
             },
 
             saveShot: async () => {
@@ -909,8 +964,7 @@
                         grind: grindVal,
                         time: timeVal,
                         dose: doseVal,
-                        yield: yieldVal,
-                        rating: parseInt(document.getElementById('input-shot-rating').value) || 0,
+                        yield: yieldVal
                     };
                     
                     if(!data.grind) {
