@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lincoln Barista v29</title>
+    <title>Lincoln Barista v30</title>
     <link rel="manifest" href="manifest.json">
     
     <meta name="theme-color" content="#6f4e37">
@@ -162,7 +162,7 @@
 <body>
 
     <div id="top-bar">
-        <div class="app-logo">Lincoln <span>Barista v29</span></div>
+        <div class="app-logo">Lincoln <span>Barista v30</span></div>
         <div class="settings-btn" onclick="app.exportData()">⚙️</div>
     </div>
 
@@ -298,7 +298,7 @@
         <h3 style="margin-top: 30px; margin-bottom: 10px;">Shot History</h3>
         
         <div class="chart-wrapper" style="padding: 10px;">
-            <div class="chart-title">Dial-In Summary <br><span style="font-size:0.6rem; color:#999; font-weight:normal;">(Ranked closest to 1:2.0)</span></div>
+            <div class="chart-title">Dial-In Summary <br><span style="font-size:0.6rem; color:#999; font-weight:normal;">(All Batches • Ranked closest to 1:2.0)</span></div>
             <table style="width:100%; border-collapse: collapse; font-size:0.85rem; text-align:center;">
                 <thead>
                     <tr style="border-bottom: 2px solid #eee; color: var(--primary);">
@@ -356,7 +356,7 @@
     </div>
 
     <script type="module">
-        console.log("APP VERSION: V29 (SMART SORT & 10-BEAN)");
+        console.log("APP VERSION: V30 (LIFETIME SUMMARY)");
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -702,8 +702,6 @@
                 document.getElementById('input-name').value = b.name;
                 document.getElementById('input-origin').value = b.origin || '';
                 document.getElementById('input-roast-level').value = b.roastLevel || 'Medium';
-                
-                // Fallback to old 5-bean weight if 10-bean doesn't exist yet
                 document.getElementById('input-ten-bean-weight').value = b.tenBeanWeight || b.fiveBeanWeight || '';
                 
                 currentEditingTags = b.tags ? [...b.tags] : [];
@@ -755,7 +753,6 @@
                     if(currentActiveBean.origin) meta.push(currentActiveBean.origin);
                     if(currentActiveBean.roastLevel) meta.push(currentActiveBean.roastLevel + " Roast");
                     
-                    // Display 10-Bean or fall back to 5-Bean for older entries
                     if(currentActiveBean.tenBeanWeight) {
                         meta.push(`⚖️ 10-Bean Wt: ${currentActiveBean.tenBeanWeight}g`);
                     } else if(currentActiveBean.fiveBeanWeight) {
@@ -790,10 +787,10 @@
                     snapshot.forEach(doc => logsCache.push({ id: doc.id, ...doc.data() }));
                     logsCache.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
 
-                    // V29: SMART SORTED DIAL-IN SUMMARY TABLE
+                    // V30: SUMMARY TABLE NOW CALCULATES ACROSS ALL BATCHES FOR THIS BEAN
                     const grouped = {};
                     logsCache.forEach(l => {
-                        if(l.roastDate !== roastDate) return;
+                        // V30 Fix: Removed 'if(l.roastDate !== roastDate) return;' to include lifetime history
                         
                         const grindVal = parseFloat(l.grind);
                         const doseVal = parseFloat(l.dose);
@@ -822,7 +819,6 @@
                     const summaryTbody = document.getElementById('dial-in-table-body');
                     summaryTbody.innerHTML = '';
                     
-                    // Create Array to Sort by closeness to 2.0
                     const tableData = Object.keys(grouped).map(gStr => {
                         const g = parseFloat(gStr);
                         const group = grouped[gStr];
@@ -838,12 +834,10 @@
                         };
                     });
                     
-                    // Sort by ratioDiff (closest to 2.0 first)
                     tableData.sort((a, b) => a.ratioDiff - b.ratioDiff);
                     
                     if(tableData.length > 0) {
                         tableData.forEach((row, index) => {
-                            // Highlight the top row (closest to 2.0) if it has a valid ratio
                             const isTop = index === 0 && row.avgRatio !== null;
                             const rowStyle = isTop ? "border-bottom: 1px solid #eee; background-color: var(--good-bg);" : "border-bottom: 1px solid #eee;";
                             const ratioDisplay = row.avgRatio !== null ? `1:${row.avgRatio.toFixed(1)}` : '--';
