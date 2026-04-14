@@ -1,0 +1,338 @@
+/* 
+    Lincoln Barista "The Platinum Roast" Design System
+    Focus: Glassmorphism, Premium Typography, and Cohesive Aesthetics
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap');
+
+:root {
+    /* Color Palette - Sophisticated HSL */
+    --primary-h: 25;
+    --primary-s: 35%;
+    --primary-l: 33%;
+    --primary: hsl(var(--primary-h), var(--primary-s), var(--primary-l)); /* Espresso */
+    
+    --accent-h: 35;
+    --accent-s: 40%;
+    --accent-l: 80%;
+    --accent: hsl(var(--accent-h), var(--accent-s), var(--accent-l)); /* Cream/Latte */
+    
+    --bg-h: 30;
+    --bg-s: 20%;
+    --bg-l: 96%;
+    --page-bg: hsl(var(--bg-h), var(--bg-s), var(--bg-l)); /* Off-white linen */
+    
+    --dark-bg: #1c1917; /* Slate Stone */
+    --text-main: #27272a;
+    --text-muted: #71717a;
+    
+    /* Semantic Colors */
+    --success-bg: #f0fdf4;
+    --success-text: #166534;
+    --warning-bg: #fffbeb;
+    --warning-text: #92400e;
+    --error-bg: #fef2f2;
+    --error-text: #991b1b;
+    
+    /* Layout Tokens */
+    --radius-sm: 8px;
+    --radius-md: 16px;
+    --radius-lg: 24px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 10px 25px rgba(0,0,0,0.12);
+    
+    /* Glassmorphism */
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.5);
+}
+
+/* --- RESET & BASE --- */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background-color: var(--page-bg);
+    color: var(--text-main);
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    -webkit-user-select: none;
+    user-select: none;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+h1, h2, h3, .app-logo {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+}
+
+/* --- LAYOUT --- */
+#top-bar {
+    background: var(--dark-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: white;
+    padding: 1.2rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.app-logo {
+    font-size: 1.25rem;
+    letter-spacing: -0.02em;
+}
+
+.app-logo span {
+    color: var(--accent);
+    opacity: 0.9;
+}
+
+.view {
+    display: none;
+    padding: 1.5rem;
+    padding-bottom: 8rem; /* Space for FAB/Bottom Nav */
+    max-width: 480px;
+    margin: 0 auto;
+    width: 100%;
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.view.active {
+    display: block;
+}
+
+/* --- GLASS CARDS --- */
+.card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow-md);
+}
+
+/* --- BEAN CARDS --- */
+.bean-card {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border-left: 6px solid var(--primary);
+}
+
+.bean-card:active {
+    transform: scale(0.98);
+}
+
+.bean-card.roast-Light { border-left-color: #fbbf24; }
+.bean-card.roast-Medium { border-left-color: #b45309; }
+.bean-card.roast-Dark { border-left-color: #451a03; }
+.bean-card.roast-Espresso { border-left-color: #171717; }
+
+.bean-card-thumb {
+    width: 72px;
+    height: 72px;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+    background: #e4e4e7;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-sm);
+}
+
+/* --- FORMS --- */
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 2px solid transparent;
+    background: white;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 1rem;
+    color: var(--text-main);
+    box-shadow: var(--shadow-sm);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(210, 180, 140, 0.2);
+}
+
+/* --- BUTTONS --- */
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    width: 100%;
+    transition: transform 0.1s, opacity 0.2s, box-shadow 0.2s;
+    box-shadow: 0 8px 16px rgba(69, 26, 3, 0.15);
+}
+
+.btn:active {
+    transform: scale(0.96);
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--text-main);
+    border: 2px solid var(--accent);
+    box-shadow: none;
+}
+
+.btn-danger {
+    background: #fee2e2;
+    color: #ef4444;
+    box-shadow: none;
+}
+
+.fab {
+    position: fixed;
+    bottom: 2rem;
+    right: 1.5rem;
+    width: 64px;
+    height: 64px;
+    border-radius: 32px;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    box-shadow: 0 12px 24px rgba(0,0,0,0.25);
+    z-index: 100;
+    cursor: pointer;
+}
+
+/* --- UTILS --- */
+.hidden { display: none !important; }
+
+.tag-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    background: #f4f4f5;
+    color: var(--text-muted);
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin: 4px 4px 0 0;
+}
+
+.tag-pill.active {
+    background: var(--primary);
+    color: white;
+}
+
+/* --- ANALYTICS & LOGS --- */
+.log-row {
+    background: white;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.5rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1rem;
+    align-items: center;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.log-row::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+}
+
+.ext-good::before { background: #10b981; }
+.ext-fast::before { background: #3b82f6; }
+.ext-slow::before { background: #f59e0b; }
+
+.advice-text {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* --- SHOT DETAIL / CHART --- */
+.chart-wrapper {
+    background: rgba(255,255,255,0.5);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    border: 1px solid var(--glass-border);
+}
+
+.dial-in-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+/* --- RATING --- */
+.star {
+    font-size: 1.5rem;
+    color: #e4e4e7;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.star.selected {
+    color: #fbbf24;
+}
+
+/* Mobile-Specific Refinements */
+@media (max-width: 480px) {
+    body {
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+    .view {
+        padding: 1rem;
+    }
+}

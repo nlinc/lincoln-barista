@@ -2,260 +2,122 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lincoln Barista v30</title>
-    <link rel="manifest" href="manifest.json">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Lincoln Barista Platinum</title>
     
-    <meta name="theme-color" content="#6f4e37">
+    <!-- PWA & Mobile Meta -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1c1917">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/751/751621.png">
 
-    <style>
-        /* --- THEME --- */
-        :root {
-            --primary: #6f4e37;   
-            --accent: #d2b48c;    
-            --dark-bg: #2c241b;      
-            --page-bg: #f8f5f2;   
-            --text-dark: #3e3630;
-            --radius: 12px;
-            
-            /* Extraction Colors */
-            --fast-bg: #e3f2fd; --fast-text: #1565c0;
-            --slow-bg: #fbe9e7; --slow-text: #d84315;
-            --good-bg: #e8f5e9; --good-text: #2e7d32;
-        }
-
-        /* --- GLOBAL --- */
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--page-bg); color: var(--text-dark);
-            padding: 0; margin: 0; display: flex; flex-direction: column; height: 100vh;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        /* --- HEADERS --- */
-        #top-bar {
-            background-color: var(--dark-bg); color: white;
-            padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 100;
-        }
-        .app-logo { font-weight: 800; font-size: 1.3rem; letter-spacing: -0.5px; }
-        .app-logo span { color: var(--accent); }
-        .settings-btn { font-size: 1.5rem; cursor: pointer; }
-
-        h1, h2, h3 { font-weight: 700; margin: 0; }
-
-        /* --- LAYOUT --- */
-        .view { display: none; padding: 20px; padding-bottom: 120px; max-width: 600px; margin: 0 auto; width: 100%; box-sizing: border-box; }
-        .view.active { display: block; animation: fadeUp 0.3s ease; }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* UTILS */
-        .hidden { display: none !important; }
-
-        /* --- FORMS --- */
-        .form-group { margin-bottom: 20px; }
-        label { display: block; color: var(--primary); font-weight: 700; font-size: 0.85rem; margin-bottom: 6px; text-transform: uppercase; }
-        input, textarea, select {
-            width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: var(--radius);
-            font-size: 1rem; box-sizing: border-box; background: white; -webkit-appearance: none;
-        }
-        input:focus, select:focus { border-color: var(--primary); outline: none; }
-
-        /* --- CARDS & TAGS --- */
-        .bean-card {
-            background: white; border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; border-left: 5px solid transparent;
-            position: relative; display: flex; gap: 15px; align-items: center;
-        }
-        .bean-card.roast-Light { border-left-color: #f1c40f; }
-        .bean-card.roast-Medium { border-left-color: #a0522d; }
-        .bean-card.roast-Dark { border-left-color: #2c241b; }
-        .bean-card.roast-Espresso { border-left-color: #000; }
-
-        .bean-card-thumb {
-            width: 60px; height: 60px; border-radius: 8px; object-fit: cover; background: #eee; flex-shrink: 0;
-        }
-
-        .tag-pill {
-            display: inline-block; background: #eee; color: #555; 
-            padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; 
-            margin-right: 5px; margin-top: 5px; cursor: pointer; transition: background 0.2s;
-        }
-        .tag-pill:hover { background: #ddd; }
-        .tag-pill.active { background: var(--primary); color: white; }
-        .tag-pill.removable { padding-right: 8px; }
-        .tag-pill.removable span { margin-left: 5px; color: #999; font-weight: bold; }
-
-        /* --- FILTERS & SORT --- */
-        #filter-bar {
-            display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; white-space: nowrap;
-        }
-        .filter-chip {
-            background: white; border: 1px solid #ddd; color: #666; padding: 6px 12px;
-            border-radius: 20px; font-size: 0.85rem; cursor: pointer;
-        }
-        .filter-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
-        .filter-chip.clear-btn { background: #fee; color: #d32f2f; border-color: #fee; }
-        
-        .sort-select {
-            padding: 6px 10px; border-radius: 8px; border: 1px solid #ddd;
-            font-size: 0.85rem; color: var(--primary); font-weight: 600;
-            background: white; outline: none;
-        }
-
-        /* --- CHARTS/TABLES --- */
-        .chart-wrapper { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .chart-title { font-size: 0.8rem; font-weight: 700; color: #888; text-transform: uppercase; margin-bottom: 10px; text-align: center; }
-
-        /* --- HISTORY LOG ROW --- */
-        .batch-header {
-            margin-top: 25px; margin-bottom: 8px; font-weight: 800; color: var(--primary); font-size: 0.9rem;
-            border-bottom: 1px solid #ddd; padding-bottom: 4px;
-        }
-        .log-row {
-            background: white; padding: 12px; border-bottom: 1px solid #eee;
-            display: grid; grid-template-columns: 0.6fr 1fr 1fr; align-items: center;
-            font-size: 0.9rem; cursor: pointer;
-        }
-        .log-row > :nth-child(2) { text-align: center; }
-        .log-row:first-child { border-top-left-radius: 8px; border-top-right-radius: 8px; }
-        .log-row:last-child { border-bottom: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
-        .log-row.header { background: #eee; font-weight: bold; font-size: 0.75rem; color: #666; text-transform: uppercase; border-radius: 8px; margin-bottom: 5px; cursor: default; }
-        
-        .log-row.ext-fast { background-color: var(--fast-bg); }
-        .log-row.ext-slow { background-color: var(--slow-bg); }
-        .log-row.ext-good { background-color: var(--good-bg); }
-
-        .advice-text { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-top: 4px; }
-        .advice-fast { color: var(--fast-text); }
-        .advice-slow { color: var(--slow-text); }
-        .advice-good { color: var(--good-text); }
-
-        /* --- BUTTONS --- */
-        .btn {
-            background-color: var(--primary); color: white; border: none; padding: 15px;
-            font-size: 1rem; font-weight: 700; cursor: pointer; border-radius: var(--radius); width: 100%;
-            box-shadow: 0 4px 10px rgba(111, 78, 55, 0.3);
-        }
-        .btn-sm { padding: 6px 12px; font-size: 0.8rem; width: auto; cursor: pointer; }
-        .btn-secondary { background-color: white; color: #333; border: 2px solid #ddd; box-shadow: none; }
-        .btn-danger { background-color: #fee; color: #d32f2f; border: none; margin-top: 15px; box-shadow: none; }
-        .fab {
-            position: fixed; bottom: 30px; right: 20px;
-            background: var(--primary); color: white; width: 60px; height: 60px;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 2rem; cursor: pointer; z-index: 90;
-            box-shadow: 0 4px 12px rgba(111, 78, 55, 0.4);
-        }
-
-        /* --- RATING STARS --- */
-        .rating-wrap { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
-        .star { font-size: 2rem; color: #ddd; cursor: pointer; transition: color 0.2s; }
-        .star.selected { color: #f1c40f; }
-        .star.bean-star { font-size: 2.5rem; }
-
-    </style>
+    <!-- Design System -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div id="top-bar">
-        <div class="app-logo">Lincoln <span>Barista v30</span></div>
-        <div class="settings-btn" onclick="app.exportData()">⚙️</div>
+        <div class="app-logo">Lincoln <span>Barista <small>Platinum</small></span></div>
+        <div class="settings-btn" onclick="app.logout()" style="cursor: pointer; opacity: 0.8;">LOGOUT</div>
     </div>
 
-    <div id="view-login" class="view active" style="text-align: center; padding-top: 25vh;">
-        <h1 style="color:var(--dark-bg);">Lincoln Barista</h1>
-        <div style="font-size: 3rem; margin: 20px 0;">☕</div>
-        <button class="btn" id="btn-login" style="background: #4285F4;">Sign in with Google</button>
+    <!-- VIEW: LOGIN -->
+    <div id="view-login" class="view" style="text-align: center; padding-top: 20vh;">
+        <div style="font-size: 4rem; margin-bottom: 1rem; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1));">☕</div>
+        <h1 style="font-size: 2.25rem; margin-bottom: 0.5rem; color: var(--primary);">Lincoln Barista</h1>
+        <p style="color: var(--text-muted); margin-bottom: 2rem;">The art of the perfect extraction.</p>
+        <button class="btn" id="btn-login" style="background: #4285F4; max-width: 280px; margin: 0 auto;">Sign in with Google</button>
     </div>
 
+    <!-- VIEW: LIST -->
     <div id="view-list" class="view">
-        
-        <div id="global-stats-card" class="chart-wrapper hidden" style="margin-bottom: 15px; padding: 12px; font-size: 0.85rem; border: 1px solid var(--accent);">
-            <div style="font-weight: 700; color: var(--primary); margin-bottom: 5px; text-transform: uppercase;">Global Stats</div>
+        <div id="global-stats-card" class="card hidden">
             <div id="global-stats-content"></div>
         </div>
 
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <h2 style="color: var(--primary);">My Beans</h2>
-            <select class="sort-select" onchange="app.setSort(this.value)">
-                <option value="newest" selected>Sort: Newest</option>
-                <option value="name">Sort: A-Z</option>
-                <option value="rating">Sort: Best Rated</option>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; margin-top: 1rem;">
+            <h2 style="font-size: 1.5rem; color: var(--primary);">My Collection</h2>
+            <select style="width: auto; padding: 0.5rem; font-size: 0.8rem; border: none; background: transparent; font-weight: 600; color: var(--text-muted);" onchange="app.setSort(this.value)">
+                <option value="newest">Recent</option>
+                <option value="name">A-Z</option>
+                <option value="rating">Top Rated</option>
             </select>
         </div>
 
-        <div id="filter-bar" class="hidden"></div>
+        <div id="filter-bar" style="display:flex; gap:0.5rem; overflow-x:auto; padding-bottom:1rem; margin-bottom:0.5rem;"></div>
         <div id="bean-list-container"></div>
+        
         <div class="fab" onclick="app.resetBeanForm(); app.router('edit-bean');">+</div>
     </div>
 
+    <!-- VIEW: EDIT BEAN -->
     <div id="view-edit-bean" class="view">
-        <h2 id="bean-form-header" style="color: var(--primary); margin-bottom: 20px;">New Bean Profile</h2>
+        <h2 id="bean-form-header" style="margin-bottom: 1.5rem;">New Profile</h2>
         <input type="hidden" id="input-bean-id">
         
-        <div class="form-group" style="text-align: center; background: white; padding: 15px; border-radius: var(--radius); border: 1px solid #eee;">
-            <label>Bag Photo</label>
-            <img id="edit-image-preview" src="" style="display:none; width:100%; max-height:250px; object-fit:contain; border-radius:8px; margin-bottom:15px;">
-            <label class="btn btn-secondary" style="display:block; cursor:pointer;">
-                📷 Take/Upload Photo
+        <div class="card" style="text-align: center;">
+            <label>Bag Imagery</label>
+            <img id="edit-image-preview" class="hidden" style="width:100%; max-height:300px; object-fit:contain; border-radius:var(--radius-sm); margin-bottom:1rem; border: 1px solid var(--accent);">
+            <label class="btn btn-secondary" style="cursor:pointer;">
+                📷 Select Photo
                 <input type="file" accept="image/*" capture="environment" id="input-bean-image" style="display:none;" onchange="app.handleImageUpload(event)">
             </label>
-            <button class="btn-sm btn-danger hidden" id="btn-remove-image" onclick="app.removeImage()" style="margin-top:10px;">Remove Photo</button>
+            <button class="btn btn-danger hidden" id="btn-remove-image" onclick="app.removeImage()" style="margin-top:10px; padding: 0.5rem;">Remove</button>
         </div>
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+        <div class="card">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                <div class="form-group">
+                    <label>Roastery</label>
+                    <input type="text" id="input-roaster" placeholder="Onyx, Square Mile...">
+                </div>
+                <div class="form-group">
+                    <label>Region</label>
+                    <input type="text" id="input-roaster-location" placeholder="Arkansas, London...">
+                </div>
+            </div>
+
             <div class="form-group">
-                <label>Roaster</label>
-                <input type="text" id="input-roaster" placeholder="e.g. Onyx">
+                <label>Bean / Blend Name</label>
+                <input type="text" id="input-name" placeholder="Geometry, Sweet Shop...">
             </div>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                <div class="form-group">
+                    <label>Origin</label>
+                    <input type="text" id="input-origin" placeholder="Ethiopia, Colombia...">
+                </div>
+                <div class="form-group">
+                    <label>Roast Level</label>
+                    <select id="input-roast-level">
+                        <option value="Light">Light</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Dark">Dark</option>
+                        <option value="Espresso">Espresso</option>
+                    </select>
+                </div>
+            </div>
+
             <div class="form-group">
-                <label>Location</label>
-                <input type="text" id="input-roaster-location" placeholder="e.g. Rogers, AR">
+                <label>Density Check (10-Bean Weight)</label>
+                <input type="number" inputmode="decimal" step="0.01" id="input-ten-bean-weight" placeholder="1.70g">
             </div>
-        </div>
 
-        <div class="form-group">
-            <label>Bean Name</label>
-            <input type="text" id="input-name" placeholder="e.g. Geometry">
-        </div>
-        
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
             <div class="form-group">
-                <label>Origin</label>
-                <input type="text" id="input-origin" placeholder="e.g. Ethiopia">
-            </div>
-            <div class="form-group">
-                <label>Roast Level</label>
-                <select id="input-roast-level">
-                    <option value="Light">Light</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Dark">Dark</option>
-                    <option value="Espresso">Espresso</option>
-                </select>
+                <label>Tasting Profiles</label>
+                <div style="display:flex; gap:0.5rem;">
+                    <input type="text" id="input-new-tag" placeholder="Blueberry, Floral..." onkeydown="if(event.key === 'Enter') app.addTag()">
+                    <button class="btn btn-secondary" style="width: auto; padding: 0 1rem;" onclick="app.addTag()">Add</button>
+                </div>
+                <div id="editing-tags-container" style="margin-top:0.5rem;"></div>
             </div>
         </div>
 
-        <div class="form-group">
-            <label>10-Bean Weight (g) <span style="font-weight:normal; color:#888;">Density Check</span></label>
-            <input type="text" inputmode="decimal" id="input-ten-bean-weight" placeholder="e.g. 1.70">
-        </div>
-
-        <div class="form-group">
-            <label>Tasting Notes</label>
-            <div style="display:flex; gap:10px;">
-                <input type="text" id="input-new-tag" placeholder="e.g. Blueberry" onkeydown="if(event.key === 'Enter') { event.preventDefault(); app.addTag(); }">
-                <button class="btn btn-secondary btn-sm" onclick="app.addTag()">Add</button>
-            </div>
-            <div id="editing-tags-container" style="margin-top:10px;"></div>
-        </div>
-
-        <div class="form-group" style="text-align: center; margin-top:30px; background: white; padding: 15px; border-radius: var(--radius); border: 1px solid #eee;">
-            <label>Overall Bag Rating</label>
-            <div class="rating-wrap">
+        <div class="card" style="text-align: center;">
+            <label>Overall Impression</label>
+            <div class="rating-wrap" style="display:flex; justify-content:center; gap:0.5rem; margin-top:0.5rem;">
                 <span class="star bean-star" onclick="app.setBeanRating(1)">★</span>
                 <span class="star bean-star" onclick="app.setBeanRating(2)">★</span>
                 <span class="star bean-star" onclick="app.setBeanRating(3)">★</span>
@@ -266,777 +128,102 @@
         </div>
 
         <button class="btn" id="btn-save-bean" onclick="app.saveBean()">Save Profile</button>
-        <button class="btn btn-secondary" onclick="app.router('list')" style="margin-top: 10px;">Cancel</button>
-        <button class="btn btn-danger hidden" id="btn-delete-bean" onclick="app.deleteBean()">Archive Bean</button>
+        <button class="btn btn-secondary" onclick="app.router('list')" style="margin-top: 0.75rem;">Cancel</button>
+        <button class="btn btn-danger hidden" id="btn-delete-bean" onclick="app.deleteBean()" style="margin-top: 1.5rem;">Archive Bean</button>
     </div>
 
+    <!-- VIEW: DETAIL -->
     <div id="view-detail" class="view">
-        <button class="btn-secondary btn-sm" style="margin-bottom: 15px;" onclick="app.router('list')">← Back</button>
+        <button class="btn-secondary" style="margin-bottom: 1.5rem; width: auto; padding: 0.5rem 1rem;" onclick="app.router('list')">← Collection</button>
         
-        <div style="text-align:center;">
-            <img id="detail-image" src="" style="display:none; width:150px; height:150px; object-fit:cover; border-radius:12px; margin: 0 auto 15px auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-            <div id="detail-roaster" style="font-size:0.9rem; color:var(--primary); font-weight:700; text-transform:uppercase;"></div>
-            <div id="detail-location" style="font-size:0.75rem; color:#888; margin-bottom:5px;"></div>
-            <h1 id="detail-name" style="font-size:2rem; margin:0;"></h1>
-            <div id="detail-rating" style="color:#f1c40f; font-size:1.2rem; margin-top:2px;"></div>
-            <div id="detail-meta" style="margin-top:5px; font-size:0.9rem; color:#666;"></div>
-            <div id="detail-tags" style="margin-top:10px;"></div>
-            <div style="margin-top:15px;">
-                <button class="btn-sm btn-secondary" onclick="app.editActiveBean()">✎ Edit Profile</button>
+        <div style="text-align:center; margin-bottom: 2rem;">
+            <img id="detail-image" src="" class="hidden" style="width:140px; height:140px; object-fit:cover; border-radius:var(--radius-md); margin: 0 auto 1.5rem auto; box-shadow: var(--shadow-lg); border: 2px solid white;">
+            <div id="detail-roaster" style="font-size:0.75rem; color:var(--primary); font-weight:800; text-transform:uppercase; letter-spacing:0.1em;"></div>
+            <h1 id="detail-name" style="font-size:2rem; line-height:1.2; margin: 0.25rem 0;"></h1>
+            <div id="detail-rating" style="font-size:1.5rem; margin-bottom: 0.5rem;"></div>
+            <div id="detail-age" style="font-size:0.8rem; color:var(--text-muted); font-weight:600;"></div>
+            
+            <div style="margin-top:1.5rem;">
+                <button class="btn-secondary" style="width:auto; padding:0.4rem 1rem; font-size:0.8rem;" onclick="app.editActiveBean()">Edit Profile</button>
             </div>
         </div>
 
-        <div style="background:white; padding:15px; border-radius:12px; margin-top:20px; border:2px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
             <div>
-                <div style="font-size:0.75rem; color:#888; text-transform:uppercase; font-weight:700;">Current Bag Date</div>
-                <div id="detail-date" style="font-size:1.1rem; font-weight:700;"></div>
-                <div id="detail-age" style="font-size:0.8rem; color:var(--primary); font-weight:600;"></div>
+                <div style="font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Active Batch</div>
+                <div id="detail-date" style="font-size:1.1rem; font-weight:700; color: var(--primary);"></div>
             </div>
-            <button class="btn btn-secondary btn-sm" onclick="app.promptNewDate()">Update Batch</button>
+            <button class="btn-secondary" style="width:auto; padding:0.4rem 0.75rem; font-size:0.75rem;" onclick="app.promptNewDate()">New Bag Date</button>
         </div>
         
-        <h3 style="margin-top: 30px; margin-bottom: 10px;">Shot History</h3>
-        
-        <div class="chart-wrapper" style="padding: 10px;">
-            <div class="chart-title">Dial-In Summary <br><span style="font-size:0.6rem; color:#999; font-weight:normal;">(All Batches • Ranked closest to 1:2.0)</span></div>
+        <div class="chart-wrapper">
+            <div style="font-size:0.65rem; font-weight:800; text-transform:uppercase; color:var(--text-muted); margin-bottom:0.75rem; text-align:center; letter-spacing:0.05em;">Dial-In Efficiency</div>
             <table style="width:100%; border-collapse: collapse; font-size:0.85rem; text-align:center;">
                 <thead>
-                    <tr style="border-bottom: 2px solid #eee; color: var(--primary);">
-                        <th style="padding: 8px 5px;">Grind</th>
-                        <th style="padding: 8px 5px;">Avg Ratio</th>
-                        <th style="padding: 8px 5px;">Avg Time</th>
-                        <th style="padding: 8px 5px;">Shots</th>
+                    <tr style="color: var(--text-muted); font-size: 0.7rem; text-transform: uppercase;">
+                        <th style="padding: 0.5rem;">Grind</th>
+                        <th style="padding: 0.5rem;">Ratio</th>
+                        <th style="padding: 0.5rem;">Time</th>
+                        <th style="padding: 0.5rem;">Count</th>
                     </tr>
                 </thead>
-                <tbody id="dial-in-table-body">
-                    </tbody>
+                <tbody id="dial-in-table-body"></tbody>
             </table>
         </div>
 
-        <div class="log-row header">
-            <span>Result</span>
-            <span>Grind</span>
-            <span>Ratio</span>
+        <div style="margin-top: 2rem;">
+            <div style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.75rem; padding-left: 0.5rem;">Extraction Logs</div>
+            <div id="history-container"></div>
         </div>
-        <div id="history-container"></div>
+        
         <div class="fab" onclick="app.openLogShot()">☕</div>
     </div>
 
+    <!-- VIEW: LOG SHOT -->
     <div id="view-log-shot" class="view">
-        <h2 id="log-shot-title" style="color: var(--primary); margin-bottom: 20px;">Log Extraction</h2>
+        <h2 id="log-shot-title" style="margin-bottom: 2rem;">Log Extraction</h2>
         <input type="hidden" id="input-log-bean-id">
         <input type="hidden" id="input-log-shot-id">
         
-        <div style="text-align:center; margin-bottom:20px; font-size:0.9rem; color:#666;">
-            Batch: <strong id="log-display-date"></strong>
-        </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-            <div class="form-group">
-                <label>Grind Setting</label>
-                <input type="text" inputmode="decimal" id="input-shot-grind" placeholder="14">
+        <div class="card">
+            <div style="text-align:center; margin-bottom:1.5rem;">
+                <div style="font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Active Batch</div>
+                <div id="log-display-date" style="font-weight:700; color:var(--primary);"></div>
             </div>
-            <div class="form-group">
-                <label>Time (Sec)</label>
-                <input type="text" inputmode="decimal" id="input-shot-time" placeholder="30">
-            </div>
-            <div class="form-group">
-                <label>Dose In (g)</label>
-                <input type="text" inputmode="decimal" id="input-shot-dose" placeholder="16">
-            </div>
-            <div class="form-group">
-                <label>Yield Out (g)</label>
-                <input type="text" inputmode="decimal" id="input-shot-yield" placeholder="32">
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Grind Setting</label>
+                    <input type="number" inputmode="decimal" step="0.1" id="input-shot-grind" placeholder="14.0">
+                </div>
+                <div class="form-group">
+                    <label>Time (Seconds)</label>
+                    <input type="number" inputmode="decimal" id="input-shot-time" placeholder="30">
+                </div>
+                <div class="form-group">
+                    <label>Dose In (g)</label>
+                    <input type="number" inputmode="decimal" step="0.1" id="input-shot-dose" placeholder="18.0">
+                </div>
+                <div class="form-group">
+                    <label>Yield Out (g)</label>
+                    <input type="number" inputmode="decimal" step="0.1" id="input-shot-yield" placeholder="36.0">
+                </div>
             </div>
         </div>
 
-        <button class="btn" id="btn-save-shot" onclick="app.saveShot()">Log It</button>
-        <button class="btn btn-secondary" onclick="app.router('detail')" style="margin-top: 10px;">Cancel</button>
-        <button class="btn btn-danger hidden" id="btn-delete-shot" onclick="app.deleteShot()">Delete Shot</button>
+        <button class="btn" id="btn-save-shot" onclick="app.saveShot()">Log Extraction</button>
+        <button class="btn btn-secondary" onclick="app.router('detail')" style="margin-top: 0.75rem;">Cancel</button>
+        <button class="btn btn-danger hidden" id="btn-delete-shot" onclick="app.deleteShot()" style="margin-top: 1.5rem;">Delete Log</button>
     </div>
 
-    <script type="module">
-        console.log("APP VERSION: V30 (LIFETIME SUMMARY)");
-
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        const firebaseConfig = {
-          apiKey: "AIzaSyAW0-niuOFshWMIjhTsPBrFEPwsK6200G4",
-          authDomain: "espresso-4298d.firebaseapp.com",
-          projectId: "espresso-4298d",
-          storageBucket: "espresso-4298d.firebasestorage.app",
-          messagingSenderId: "697900751526",
-          appId: "1:697900751526:web:402b382cad1337e0d73267",
-          measurementId: "G-WLRK06D2RZ"
-        };
-
-        const appInstance = initializeApp(firebaseConfig);
-        const auth = getAuth(appInstance);
-        const db = getFirestore(appInstance);
-        const provider = new GoogleAuthProvider();
-
-        let currentUser = null;
-        let beans = [];
-        let activeFilters = new Set();
-        let currentSort = 'newest';
-        let currentActiveBean = null;
-        let logsCache = [];
-        let currentEditingTags = [];
-        let currentEditingImage = null; 
-
-        window.app = {
-            router: (viewName, addToHistory = true) => {
-                document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-                document.getElementById(`view-${viewName}`).classList.add('active');
-                document.getElementById('top-bar').style.display = (viewName === 'login') ? 'none' : 'flex';
-                
-                if (addToHistory) {
-                    if (viewName === 'list' && !history.state) {
-                        history.replaceState({ view: viewName }, "", "#" + viewName);
-                    } else {
-                        history.pushState({ view: viewName }, "", "#" + viewName);
-                    }
-                }
-            },
-
-            login: async () => { try { await signInWithPopup(auth, provider); } catch(e) { alert(e.message); } },
-            logout: () => { if(confirm("Logout?")) signOut(auth).then(() => location.reload()); },
-
-            handleImageUpload: async (event) => {
-                const file = event.target.files[0];
-                if(!file) return;
-
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 500; 
-                        const scaleSize = MAX_WIDTH / img.width;
-                        canvas.width = MAX_WIDTH;
-                        canvas.height = img.height * scaleSize;
-
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        
-                        currentEditingImage = canvas.toDataURL('image/jpeg', 0.7);
-                        const preview = document.getElementById('edit-image-preview');
-                        preview.src = currentEditingImage;
-                        preview.style.display = 'block';
-                        document.getElementById('btn-remove-image').classList.remove('hidden');
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            },
-
-            removeImage: () => {
-                currentEditingImage = null;
-                document.getElementById('input-bean-image').value = '';
-                document.getElementById('edit-image-preview').style.display = 'none';
-                document.getElementById('btn-remove-image').classList.add('hidden');
-            },
-
-            addTag: () => {
-                const input = document.getElementById('input-new-tag');
-                const tag = input.value.trim();
-                if(tag && !currentEditingTags.includes(tag)) {
-                    currentEditingTags.push(tag);
-                    input.value = '';
-                    app.renderEditingTags();
-                }
-            },
-            
-            removeTag: (index) => {
-                currentEditingTags.splice(index, 1);
-                app.renderEditingTags();
-            },
-
-            renderEditingTags: () => {
-                const container = document.getElementById('editing-tags-container');
-                container.innerHTML = '';
-                currentEditingTags.forEach((tag, i) => {
-                    const pill = document.createElement('span');
-                    pill.className = 'tag-pill removable active';
-                    pill.innerHTML = `${tag} <span onclick="app.removeTag(${i})">×</span>`;
-                    container.appendChild(pill);
-                });
-            },
-
-            exportData: async () => {
-                if(!confirm("Download all data as CSV?")) return;
-                const qLogs = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
-                const snapLogs = await getDocs(qLogs);
-                let csvContent = "data:text/csv;charset=utf-8,Type,Date,Roaster,Bean,Grind,Time,Dose,Yield\n";
-                const beanMap = {};
-                beans.forEach(b => beanMap[b.id] = { name: b.name, roaster: b.roaster });
-                snapLogs.forEach(doc => {
-                    const l = doc.data();
-                    const b = beanMap[l.beanId] || { name: "Unknown", roaster: "Unknown" };
-                    const cleanName = `"${b.name.replace(/"/g, '""')}"`;
-                    const cleanRoaster = `"${b.roaster.replace(/"/g, '""')}"`;
-                    const dateStr = l.date ? new Date(l.date.seconds * 1000).toISOString().split('T')[0] : "Unknown";
-                    csvContent += `Shot,${dateStr},${cleanRoaster},${cleanName},${l.grind},${l.time},${l.dose},${l.yield}\n`;
-                });
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", "lincoln_barista_export.csv");
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            },
-
-            fetchBeans: async () => {
-                const q = query(collection(db, "beans"), where("uid", "==", currentUser.uid));
-                const snapshot = await getDocs(q);
-                beans = [];
-                snapshot.forEach((doc) => beans.push({ id: doc.id, ...doc.data() }));
-                app.renderBeanList();
-                app.fetchGlobalStats(); 
-            },
-
-            fetchGlobalStats: async () => {
-                try {
-                    const q = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
-                    const snapshot = await getDocs(q);
-                    
-                    const grindCounts = {};
-                    let totalShots = 0;
-                    
-                    snapshot.forEach(doc => {
-                        const l = doc.data();
-                        if(l.grind) {
-                            const gNum = parseFloat(l.grind);
-                            if(!isNaN(gNum)) {
-                                const gKey = gNum.toFixed(1);
-                                grindCounts[gKey] = (grindCounts[gKey] || 0) + 1;
-                                totalShots++;
-                            }
-                        }
-                    });
-                    
-                    const sortedGrinds = Object.entries(grindCounts)
-                        .sort((a,b) => b[1] - a[1])
-                        .slice(0, 3);
-                    
-                    const statsCard = document.getElementById('global-stats-card');
-                    const statsContent = document.getElementById('global-stats-content');
-                    
-                    if(totalShots > 0) {
-                        statsCard.classList.remove('hidden');
-                        let topGrindsHtml = sortedGrinds.map(entry => `<b>${entry[0]}</b> <span style="color:#888;">(${entry[1]}x)</span>`).join(', &nbsp;');
-                        statsContent.innerHTML = `
-                            <div style="margin-bottom:6px;"><b>Total Shots Logged:</b> ${totalShots}</div>
-                            <div><b>Most Used Grinds:</b> <br> ${topGrindsHtml}</div>
-                        `;
-                    } else {
-                        statsCard.classList.add('hidden');
-                    }
-                } catch(e) {
-                    console.error("Error loading global stats", e);
-                }
-            },
-
-            toggleFilter: (tag) => {
-                if(activeFilters.has(tag)) activeFilters.delete(tag);
-                else activeFilters.add(tag);
-                app.renderBeanList();
-            },
-            clearFilters: () => { activeFilters.clear(); app.renderBeanList(); },
-            setSort: (mode) => { currentSort = mode; app.renderBeanList(); },
-
-            renderBeanList: () => {
-                const c = document.getElementById('bean-list-container');
-                const fb = document.getElementById('filter-bar');
-                c.innerHTML = '';
-                fb.innerHTML = '';
-
-                let visibleBeans = beans.filter(b => {
-                    if(activeFilters.size === 0) return true;
-                    const beanTags = [b.roastLevel, b.origin, b.roasterLocation, ...(b.tags || [])].map(t => (t||'').toLowerCase());
-                    for(let f of activeFilters) { if(!beanTags.includes(f.toLowerCase())) return false; }
-                    return true;
-                });
-
-                if(currentSort === 'name') visibleBeans.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
-                else if (currentSort === 'rating') visibleBeans.sort((a,b) => (b.rating || 0) - (a.rating || 0));
-                else if (currentSort === 'newest') visibleBeans.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-
-                if(activeFilters.size > 0) {
-                    fb.classList.remove('hidden');
-                    const clearBtn = document.createElement('div');
-                    clearBtn.className = 'filter-chip clear-btn';
-                    clearBtn.innerText = '× Clear';
-                    clearBtn.onclick = () => app.clearFilters();
-                    fb.appendChild(clearBtn);
-                    activeFilters.forEach(f => {
-                        const chip = document.createElement('div');
-                        chip.className = 'filter-chip active';
-                        chip.innerText = f;
-                        chip.onclick = () => app.toggleFilter(f);
-                        fb.appendChild(chip);
-                    });
-                } else { fb.classList.add('hidden'); }
-
-                if(visibleBeans.length === 0) c.innerHTML = "<div style='text-align:center; color:#999; margin-top:40px;'>No matching beans.</div>";
-                
-                visibleBeans.forEach(b => {
-                    const div = document.createElement('div');
-                    div.className = `bean-card roast-${b.roastLevel || 'Medium'}`;
-                    let ratingHtml = (b.rating && b.rating > 0) ? `<span style="color:#f1c40f; margin-left:8px;">${'★'.repeat(b.rating)}</span>` : '';
-                    let thumbHtml = b.image ? `<img src="${b.image}" class="bean-card-thumb">` : `<div class="bean-card-thumb" style="display:flex; align-items:center; justify-content:center; font-size:1.5rem;">☕</div>`;
-
-                    div.innerHTML = `
-                        ${thumbHtml}
-                        <div style="flex-grow:1;">
-                            <div style="font-size:0.7rem; color:var(--primary); font-weight:700; text-transform:uppercase;">
-                                ${b.roaster} <span style="color:#999; margin-left:5px;">${b.roastLevel || ''}</span> ${ratingHtml}
-                            </div>
-                            <div style="font-weight:700; font-size:1.1rem; margin-bottom:5px;">${b.name}</div>
-                            <div class="tags-container"></div>
-                        </div>
-                    `;
-                    const tagContainer = div.querySelector('.tags-container');
-                    
-                    if(b.origin) {
-                        const t = document.createElement('span');
-                        t.className = 'tag-pill'; t.innerText = `📍 ${b.origin}`; t.onclick = (e) => { e.stopPropagation(); app.toggleFilter(b.origin); };
-                        tagContainer.appendChild(t);
-                    }
-                    if(b.tags && b.tags.length > 0) {
-                        b.tags.forEach(tagText => {
-                            const t = document.createElement('span');
-                            t.className = 'tag-pill'; t.innerText = `#${tagText}`; t.onclick = (e) => { e.stopPropagation(); app.toggleFilter(tagText); };
-                            tagContainer.appendChild(t);
-                        });
-                    }
-                    div.onclick = () => app.loadBeanDetail(b.id);
-                    c.appendChild(div);
-                });
-            },
-
-            resetBeanForm: () => {
-                document.getElementById('input-bean-id').value = '';
-                document.getElementById('input-roaster').value = '';
-                document.getElementById('input-roaster-location').value = '';
-                document.getElementById('input-name').value = '';
-                document.getElementById('input-origin').value = '';
-                document.getElementById('input-roast-level').value = 'Medium';
-                document.getElementById('input-ten-bean-weight').value = '';
-                
-                currentEditingTags = [];
-                app.renderEditingTags();
-                app.removeImage();
-
-                app.setBeanRating(0);
-                document.getElementById('bean-form-header').innerText = "New Bean Profile";
-                document.getElementById('btn-delete-bean').classList.add('hidden');
-                document.getElementById('btn-save-bean').innerText = "Save Profile";
-            },
-            
-            setBeanRating: (n) => {
-                document.getElementById('input-bean-rating').value = n;
-                document.querySelectorAll('.bean-star').forEach((el, i) => { el.classList.toggle('selected', i < n); });
-            },
-
-            saveBean: async () => {
-                const btn = document.getElementById('btn-save-bean');
-                const originalText = btn.innerText;
-                
-                try {
-                    btn.innerText = "Saving...";
-                    const id = document.getElementById('input-bean-id').value;
-                    
-                    const data = {
-                        uid: currentUser.uid,
-                        roaster: document.getElementById('input-roaster').value,
-                        roasterLocation: document.getElementById('input-roaster-location').value,
-                        name: document.getElementById('input-name').value,
-                        origin: document.getElementById('input-origin').value,
-                        roastLevel: document.getElementById('input-roast-level').value,
-                        tenBeanWeight: document.getElementById('input-ten-bean-weight').value.trim(),
-                        tags: currentEditingTags,
-                        rating: parseInt(document.getElementById('input-bean-rating').value) || 0,
-                        image: currentEditingImage,
-                        updatedAt: new Date()
-                    };
-
-                    if(!data.name) { btn.innerText = originalText; return alert("Name required"); }
-                    
-                    if(id) await updateDoc(doc(db, "beans", id), data);
-                    else await addDoc(collection(db, "beans"), { ...data, currentRoastDate: new Date().toISOString().split('T')[0], createdAt: new Date() });
-                    
-                    await app.fetchBeans();
-                    app.router('list');
-                } catch(e) {
-                    alert("Error saving: " + e.message);
-                    btn.innerText = originalText;
-                }
-            },
-
-            deleteBean: async () => {
-                if(confirm("Archive this bean?")) {
-                    await deleteDoc(doc(db, "beans", document.getElementById('input-bean-id').value));
-                    await app.fetchBeans();
-                    app.router('list');
-                }
-            },
-            promptNewDate: async () => {
-                const newDate = prompt("Enter roast date for the NEW bag (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
-                if (newDate && currentActiveBean) {
-                    await updateDoc(doc(db, "beans", currentActiveBean.id), { currentRoastDate: newDate });
-                    await app.fetchBeans(); 
-                    await app.loadBeanDetail(currentActiveBean.id);
-                }
-            },
-
-            editActiveBean: () => {
-                const b = currentActiveBean;
-                document.getElementById('bean-form-header').innerText = "Edit Bean";
-                document.getElementById('input-bean-id').value = b.id;
-                document.getElementById('input-roaster').value = b.roaster;
-                document.getElementById('input-roaster-location').value = b.roasterLocation || '';
-                document.getElementById('input-name').value = b.name;
-                document.getElementById('input-origin').value = b.origin || '';
-                document.getElementById('input-roast-level').value = b.roastLevel || 'Medium';
-                document.getElementById('input-ten-bean-weight').value = b.tenBeanWeight || b.fiveBeanWeight || '';
-                
-                currentEditingTags = b.tags ? [...b.tags] : [];
-                app.renderEditingTags();
-
-                if(b.image) {
-                    currentEditingImage = b.image;
-                    const preview = document.getElementById('edit-image-preview');
-                    preview.src = currentEditingImage;
-                    preview.style.display = 'block';
-                    document.getElementById('btn-remove-image').classList.remove('hidden');
-                } else {
-                    app.removeImage();
-                }
-                
-                app.setBeanRating(b.rating || 0);
-                document.getElementById('btn-delete-bean').classList.remove('hidden');
-                document.getElementById('btn-save-bean').innerText = "Update Profile";
-                app.router('edit-bean');
-            },
-
-            loadBeanDetail: async (id) => {
-                try {
-                    currentActiveBean = beans.find(b => b.id === id);
-                    if(!currentActiveBean) {
-                        await app.fetchBeans();
-                        currentActiveBean = beans.find(b => b.id === id);
-                        if(!currentActiveBean) {
-                            alert("Could not load this bean.");
-                            return app.router('list');
-                        }
-                    }
-
-                    const imgEl = document.getElementById('detail-image');
-                    if(currentActiveBean.image) {
-                        imgEl.src = currentActiveBean.image;
-                        imgEl.style.display = 'block';
-                    } else {
-                        imgEl.style.display = 'none';
-                    }
-
-                    document.getElementById('detail-roaster').innerText = currentActiveBean.roaster;
-                    document.getElementById('detail-location').innerText = currentActiveBean.roasterLocation ? `📍 ${currentActiveBean.roasterLocation}` : '';
-                    document.getElementById('detail-name').innerText = currentActiveBean.name;
-                    const r = currentActiveBean.rating || 0;
-                    document.getElementById('detail-rating').innerText = r > 0 ? '★'.repeat(r) : '';
-                    
-                    let meta = [];
-                    if(currentActiveBean.origin) meta.push(currentActiveBean.origin);
-                    if(currentActiveBean.roastLevel) meta.push(currentActiveBean.roastLevel + " Roast");
-                    
-                    if(currentActiveBean.tenBeanWeight) {
-                        meta.push(`⚖️ 10-Bean Wt: ${currentActiveBean.tenBeanWeight}g`);
-                    } else if(currentActiveBean.fiveBeanWeight) {
-                        meta.push(`⚖️ 5-Bean Wt: ${currentActiveBean.fiveBeanWeight}g`);
-                    }
-                    
-                    document.getElementById('detail-meta').innerText = meta.join(' • ');
-
-                    const tagsContainer = document.getElementById('detail-tags');
-                    tagsContainer.innerHTML = '';
-                    if(currentActiveBean.tags) {
-                        currentActiveBean.tags.forEach(t => {
-                            const sp = document.createElement('span');
-                            sp.className = 'tag-pill'; sp.innerText = t; sp.style.cursor = 'default'; sp.style.background = '#fff'; sp.style.border = '1px solid #ddd';
-                            tagsContainer.appendChild(sp);
-                        });
-                    }
-                    
-                    const roastDate = currentActiveBean.currentRoastDate || "Unknown";
-                    document.getElementById('detail-date').innerText = roastDate;
-                    if(roastDate !== "Unknown") {
-                        const diff = new Date() - new Date(roastDate);
-                        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                        document.getElementById('detail-age').innerText = `${days} days rest`;
-                    } else {
-                        document.getElementById('detail-age').innerText = "";
-                    }
-
-                    const q = query(collection(db, "brew_logs"), where("beanId", "==", id), where("uid", "==", currentUser.uid));
-                    const snapshot = await getDocs(q);
-                    logsCache = [];
-                    snapshot.forEach(doc => logsCache.push({ id: doc.id, ...doc.data() }));
-                    logsCache.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
-
-                    // V30: SUMMARY TABLE NOW CALCULATES ACROSS ALL BATCHES FOR THIS BEAN
-                    const grouped = {};
-                    logsCache.forEach(l => {
-                        // V30 Fix: Removed 'if(l.roastDate !== roastDate) return;' to include lifetime history
-                        
-                        const grindVal = parseFloat(l.grind);
-                        const doseVal = parseFloat(l.dose);
-                        const yieldVal = parseFloat(l.yield);
-                        const timeVal = parseFloat(l.time);
-                        
-                        if(isNaN(grindVal)) return;
-                        
-                        if(!grouped[grindVal]) {
-                            grouped[grindVal] = { totalRatio: 0, ratioCount: 0, totalTime: 0, timeCount: 0, count: 0 };
-                        }
-                        
-                        if(!isNaN(doseVal) && !isNaN(yieldVal) && doseVal > 0) {
-                            grouped[grindVal].totalRatio += (yieldVal / doseVal);
-                            grouped[grindVal].ratioCount++;
-                        }
-
-                        if(!isNaN(timeVal)) {
-                            grouped[grindVal].totalTime += timeVal;
-                            grouped[grindVal].timeCount++;
-                        }
-
-                        grouped[grindVal].count++;
-                    });
-
-                    const summaryTbody = document.getElementById('dial-in-table-body');
-                    summaryTbody.innerHTML = '';
-                    
-                    const tableData = Object.keys(grouped).map(gStr => {
-                        const g = parseFloat(gStr);
-                        const group = grouped[gStr];
-                        const avgRatio = group.ratioCount > 0 ? (group.totalRatio / group.ratioCount) : null;
-                        const ratioDiff = avgRatio !== null ? Math.abs(avgRatio - 2.0) : 999;
-                        
-                        return {
-                            grind: g,
-                            avgRatio: avgRatio,
-                            avgTime: group.timeCount > 0 ? Math.round(group.totalTime / group.timeCount) + 's' : '--',
-                            count: group.count,
-                            ratioDiff: ratioDiff
-                        };
-                    });
-                    
-                    tableData.sort((a, b) => a.ratioDiff - b.ratioDiff);
-                    
-                    if(tableData.length > 0) {
-                        tableData.forEach((row, index) => {
-                            const isTop = index === 0 && row.avgRatio !== null;
-                            const rowStyle = isTop ? "border-bottom: 1px solid #eee; background-color: var(--good-bg);" : "border-bottom: 1px solid #eee;";
-                            const ratioDisplay = row.avgRatio !== null ? `1:${row.avgRatio.toFixed(1)}` : '--';
-                            
-                            summaryTbody.innerHTML += `
-                                <tr style="${rowStyle}">
-                                    <td style="padding: 10px 5px; font-weight: bold; color: ${isTop ? 'var(--good-text)' : 'inherit'};">${row.grind.toFixed(1)}</td>
-                                    <td style="padding: 10px 5px; color:${isTop ? 'var(--good-text)' : '#666'};">${ratioDisplay}</td>
-                                    <td style="padding: 10px 5px; color:${isTop ? 'var(--good-text)' : '#666'};">${row.avgTime}</td>
-                                    <td style="padding: 10px 5px; color:${isTop ? 'var(--good-text)' : '#888'};">${row.count}</td>
-                                </tr>
-                            `;
-                        });
-                    } else {
-                        summaryTbody.innerHTML = `<tr><td colspan="4" style="padding:15px; color:#ccc;">Log shots to see summary</td></tr>`;
-                    }
-
-                    // RENDER INDIVIDUAL LOGS
-                    const groups = {};
-                    logsCache.forEach(log => {
-                        const k = log.roastDate || "Unknown Batch";
-                        if(!groups[k]) groups[k] = [];
-                        groups[k].push(log);
-                    });
-
-                    const container = document.getElementById('history-container');
-                    container.innerHTML = '';
-                    if(logsCache.length === 0) container.innerHTML = "<div style='padding:20px; text-align:center; color:#ccc;'>No shots logged.</div>";
-
-                    Object.keys(groups).sort().reverse().forEach(dateKey => {
-                        const h = document.createElement('div');
-                        h.className = 'batch-header';
-                        h.innerText = `BATCH: ${dateKey}`;
-                        container.appendChild(h);
-                        const groupDiv = document.createElement('div');
-                        groupDiv.style.borderRadius = "8px";
-                        groupDiv.style.boxShadow = "0 2px 5px rgba(0,0,0,0.05)";
-                        
-                        groups[dateKey].forEach(log => {
-                            const row = document.createElement('div');
-                            
-                            const dose = parseFloat(log.dose);
-                            const yieldOut = parseFloat(log.yield);
-                            let ratioVal = 0;
-                            if(!isNaN(dose) && !isNaN(yieldOut) && dose > 0) {
-                                ratioVal = yieldOut / dose;
-                            }
-
-                            let extClass = "ext-good";
-                            let advice = "Golden Zone";
-                            let adviceClass = "advice-good";
-                            
-                            if (ratioVal > 2.25) { 
-                                extClass = "ext-fast"; advice = "High Yield (Grind Finer)"; adviceClass = "advice-fast";
-                            } else if (ratioVal < 1.75 && ratioVal > 0) { 
-                                extClass = "ext-slow"; advice = "Low Yield (Grind Coarser)"; adviceClass = "advice-slow";
-                            } else if (ratioVal === 0) {
-                                advice = "Incomplete Data"; extClass = "ext-good"; adviceClass = "advice-good";
-                            }
-
-                            row.className = `log-row ${extClass}`;
-                            row.onclick = () => app.openEditShot(log.id);
-                            
-                            row.innerHTML = `
-                                <div>
-                                    <div style="font-weight:700;">${log.time || '--'}s</div>
-                                    <div class="advice-text ${adviceClass}">${advice}</div>
-                                </div>
-                                <div style="font-weight:700;">${log.grind || '--'}</div>
-                                <div>
-                                    <div style="color:#666;">1:${ratioVal.toFixed(1)}</div>
-                                    <div style="font-size:0.7rem;">${log.dose || '-'}g/${log.yield || '-'}g</div>
-                                </div>
-                            `;
-                            groupDiv.appendChild(row);
-                        });
-                        container.appendChild(groupDiv);
-                    });
-                    
-                    app.router('detail'); 
-                    
-                } catch(err) {
-                    console.error(err);
-                }
-            },
-
-            openLogShot: () => {
-                document.getElementById('log-shot-title').innerText = "Log Extraction";
-                document.getElementById('input-log-bean-id').value = currentActiveBean ? currentActiveBean.id : '';
-                document.getElementById('input-log-shot-id').value = '';
-                document.getElementById('log-display-date').innerText = currentActiveBean ? (currentActiveBean.currentRoastDate || "Unknown") : "Unknown";
-                document.getElementById('input-shot-grind').value = '';
-                document.getElementById('input-shot-time').value = '30';
-                document.getElementById('input-shot-dose').value = '16';
-                document.getElementById('input-shot-yield').value = '32';
-                
-                document.getElementById('btn-save-shot').innerText = "Log It";
-                document.getElementById('btn-delete-shot').classList.add('hidden');
-                app.router('log-shot');
-            },
-
-            openEditShot: (shotId) => {
-                const log = logsCache.find(l => l.id === shotId);
-                if(!log) return;
-                document.getElementById('log-shot-title').innerText = "Edit Extraction";
-                document.getElementById('input-log-bean-id').value = currentActiveBean ? currentActiveBean.id : log.beanId;
-                document.getElementById('input-log-shot-id').value = shotId;
-                document.getElementById('log-display-date').innerText = log.roastDate;
-                document.getElementById('input-shot-grind').value = log.grind || '';
-                document.getElementById('input-shot-time').value = log.time || '';
-                document.getElementById('input-shot-dose').value = log.dose || '';
-                document.getElementById('input-shot-yield').value = log.yield || '';
-                
-                document.getElementById('btn-save-shot').innerText = "Update Log";
-                document.getElementById('btn-delete-shot').classList.remove('hidden');
-                app.router('log-shot');
-            },
-
-            saveShot: async () => {
-                const btn = document.getElementById('btn-save-shot');
-                const originalText = btn.innerText;
-                
-                try {
-                    btn.innerText = "Saving...";
-                    
-                    const beanId = document.getElementById('input-log-bean-id').value;
-                    const shotId = document.getElementById('input-log-shot-id').value;
-                    
-                    if(!beanId) throw new Error("No bean selected.");
-
-                    if(!currentActiveBean || currentActiveBean.id !== beanId) {
-                        currentActiveBean = beans.find(b => b.id === beanId);
-                    }
-
-                    const grindVal = document.getElementById('input-shot-grind').value.trim();
-                    const timeVal = document.getElementById('input-shot-time').value.trim();
-                    const doseVal = document.getElementById('input-shot-dose').value.trim();
-                    const yieldVal = document.getElementById('input-shot-yield').value.trim();
-
-                    const data = {
-                        beanId: beanId,
-                        uid: currentUser.uid,
-                        grind: grindVal,
-                        time: timeVal,
-                        dose: doseVal,
-                        yield: yieldVal
-                    };
-                    
-                    if(!data.grind) {
-                        btn.innerText = originalText;
-                        return alert("Grind setting required!");
-                    }
-                    
-                    if(shotId) {
-                        await updateDoc(doc(db, "brew_logs", shotId), data);
-                    } else {
-                        data.roastDate = currentActiveBean ? (currentActiveBean.currentRoastDate || "Unknown") : "Unknown";
-                        data.date = new Date();
-                        await addDoc(collection(db, "brew_logs"), data);
-                    }
-                    
-                    btn.innerText = "Success!";
-                    await app.loadBeanDetail(beanId);
-                    
-                } catch (error) {
-                    alert("Error Saving: " + error.message);
-                    btn.innerText = originalText;
-                }
-            },
-
-            deleteShot: async () => {
-                if(confirm("Delete this shot log?")) {
-                    const shotId = document.getElementById('input-log-shot-id').value;
-                    const beanId = document.getElementById('input-log-bean-id').value;
-                    await deleteDoc(doc(db, "brew_logs", shotId));
-                    await app.loadBeanDetail(beanId);
-                }
-            }
-        };
-
-        window.addEventListener('popstate', (event) => {
-            if (event.state && event.state.view) {
-                app.router(event.state.view, false);
-            } else {
-                if (currentUser) app.router('list', false);
-            }
+    <!-- Load App Logic -->
+    <script type="module" src="js/app.js"></script>
+    <script>
+        // Inline script to handle basic login button listener before module loads if needed, 
+        // but app.js will handle it.
+        document.getElementById('btn-login').addEventListener('click', () => {
+            if (window.app) window.app.login();
         });
-
-        onAuthStateChanged(auth, u => {
-            if(u) {
-                currentUser = u;
-                document.getElementById('view-login').style.display='none';
-                app.fetchBeans();
-                app.router('list'); 
-            } else {
-                app.router('login');
-            }
-        });
-        document.getElementById('btn-login').addEventListener('click', app.login);
     </script>
 </body>
 </html>
