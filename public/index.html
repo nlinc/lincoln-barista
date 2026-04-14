@@ -20,7 +20,10 @@
 
     <div id="top-bar">
         <div class="app-logo">Lincoln <span>Barista <small>Platinum</small></span></div>
-        <div class="settings-btn" onclick="app.logout()" style="cursor: pointer; opacity: 0.8;">LOGOUT</div>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <div class="settings-btn" onclick="app.exportData()" style="cursor: pointer; font-size: 1.25rem;">⚙️</div>
+            <div class="settings-btn" onclick="app.logout()" style="cursor: pointer; opacity: 0.6; font-size: 0.7rem; font-weight: 700;">LOGOUT</div>
+        </div>
     </div>
 
     <!-- VIEW: LOGIN -->

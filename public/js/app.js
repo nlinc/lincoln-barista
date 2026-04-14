@@ -340,11 +340,17 @@ const app = {
             document.getElementById('detail-age').innerText += ` • ${msg}`;
         }
 
-        // Fetch Logs
-        const q = query(collection(db, "brew_logs"), where("beanId", "==", id), where("uid", "==", currentUser.uid), orderBy("date", "desc"));
-        const snapshot = await getDocs(q);
-        logsCache = [];
-        snapshot.forEach(doc => logsCache.push({ id: doc.id, ...doc.data() }));
+        // Fetch Logs (Local sorting to avoid missing index errors)
+        try {
+            const q = query(collection(db, "brew_logs"), where("beanId", "==", id), where("uid", "==", currentUser.uid));
+            const snapshot = await getDocs(q);
+            logsCache = [];
+            snapshot.forEach(doc => logsCache.push({ id: doc.id, ...doc.data() }));
+            logsCache.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
+        } catch(e) {
+            console.error("Error fetching logs:", e);
+            logsCache = [];
+        }
 
         app.renderHistory();
         app.renderDialInSummary();
