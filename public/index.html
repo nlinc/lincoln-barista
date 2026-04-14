@@ -23,7 +23,7 @@
         <div class="app-logo">Lincoln <span>Barista <small>Platinum</small></span></div>
         <div style="display: flex; gap: 0.8rem; align-items: center;">
             <div class="settings-btn" onclick="app.renderAnalytics()" style="cursor: pointer; font-size: 1.25rem;">📊</div>
-            <div class="settings-btn" onclick="app.exportData()" style="cursor: pointer; font-size: 1.25rem;">⚙️</div>
+            <div class="settings-btn" onclick="app.openSettings()" style="cursor: pointer; font-size: 1.25rem;">⚙️</div>
             <div class="settings-btn" onclick="app.logout()" style="cursor: pointer; opacity: 0.6; font-size: 0.7rem; font-weight: 700;">LOGOUT</div>
         </div>
     </div>
@@ -49,6 +49,10 @@
                 <option value="name">A-Z</option>
                 <option value="rating">Top Rated</option>
             </select>
+        </div>
+
+        <div id="daily-tip-text" style="font-size: 0.8rem; color: var(--primary); background: var(--success-bg); padding: 0.75rem 1rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem; text-align: center; border: 1px solid var(--glass-border); line-height: 1.3;">
+            💡 <b>Daily Tip:</b> Analyzing your beans for insights...
         </div>
 
         <div id="filter-bar" style="display:flex; gap:0.5rem; overflow-x:auto; padding-bottom:1rem; margin-bottom:0.5rem;"></div>
@@ -257,6 +261,52 @@
         <div id="analytics-insights" class="card" style="background: var(--success-bg); border-color: var(--glass-border);">
             <div style="font-size:0.65rem; font-weight:800; text-transform:uppercase; color:var(--success-text); margin-bottom:0.5rem;">AI Insight</div>
             <div id="analytics-insight-text" style="font-size: 0.85rem; color: var(--success-text); font-weight: 500;">Analyzing your data for patterns...</div>
+        </div>
+    </div>
+
+    <!-- VIEW: SETTINGS -->
+    <div id="view-settings" class="view">
+        <button class="btn-secondary" style="margin-bottom: 1.5rem; width: auto; padding: 0.5rem 1rem;" onclick="app.router('list')">← Back</button>
+        <h2 style="margin-bottom: 2rem;">Profile & Gear</h2>
+
+        <div class="card">
+            <div style="font-size:0.65rem; font-weight:800; text-transform:uppercase; color:var(--text-muted); margin-bottom:1.5rem;">Machine Profile</div>
+            
+            <div class="form-group">
+                <label>Machine Name</label>
+                <input type="text" id="profile-machine-name" placeholder="Lelit Elizabeth">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Infusion (s)</label>
+                    <input type="number" id="profile-infusion" placeholder="3" oninput="app.updateSettingsDisplay()">
+                </div>
+                <div class="form-group">
+                    <label>Bloom/Rest (s)</label>
+                    <input type="number" id="profile-bloom" placeholder="7" oninput="app.updateSettingsDisplay()">
+                </div>
+            </div>
+            
+            <div style="font-size:0.6rem; color:var(--text-muted); margin-top:0.5rem;">Total non-extraction offset: <span id="profile-offset-display">10</span>s</div>
+        </div>
+
+        <div class="card">
+            <div style="font-size:0.65rem; font-weight:800; text-transform:uppercase; color:var(--text-muted); margin-bottom:1rem;">Intelligence</div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-weight:600; font-size:0.9rem;">Enable True AI (Gemini)</div>
+                <label class="switch">
+                    <input type="checkbox" id="profile-ai-enabled" checked>
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div style="font-size:0.6rem; color:var(--text-muted); margin-top:0.5rem;">Enable high-fidelity bean analysis & daily tips.</div>
+        </div>
+
+        <button class="btn" onclick="app.saveProfile()">Update Profile</button>
+        
+        <div style="margin-top:2rem; padding:1rem; border-top:1px solid var(--glass-border); text-align:center;">
+            <button class="btn-secondary" onclick="app.exportData()" style="font-size:0.75rem;">Export Data (CSV)</button>
         </div>
     </div>
 

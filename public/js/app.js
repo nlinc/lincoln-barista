@@ -14,6 +14,10 @@ const auth = getAuth(appInstance);
 const db = getFirestore(appInstance);
 const provider = new GoogleAuthProvider();
 
+// AI Config
+const GEMINI_API_KEY = 'AIzaSyDtfGUcL45kTAQUXK4BI62fgUHuonjbVEM';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
 // App State
 let currentUser = null;
 let beans = [];
@@ -21,10 +25,15 @@ let activeFilters = new Set();
 let currentSort = 'newest';
 let currentActiveBean = null;
 let logsCache = [];
-let currentEditingTags = [];
-let currentEditingImage = null;
 let chartTrend = null;
 let chartDist = null;
+let userProfile = {
+    machineName: 'Lelit Elizabeth',
+    infusion: 3,
+    bloom: 7,
+    aiEnabled: true
+};
+let aiCache = {};
 
 // --- UTILS ---
 const haptic = (type = 'light') => {
@@ -48,24 +57,22 @@ const getAIAdvice = (shot, roastLevel = 'Medium') => {
         espresso: { ratio: [1.8, 2.2], time: [25, 32], name: 'Espresso' }
     };
 
-    const target = targets[roast] || targets.medium;
-    let advice = [];
-    let status = 'good';
+    // SPECIAL: Machine Profile Scaling
+    // Now dynamic based on user profile logic
+    const totalOffset = (userProfile.infusion || 0) + (userProfile.bloom || 0);
+    const targetBase = targets[roast] || targets.medium;
+    
+    // Scale the time target by adding the machine offset
+    const timeTarget = [targetBase.time[0] + totalOffset, targetBase.time[1] + totalOffset];
 
-    // SPECIAL: Lelit Elizabeth Profile Scaling (3s Infusion, 7s Rest, 20s Brew)
-    // Since we know the machine has a 10s non-extraction window, we scale the time target.
-    // If the user hits 30s total, that is effectively a 20s extraction.
-    const elizabethTimeTarget = [28, 33]; // Anchored at 30s total
-    const timeTarget = roastLevel === 'Lelit Elizabeth' ? elizabethTimeTarget : target.time;
-
-    if (ratio > target.ratio[1]) advice.push("Yield too high (Grind Finer)");
-    else if (ratio < target.ratio[0]) advice.push("Yield too low (Grind Coarser)");
+    if (ratio > targetBase.ratio[1]) advice.push("Yield too high (Grind Finer)");
+    else if (ratio < targetBase.ratio[0]) advice.push("Yield too low (Grind Coarser)");
 
     if (time > timeTarget[1]) advice.push("Slow flow (Grind Coarser)");
     else if (time < timeTarget[0]) advice.push("Fast flow (Grind Finer)");
 
     if (advice.length > 0) {
-        status = (ratio > target.ratio[1] || time < timeTarget[0]) ? 'fast' : 'slow';
+        status = (ratio > targetBase.ratio[1] || time < timeTarget[0]) ? 'fast' : 'slow';
     }
 
     return {
@@ -115,6 +122,24 @@ const app = {
         snapshot.forEach((doc) => beans.push({ id: doc.id, ...doc.data() }));
         app.renderBeanList();
         app.renderGlobalStats();
+        app.renderDailyTip();
+    },
+
+    renderDailyTip: async () => {
+        const tipEl = document.getElementById('daily-tip-text');
+        if(!tipEl || !userProfile.aiEnabled) return;
+        
+        try {
+            const prompt = "You are a world-class barista. Give a 1-sentence interesting scientific tip about coffee beans, roasting, or espresso machine maintenance (like the Lelit Elizabeth). Keep it brief and professional.";
+            const res = await fetch(GEMINI_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            const data = await res.json();
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Grind finer for light roasts!";
+            tipEl.innerHTML = `💡 <b>Daily Tip:</b> ${text}`;
+        } catch(e) { console.error("Tip error:", e); }
     },
 
     renderBeanList: () => {
@@ -366,10 +391,20 @@ const app = {
         // Reveal the Butler
         const butlerCard = document.getElementById('butler-advice-card');
         const butlerText = document.getElementById('butler-detail-text');
+        const machineBadge = document.getElementById('machine-badge');
+
+        machineBadge.innerText = `${userProfile.machineName || 'Generic'} • ${(userProfile.infusion||0)+(userProfile.bloom||0)}s Offset`;
+
         if(logsCache.length > 0) {
-            const lastAdvice = getAIAdvice(logsCache[0], 'Lelit Elizabeth');
-            butlerText.innerHTML = `"${lastAdvice.text}"`;
+            const lastLog = logsCache[0];
+            const heuristicAdvice = getAIAdvice(lastLog, userProfile.machineName);
+            butlerText.innerHTML = `"${heuristicAdvice.text}"`;
             butlerCard.classList.remove('hidden');
+
+            // Trigger True AI if enabled and not cached
+            if(userProfile.aiEnabled) {
+                app.getGeminiAnalysis(lastLog, currentActiveBean);
+            }
         } else {
             butlerCard.classList.add('hidden');
         }
@@ -607,7 +642,7 @@ const app = {
 
         if(time && dose && yieldVal) {
             const mockShot = { time, dose, yield: yieldVal };
-            const advice = getAIAdvice(mockShot, 'Lelit Elizabeth');
+            const advice = getAIAdvice(mockShot, userProfile.machineName);
             previewText.innerText = `Butler predicts: ${advice.text}`;
             previewEl.classList.remove('hidden');
             previewEl.style.backgroundColor = advice.status === 'good' ? 'var(--success-bg)' : 'var(--warning-bg)';
@@ -645,6 +680,92 @@ const app = {
             
             await app.loadBeanDetail(beanId);
         } catch(e) { alert(e.message); btn.innerText = "Retry"; }
+    },
+
+    // --- USER PROFILE ---
+    fetchProfile: async () => {
+        try {
+            const docRef = doc(db, "user_profiles", currentUser.uid);
+            // v10 style
+            const { getDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+            const snap = await getDoc(docRef);
+
+            if (snap.exists()) {
+                userProfile = snap.data();
+            } else {
+                userProfile = { machineName: 'Lelit Elizabeth', infusion: 3, bloom: 7, aiEnabled: true };
+                const { setDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+                await setDoc(docRef, userProfile);
+            }
+        } catch(e) { console.error("Profile fetch error:", e); }
+    },
+
+    updateSettingsDisplay: () => {
+        const infusion = parseInt(document.getElementById('profile-infusion').value) || 0;
+        const bloom = parseInt(document.getElementById('profile-bloom').value) || 0;
+        document.getElementById('profile-offset-display').innerText = infusion + bloom;
+    },
+
+    openSettings: () => {
+        haptic('light');
+        document.getElementById('profile-machine-name').value = userProfile.machineName || '';
+        document.getElementById('profile-infusion').value = userProfile.infusion || 0;
+        document.getElementById('profile-bloom').value = userProfile.bloom || 0;
+        document.getElementById('profile-ai-enabled').checked = userProfile.aiEnabled !== false;
+        
+        const offset = (parseInt(userProfile.infusion)||0) + (parseInt(userProfile.bloom)||0);
+        document.getElementById('profile-offset-display').innerText = offset;
+
+        app.router('settings');
+    },
+
+    saveProfile: async () => {
+        haptic('medium');
+        const name = document.getElementById('profile-machine-name').value;
+        const infusion = parseInt(document.getElementById('profile-infusion').value) || 0;
+        const bloom = parseInt(document.getElementById('profile-bloom').value) || 0;
+        const aiEnabled = document.getElementById('profile-ai-enabled').checked;
+
+        userProfile = { machineName: name, infusion, bloom, aiEnabled };
+        
+        try {
+            const { setDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+            await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
+            app.renderDailyTip();
+            app.router('list');
+        } catch(e) { alert(e.message); }
+    },
+
+    getGeminiAnalysis: async (shot, bean) => {
+        const butlerText = document.getElementById('butler-detail-text');
+        const cacheKey = `${shot.id}_${shot.yield}`;
+        if(aiCache[cacheKey]) {
+            butlerText.innerHTML = `🤵🏻‍♂️ <i>${aiCache[cacheKey]}</i>`;
+            return;
+        }
+
+        butlerText.innerHTML = "🤵🏻‍♂️ <i>Butler is analyzing the flavor profile...</i>";
+        
+        try {
+            const prompt = `You are an expert Barista. Analyze this espresso shot:
+            Bean: ${bean.name} (${bean.roastLevel} roast from ${bean.origin})
+            Shot: ${shot.dose}g in, ${shot.yield}g out in ${shot.time}s.
+            Machine Settings: ${userProfile.machineName} with ${userProfile.infusion}s infusion and ${userProfile.bloom}s rest.
+            
+            Give a 1-sentence scientific explanation of the flavor (e.g. over-extracted, bright acidity) and one specific suggestion for improvement. Keep it concise.`;
+
+            const res = await fetch(GEMINI_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            const data = await res.json();
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Shot quality identified.";
+            aiCache[cacheKey] = text.trim();
+            butlerText.innerHTML = `🤵🏻‍♂️ <i>${aiCache[cacheKey]}</i>`;
+        } catch(e) { 
+            console.error("AI Analysis error:", e);
+        }
     },
 
     renderAnalytics: async () => {
@@ -770,9 +891,11 @@ window.app = app;
 onAuthStateChanged(auth, u => {
     if(u) {
         currentUser = u;
-        app.fetchBeans();
-        const hash = window.location.hash.substring(1);
-        app.router(hash || 'list');
+        app.fetchProfile().then(() => {
+            app.fetchBeans();
+            const hash = window.location.hash.substring(1);
+            app.router(hash || 'list');
+        });
     } else {
         app.router('login');
     }
