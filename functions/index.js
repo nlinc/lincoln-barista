@@ -1,16 +1,11 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
 
-const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
-const getApiKey = () => {
-    try { return GEMINI_API_KEY.value(); } 
-    catch(e) { return process.env.GEMINI_API_KEY; }
-};
+const getApiKey = () => process.env.GEMINI_API_KEY;
 
-exports.analyzeShot = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
+exports.analyzeShot = onCall(async (request) => {
     // Auth Check
     if (!request.auth) {
         throw new HttpsError("unauthenticated", "Please log in to use AI analysis.");
@@ -48,7 +43,7 @@ exports.analyzeShot = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
     }
 });
 
-exports.getDailyTip = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
+exports.getDailyTip = onCall(async (request) => {
     if (!request.auth) return { text: "Log in for daily tips." };
 
     try {
