@@ -6,17 +6,18 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 // Initialize Firebase
 const appInstance = initializeApp(firebaseConfig);
 const auth = getAuth(appInstance);
 const db = getFirestore(appInstance);
+const functions = getFunctions(appInstance);
 const provider = new GoogleAuthProvider();
 
 // AI Config
-const GEMINI_API_KEY = 'AIzaSyDtfGUcL45kTAQUXK4BI62fgUHuonjbVEM';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+// Moved to secure Cloud Functions backend.
 
 // App State
 let currentUser = null;
@@ -132,16 +133,10 @@ const app = {
         if(!tipEl || !userProfile.aiEnabled) return;
         
         try {
-            const prompt = "You are a world-class barista. Give a 1-sentence interesting scientific tip about coffee beans, roasting, or espresso machine maintenance (like the Lelit Elizabeth). Keep it brief and professional.";
-            const res = await fetch(GEMINI_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-            });
-            const data = await res.json();
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Grind finer for light roasts!";
-            tipEl.innerHTML = `💡 <b>Daily Tip:</b> ${text}`;
-        } catch(e) { console.error("Tip error:", e); }
+            const getTipFn = httpsCallable(functions, 'getDailyTip');
+            const result = await getTipFn({});
+            tipEl.innerHTML = `💡 <b>Daily Tip:</b> ${result.data.text}`;
+        } catch(e) { console.error("Tip error:", e); tipEl.innerHTML = "💡 <b>Daily Tip:</b> Grind finer for light roasts!"; }
     },
 
     renderBeanList: () => {
@@ -750,24 +745,18 @@ const app = {
         butlerText.innerHTML = "🤵🏻‍♂️ <i>Butler is analyzing the flavor profile...</i>";
         
         try {
-            const prompt = `You are an expert Barista. Analyze this espresso shot:
-            Bean: ${bean.name} (${bean.roastLevel} roast from ${bean.origin})
-            Shot: ${shot.dose}g in, ${shot.yield}g out in ${shot.time}s.
-            Machine Settings: ${userProfile.machineName} with ${userProfile.infusion}s infusion and ${userProfile.bloom}s rest.
-            
-            Give a 1-sentence scientific explanation of the flavor (e.g. over-extracted, bright acidity) and one specific suggestion for improvement. Keep it concise.`;
-
-            const res = await fetch(GEMINI_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            const analyzeFn = httpsCallable(functions, 'analyzeShot');
+            const result = await analyzeFn({ 
+                shot, 
+                bean: { name: bean.name, roastLevel: bean.roastLevel, origin: bean.origin },
+                machine: { name: userProfile.machineName, infusion: userProfile.infusion, bloom: userProfile.bloom }
             });
-            const data = await res.json();
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Shot quality identified.";
-            aiCache[cacheKey] = text.trim();
+            
+            aiCache[cacheKey] = result.data.text.trim();
             butlerText.innerHTML = `🤵🏻‍♂️ <i>${aiCache[cacheKey]}</i>`;
         } catch(e) { 
             console.error("AI Analysis error:", e);
+            butlerText.innerHTML = "🤵🏻‍♂️ <i>Butler is momentarily unavailable. Check your grind manually!</i>";
         }
     },
 
