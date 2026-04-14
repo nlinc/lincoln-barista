@@ -5,7 +5,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 // Initialize Firebase
@@ -346,8 +346,9 @@ const app = {
     },
 
     loadBeanDetail: async (id) => {
-        currentActiveBean = beans.find(b => b.id === id);
-        if(!currentActiveBean) return app.router('list');
+        try {
+            currentActiveBean = beans.find(b => b.id === id);
+            if(!currentActiveBean) return app.router('list');
 
         // Dynamic Header
         const imgEl = document.getElementById('detail-image');
@@ -403,13 +404,17 @@ const app = {
 
             // Trigger True AI if enabled and not cached
             if(userProfile.aiEnabled) {
-                app.getGeminiAnalysis(lastLog, currentActiveBean);
+                app.getGeminiAnalysis(lastLog, currentActiveBean).catch(console.error);
             }
         } else {
             butlerCard.classList.add('hidden');
         }
 
         app.router('detail');
+        } catch(e) {
+            console.error("Critical error in loadBeanDetail:", e);
+            app.router('list');
+        }
     },
 
     renderHistory: () => {
@@ -686,15 +691,12 @@ const app = {
     fetchProfile: async () => {
         try {
             const docRef = doc(db, "user_profiles", currentUser.uid);
-            // v10 style
-            const { getDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
             const snap = await getDoc(docRef);
 
             if (snap.exists()) {
                 userProfile = snap.data();
             } else {
                 userProfile = { machineName: 'Lelit Elizabeth', infusion: 3, bloom: 7, aiEnabled: true };
-                const { setDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
                 await setDoc(docRef, userProfile);
             }
         } catch(e) { console.error("Profile fetch error:", e); }
@@ -729,7 +731,6 @@ const app = {
         userProfile = { machineName: name, infusion, bloom, aiEnabled };
         
         try {
-            const { setDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
             await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
             app.renderDailyTip();
             app.router('list');
