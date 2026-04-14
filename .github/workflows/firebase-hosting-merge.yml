@@ -18,3 +18,4 @@ jobs:
           args: deploy --only hosting,functions --force
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ESPRESSO_4298D }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

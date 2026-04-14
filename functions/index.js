@@ -5,6 +5,10 @@ const admin = require("firebase-admin");
 admin.initializeApp();
 
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
+const getApiKey = () => {
+    try { return GEMINI_API_KEY.value(); } 
+    catch(e) { return process.env.GEMINI_API_KEY; }
+};
 
 exports.analyzeShot = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
     // Auth Check
@@ -22,7 +26,7 @@ exports.analyzeShot = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
         
         Give a 1-sentence scientific explanation of the flavor (e.g. over-extracted, bright acidity) and one specific suggestion for improvement. Keep it concise.`;
 
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY.value()}`, {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${getApiKey()}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
@@ -50,7 +54,7 @@ exports.getDailyTip = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
     try {
         const prompt = "You are a world-class barista. Give a 1-sentence interesting scientific tip about coffee beans, roasting, or espresso machine maintenance (like the Lelit Elizabeth). Keep it brief and professional.";
         
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY.value()}`, {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${getApiKey()}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
