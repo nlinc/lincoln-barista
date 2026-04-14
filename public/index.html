@@ -153,6 +153,15 @@
             </div>
         </div>
 
+        <div id="butler-advice-card" class="card hidden" style="background: var(--success-bg); border-color: var(--glass-border); display: flex; align-items: center; gap: 1rem;">
+            <div style="font-size: 2rem;">🤵🏻‍♂️</div>
+            <div>
+                <div style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--success-text); margin-bottom: 0.25rem;">AI Brew Butler</div>
+                <div id="butler-detail-text" style="font-size: 0.85rem; color: var(--success-text); font-weight: 600;">"Ready to analyze your next extraction."</div>
+                <div id="machine-badge" style="font-size: 0.6rem; color: var(--text-muted); font-weight: 700; margin-top: 0.25rem; opacity: 0.6;">LELIT ELIZABETH • 3/7/20 PROFILING</div>
+            </div>
+        </div>
+
         <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
             <div>
                 <div style="font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Active Batch</div>
@@ -199,21 +208,26 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <div class="form-group">
                     <label>Grind Setting</label>
-                    <input type="number" inputmode="decimal" step="0.1" id="input-shot-grind" placeholder="14.0">
+                    <input type="number" inputmode="decimal" step="0.1" id="input-shot-grind" placeholder="14.0" oninput="app.liveButlerPreview()">
                 </div>
                 <div class="form-group">
                     <label>Time (Seconds)</label>
-                    <input type="number" inputmode="decimal" id="input-shot-time" placeholder="30">
+                    <input type="number" inputmode="decimal" id="input-shot-time" placeholder="30" oninput="app.liveButlerPreview()">
                 </div>
                 <div class="form-group">
                     <label>Dose In (g)</label>
-                    <input type="number" inputmode="decimal" step="0.1" id="input-shot-dose" placeholder="18.0">
+                    <input type="number" inputmode="decimal" step="0.1" id="input-shot-dose" placeholder="18.0" oninput="app.liveButlerPreview()">
                 </div>
                 <div class="form-group">
                     <label>Yield Out (g)</label>
-                    <input type="number" inputmode="decimal" step="0.1" id="input-shot-yield" placeholder="36.0">
+                    <input type="number" inputmode="decimal" step="0.1" id="input-shot-yield" placeholder="36.0" oninput="app.liveButlerPreview()">
                 </div>
             </div>
+        </div>
+
+        <div id="log-butler-preview" class="card hidden" style="background: var(--warning-bg); border-color: var(--accent); margin-bottom: 1rem; text-align: center;">
+            <div style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--warning-text); margin-bottom: 0.25rem;">🤵🏻‍♂️ Butler's Preview</div>
+            <div id="log-butler-preview-text" style="font-size: 0.85rem; color: var(--warning-text); font-weight: 600;">Input data to see extraction advice.</div>
         </div>
 
         <button class="btn" id="btn-save-shot" onclick="app.saveShot()">Log Extraction</button>

@@ -52,14 +52,20 @@ const getAIAdvice = (shot, roastLevel = 'Medium') => {
     let advice = [];
     let status = 'good';
 
+    // SPECIAL: Lelit Elizabeth Profile Scaling (3s Infusion, 7s Rest, 20s Brew)
+    // Since we know the machine has a 10s non-extraction window, we scale the time target.
+    // If the user hits 30s total, that is effectively a 20s extraction.
+    const elizabethTimeTarget = [28, 33]; // Anchored at 30s total
+    const timeTarget = roastLevel === 'Lelit Elizabeth' ? elizabethTimeTarget : target.time;
+
     if (ratio > target.ratio[1]) advice.push("Yield too high (Grind Finer)");
     else if (ratio < target.ratio[0]) advice.push("Yield too low (Grind Coarser)");
 
-    if (time > target.time[1]) advice.push("Slow flow (Grind Coarser)");
-    else if (time < target.time[0]) advice.push("Fast flow (Grind Finer)");
+    if (time > timeTarget[1]) advice.push("Slow flow (Grind Coarser)");
+    else if (time < timeTarget[0]) advice.push("Fast flow (Grind Finer)");
 
     if (advice.length > 0) {
-        status = (ratio > target.ratio[1] || time < target.time[0]) ? 'fast' : 'slow';
+        status = (ratio > target.ratio[1] || time < timeTarget[0]) ? 'fast' : 'slow';
     }
 
     return {
@@ -356,6 +362,18 @@ const app = {
 
         app.renderHistory();
         app.renderDialInSummary();
+
+        // Reveal the Butler
+        const butlerCard = document.getElementById('butler-advice-card');
+        const butlerText = document.getElementById('butler-detail-text');
+        if(logsCache.length > 0) {
+            const lastAdvice = getAIAdvice(logsCache[0], 'Lelit Elizabeth');
+            butlerText.innerHTML = `"${lastAdvice.text}"`;
+            butlerCard.classList.remove('hidden');
+        } else {
+            butlerCard.classList.add('hidden');
+        }
+
         app.router('detail');
     },
 
@@ -572,7 +590,31 @@ const app = {
         document.getElementById('input-shot-grind').value = logsCache[0]?.grind || '';
         
         document.getElementById('btn-delete-shot').classList.add('hidden');
+        
+        // Butler Preview Reset
+        document.getElementById('log-butler-preview').classList.add('hidden');
+        document.getElementById('log-butler-preview-text').innerText = "Input data to see extraction advice.";
+
         app.router('log-shot');
+    },
+
+    liveButlerPreview: () => {
+        const time = document.getElementById('input-shot-time').value;
+        const dose = document.getElementById('input-shot-dose').value;
+        const yieldVal = document.getElementById('input-shot-yield').value;
+        const previewEl = document.getElementById('log-butler-preview');
+        const previewText = document.getElementById('log-butler-preview-text');
+
+        if(time && dose && yieldVal) {
+            const mockShot = { time, dose, yield: yieldVal };
+            const advice = getAIAdvice(mockShot, 'Lelit Elizabeth');
+            previewText.innerText = `Butler predicts: ${advice.text}`;
+            previewEl.classList.remove('hidden');
+            previewEl.style.backgroundColor = advice.status === 'good' ? 'var(--success-bg)' : 'var(--warning-bg)';
+            previewEl.style.color = advice.status === 'good' ? 'var(--success-text)' : 'var(--warning-text)';
+        } else {
+            previewEl.classList.add('hidden');
+        }
     },
 
     saveShot: async () => {
