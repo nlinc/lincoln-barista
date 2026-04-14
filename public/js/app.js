@@ -23,6 +23,8 @@ let currentActiveBean = null;
 let logsCache = [];
 let currentEditingTags = [];
 let currentEditingImage = null;
+let chartTrend = null;
+let chartDist = null;
 
 // --- UTILS ---
 const haptic = (type = 'light') => {
@@ -601,6 +603,121 @@ const app = {
             
             await app.loadBeanDetail(beanId);
         } catch(e) { alert(e.message); btn.innerText = "Retry"; }
+    },
+
+    renderAnalytics: async () => {
+        haptic('light');
+        app.router('analytics');
+
+        const q = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
+        const snap = await getDocs(q);
+        const allLogs = [];
+        snap.forEach(d => allLogs.push(d.data()));
+
+        if (allLogs.length === 0) return;
+
+        // Group by Date for Trend
+        const last30 = new Date();
+        last30.setDate(last30.getDate() - 30);
+        
+        const trendData = allLogs
+            .filter(l => l.date && l.date.toDate() > last30)
+            .sort((a,b) => a.date.toDate() - b.date.toDate());
+
+        // Process Grind Distribution
+        const grindCounts = {};
+        allLogs.forEach(l => {
+            if(l.grind) {
+                const g = parseFloat(l.grind).toFixed(1);
+                grindCounts[g] = (grindCounts[g] || 0) + 1;
+            }
+        });
+        const distLabels = Object.keys(grindCounts).sort((a,b) => parseFloat(a) - parseFloat(b));
+        const distValues = distLabels.map(l => grindCounts[l]);
+
+        // Cleanup existing charts
+        if (chartTrend) chartTrend.destroy();
+        if (chartDist) chartDist.destroy();
+
+        // 1. Trend Chart (Grind & Yield over time)
+        const ctxTrend = document.getElementById('trendChart').getContext('2d');
+        chartTrend = new Chart(ctxTrend, {
+            type: 'line',
+            data: {
+                labels: trendData.map(l => l.date.toDate().toLocaleDateString(undefined, {month:'short', day:'numeric'})),
+                datasets: [
+                    {
+                        label: 'Grind Setting',
+                        data: trendData.map(l => parseFloat(l.grind)),
+                        borderColor: '#6f4e37',
+                        backgroundColor: 'rgba(111, 78, 55, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Yield (g)',
+                        data: trendData.map(l => parseFloat(l.yield)),
+                        borderColor: '#d2b48c',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        fill: false,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { display: false },
+                    y: { position: 'left', title: { display: true, text: 'Grind' } },
+                    y1: { position: 'right', display: false, grid: { drawOnChartArea: false } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        // 2. Distribution Chart
+        const ctxDist = document.getElementById('distChart').getContext('2d');
+        chartDist = new Chart(ctxDist, {
+            type: 'bar',
+            data: {
+                labels: distLabels,
+                datasets: [{
+                    data: distValues,
+                    backgroundColor: 'rgba(111, 78, 55, 0.6)',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { 
+                    y: { beginAtZero: true, grid: { display: false } },
+                    x: { grid: { display : false } }
+                }
+            }
+        });
+
+        // AI Insight Generation
+        const insightEl = document.getElementById('analytics-insight-text');
+        const avgYield = allLogs.reduce((acc, l) => acc + (parseFloat(l.yield) || 0), 0) / allLogs.length;
+        const topGrind = distLabels[distValues.indexOf(Math.max(...distValues))];
+        
+        let insight = `Your most consistent grind is **${topGrind}**. `;
+        if (trendData.length > 5) {
+            const firstHalf = trendData.slice(0, Math.floor(trendData.length/2));
+            const secondHalf = trendData.slice(Math.floor(trendData.length/2));
+            const avg1 = firstHalf.reduce((a,b) => a + parseFloat(b.grind), 0) / firstHalf.length;
+            const avg2 = secondHalf.reduce((a,b) => a + parseFloat(b.grind), 0) / secondHalf.length;
+            
+            if (avg2 > avg1 + 0.5) insight += "You've been grinding **coarser** recently—likely enjoying darker roasts.";
+            else if (avg2 < avg1 - 0.5) insight += "You've been grinding **finer** recently—hitting those high-extraction light roasts.";
+            else insight += "You have incredible grind stability across roasters.";
+        }
+        insightEl.innerHTML = insight;
     }
 };
 

@@ -306,6 +306,12 @@ input:focus, select:focus {
     border-radius: var(--radius-md);
     padding: 1rem;
     border: 1px solid var(--glass-border);
+    margin-bottom: 1.5rem;
+}
+
+canvas {
+    width: 100% !important;
+    height: 100% !important;
 }
 
 .dial-in-badge {

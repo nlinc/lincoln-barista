@@ -13,14 +13,16 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/751/751621.png">
 
-    <!-- Design System -->
+    <!-- Design System & Libraries -->
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
     <div id="top-bar">
         <div class="app-logo">Lincoln <span>Barista <small>Platinum</small></span></div>
-        <div style="display: flex; gap: 1rem; align-items: center;">
+        <div style="display: flex; gap: 0.8rem; align-items: center;">
+            <div class="settings-btn" onclick="app.renderAnalytics()" style="cursor: pointer; font-size: 1.25rem;">📊</div>
             <div class="settings-btn" onclick="app.exportData()" style="cursor: pointer; font-size: 1.25rem;">⚙️</div>
             <div class="settings-btn" onclick="app.logout()" style="cursor: pointer; opacity: 0.6; font-size: 0.7rem; font-weight: 700;">LOGOUT</div>
         </div>
@@ -217,6 +219,31 @@
         <button class="btn" id="btn-save-shot" onclick="app.saveShot()">Log Extraction</button>
         <button class="btn btn-secondary" onclick="app.router('detail')" style="margin-top: 0.75rem;">Cancel</button>
         <button class="btn btn-danger hidden" id="btn-delete-shot" onclick="app.deleteShot()" style="margin-top: 1.5rem;">Delete Log</button>
+    </div>
+
+    <!-- VIEW: ANALYTICS -->
+    <div id="view-analytics" class="view">
+        <button class="btn-secondary" style="margin-bottom: 1.5rem; width: auto; padding: 0.5rem 1rem;" onclick="app.router('list')">← Collection</button>
+        <h2 style="margin-bottom: 1.5rem;">Visual Trends</h2>
+
+        <div class="card">
+            <div style="font-size:0.65rem; font-weight:800; text-transform:uppercase; color:var(--text-muted); margin-bottom:1rem; letter-spacing:0.05em;">Grind vs. Yield (Last 30 Days)</div>
+            <div style="height: 250px; position: relative;">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="font-size:0.65rem; font-weight:800; text-transform:uppercase; color:var(--text-muted); margin-bottom:1rem; letter-spacing:0.05em;">Grind Frequency</div>
+            <div style="height: 200px; position: relative;">
+                <canvas id="distChart"></canvas>
+            </div>
+        </div>
+        
+        <div id="analytics-insights" class="card" style="background: var(--success-bg); border-color: var(--glass-border);">
+            <div style="font-size:0.65rem; font-weight:800; text-transform:uppercase; color:var(--success-text); margin-bottom:0.5rem;">AI Insight</div>
+            <div id="analytics-insight-text" style="font-size: 0.85rem; color: var(--success-text); font-weight: 500;">Analyzing your data for patterns...</div>
+        </div>
     </div>
 
     <!-- Load App Logic -->
