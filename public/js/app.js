@@ -61,6 +61,8 @@ const getAIAdvice = (shot, roastLevel = 'Medium') => {
     // Now dynamic based on user profile logic
     const totalOffset = (userProfile.infusion || 0) + (userProfile.bloom || 0);
     const targetBase = targets[roast] || targets.medium;
+    let advice = [];
+    let status = 'good';
     
     // Scale the time target by adding the machine offset
     const timeTarget = [targetBase.time[0] + totalOffset, targetBase.time[1] + totalOffset];
