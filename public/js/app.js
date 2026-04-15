@@ -369,13 +369,25 @@ const app = {
         
         const roastDate = currentActiveBean.currentRoastDate || "Unknown";
         
+        // Fetch Logs (Local sorting to avoid missing index errors)
+        try {
+            const q = query(collection(db, "brew_logs"), where("beanId", "==", id), where("uid", "==", currentUser.uid));
+            const snapshot = await getDocs(q);
+            logsCache = [];
+            snapshot.forEach(doc => logsCache.push({ id: doc.id, ...doc.data() }));
+            logsCache.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
+        } catch(e) {
+            console.error("Error fetching logs:", e);
+            logsCache = [];
+        }
+
         // Stale Roast Date Alert Check
         const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
         let staleWarningHtml = '';
         if (roastDate !== "Unknown") {
             const rd = new Date(roastDate).getTime();
             const now = Date.now();
-            const lastLogTime = allLogs.length > 0 ? allLogs[0].timestamp.toMillis() : 0;
+            const lastLogTime = logsCache.length > 0 ? (logsCache[0].date?.seconds * 1000 || 0) : 0;
             
             // If the roast date is older than 2 weeks AND we haven't logged a shot in over a week, remind user.
             if ((now - rd > 2 * ONE_WEEK_MS) && (!lastLogTime || (now - lastLogTime > ONE_WEEK_MS))) {
@@ -393,18 +405,6 @@ const app = {
             // Peak Flavor Hint
             const msg = (days >= 7 && days <= 21) ? "✨ Peak Flavor Window" : (days < 7 ? "⏳ Resting..." : "🫘 Aging");
             document.getElementById('detail-age').innerText += ` • ${msg}`;
-        }
-
-        // Fetch Logs (Local sorting to avoid missing index errors)
-        try {
-            const q = query(collection(db, "brew_logs"), where("beanId", "==", id), where("uid", "==", currentUser.uid));
-            const snapshot = await getDocs(q);
-            logsCache = [];
-            snapshot.forEach(doc => logsCache.push({ id: doc.id, ...doc.data() }));
-            logsCache.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
-        } catch(e) {
-            console.error("Error fetching logs:", e);
-            logsCache = [];
         }
 
         app.renderHistory();
