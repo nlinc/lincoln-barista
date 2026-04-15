@@ -12,13 +12,9 @@ jobs:
       - name: Install Functions Dependencies
         run: npm --prefix functions install
         
-      - name: Configure Secure Environment
-        run: echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > functions/.env
-        
       - name: Deploy to Firebase
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only hosting,functions,firestore:rules --force
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ESPRESSO_4298D }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
