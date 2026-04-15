@@ -4,7 +4,7 @@ const admin = require("firebase-admin");
 admin.initializeApp();
 
 const { defineSecret } = require('firebase-functions/params');
-const geminiApiKey = defineSecret('GEMINI_API_KEY');
+const geminiApiKey = defineSecret('BARISTA_GEMINI_KEY');
 
 const getApiKey = () => geminiApiKey.value();
 
