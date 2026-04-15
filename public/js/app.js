@@ -59,6 +59,7 @@ const getAIAdvice = (shot, roastLevel = 'Medium') => {
         espresso: { ratio: [1.8, 2.2], time: [25, 32], name: 'Espresso' }
     };
 
+    const targetBase = targets[roast] || targets.medium;
     // Flow Rate (g/s) is the ultimate truth of resistance
     const flowRate = parseFloat(shot.yield) / time;
     let advice = [];
@@ -910,7 +911,8 @@ onAuthStateChanged(auth, u => {
         currentUser = u;
         app.fetchProfile().then(() => {
             app.fetchBeans();
-            const hash = window.location.hash.substring(1);
+            let hash = window.location.hash.substring(1);
+            if (hash === 'login') hash = 'list'; // Prevent authenticated users from getting stuck on the login view
             app.router(hash || 'list');
         });
     } else {
