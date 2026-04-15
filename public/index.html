@@ -99,6 +99,10 @@
                     <input type="text" id="input-origin" placeholder="Ethiopia, Colombia...">
                 </div>
                 <div class="form-group">
+                    <label>Current Roast Date</label>
+                    <input type="date" id="input-roast-date">
+                </div>
+            </div>
                     <label>Roast Level</label>
                     <select id="input-roast-level">
                         <option value="Light">Light</option>
@@ -166,12 +170,15 @@
             </div>
         </div>
 
-        <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-            <div>
-                <div style="font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Active Batch</div>
-                <div id="detail-date" style="font-size:1.1rem; font-weight:700; color: var(--primary);"></div>
+        <div class="card" style="display:flex; flex-direction:column; gap:0.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Active Batch</div>
+                    <div id="detail-date" style="font-size:1.1rem; font-weight:700; color: var(--primary);"></div>
+                </div>
+                <button class="btn-secondary" style="width:auto; padding:0.4rem 0.75rem; font-size:0.75rem;" onclick="app.promptNewDate()">Update Date</button>
             </div>
-            <button class="btn-secondary" style="width:auto; padding:0.4rem 0.75rem; font-size:0.75rem;" onclick="app.promptNewDate()">New Bag Date</button>
+            <div id="stale-warning-container"></div>
         </div>
         
         <div class="chart-wrapper">
@@ -296,7 +303,7 @@
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="font-weight:600; font-size:0.9rem;">Enable True AI (Gemini)</div>
                 <label class="switch">
-                    <input type="checkbox" id="profile-ai-enabled" checked>
+                    <input type="checkbox" id="profile-ai-enabled" onchange="app.saveProfile()" checked>
                     <span class="slider round"></span>
                 </label>
             </div>

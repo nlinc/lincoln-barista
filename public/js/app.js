@@ -59,24 +59,30 @@ const getAIAdvice = (shot, roastLevel = 'Medium') => {
         espresso: { ratio: [1.8, 2.2], time: [25, 32], name: 'Espresso' }
     };
 
-    // SPECIAL: Machine Profile Scaling
-    // Now dynamic based on user profile logic
-    const totalOffset = (userProfile.infusion || 0) + (userProfile.bloom || 0);
-    const targetBase = targets[roast] || targets.medium;
+    // Flow Rate (g/s) is the ultimate truth of resistance
+    const flowRate = parseFloat(shot.yield) / time;
     let advice = [];
     let status = 'good';
+
+    // Ratio Advice
+    if (ratio >= targetBase.ratio[1] + 0.1) advice.push("Yield too high (Grind Finer)");
+    else if (ratio <= targetBase.ratio[0] - 0.1) advice.push("Yield too low (Grind Coarser)");
+
+    // Flow Advice
+    if (flowRate > 1.4) advice.push("Fast Flow (Grind Finer)");
+    else if (flowRate < 0.9) advice.push("Choked Flow (Grind Coarser)");
+
+    // Eliminate Contradictions (e.g. Yield too low BUT Fast flow)
+    const advisesFiner = advice.some(a => a.includes("Finer"));
+    const advisesCoarser = advice.some(a => a.includes("Coarser"));
     
-    // Scale the time target by adding the machine offset
-    const timeTarget = [targetBase.time[0] + totalOffset, targetBase.time[1] + totalOffset];
-
-    if (ratio > targetBase.ratio[1]) advice.push("Yield too high (Grind Finer)");
-    else if (ratio < targetBase.ratio[0]) advice.push("Yield too low (Grind Coarser)");
-
-    if (time > timeTarget[1]) advice.push("Slow flow (Grind Coarser)");
-    else if (time < timeTarget[0]) advice.push("Fast flow (Grind Finer)");
+    if (advisesFiner && advisesCoarser) {
+        // If they contradict, rely purely on flow rate.
+        advice = flowRate > 1.2 ? ["Grind Finer (Flow dominates)"] : ["Grind Coarser (Yield limits)"];
+    }
 
     if (advice.length > 0) {
-        status = (ratio > targetBase.ratio[1] || time < timeTarget[0]) ? 'fast' : 'slow';
+        status = flowRate > 1.4 || ratio > targetBase.ratio[1] ? 'fast' : 'slow';
     }
 
     return {
@@ -227,10 +233,15 @@ const app = {
                 updatedAt: new Date()
             };
 
+            const manualRoastDate = document.getElementById('input-roast-date').value;
+
             if(!data.name) throw new Error("Bean name is required.");
             
-            if(id) await updateDoc(doc(db, "beans", id), data);
-            else await addDoc(collection(db, "beans"), { ...data, currentRoastDate: new Date().toISOString().split('T')[0], createdAt: new Date() });
+            if(id) {
+                await updateDoc(doc(db, "beans", id), { ...data, currentRoastDate: manualRoastDate });
+            } else {
+                await addDoc(collection(db, "beans"), { ...data, currentRoastDate: manualRoastDate || new Date().toISOString().split('T')[0], createdAt: new Date() });
+            }
             
             await app.fetchBeans();
             app.router('list');
@@ -250,13 +261,7 @@ const app = {
     },
 
     promptNewDate: async () => {
-        const newDate = prompt("Enter roast date for the NEW bag (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
-        if (newDate && currentActiveBean) {
-            haptic('medium');
-            await updateDoc(doc(db, "beans", currentActiveBean.id), { currentRoastDate: newDate });
-            await app.fetchBeans(); 
-            await app.loadBeanDetail(currentActiveBean.id);
-        }
+        app.editActiveBean();
     },
 
     editActiveBean: () => {
@@ -270,6 +275,7 @@ const app = {
         document.getElementById('input-origin').value = b.origin || '';
         document.getElementById('input-roast-level').value = b.roastLevel || 'Medium';
         document.getElementById('input-ten-bean-weight').value = b.tenBeanWeight || '';
+        document.getElementById('input-roast-date').value = b.currentRoastDate || '';
         
         currentEditingTags = b.tags ? [...b.tags] : [];
         app.renderEditingTags();
@@ -362,6 +368,23 @@ const app = {
         document.getElementById('detail-rating').innerText = '★'.repeat(currentActiveBean.rating || 0);
         
         const roastDate = currentActiveBean.currentRoastDate || "Unknown";
+        
+        // Stale Roast Date Alert Check
+        const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+        let staleWarningHtml = '';
+        if (roastDate !== "Unknown") {
+            const rd = new Date(roastDate).getTime();
+            const now = Date.now();
+            const lastLogTime = allLogs.length > 0 ? allLogs[0].timestamp.toMillis() : 0;
+            
+            // If the roast date is older than 2 weeks AND we haven't logged a shot in over a week, remind user.
+            if ((now - rd > 2 * ONE_WEEK_MS) && (!lastLogTime || (now - lastLogTime > ONE_WEEK_MS))) {
+                staleWarningHtml = `<div style="background:var(--accent); color:#000; padding:10px; border-radius:var(--radius-sm); font-size:0.8rem; font-weight:bold; margin-top:10px; cursor:pointer;" onclick="app.editActiveBean()">
+                    ⚠️ Is this a new bag? Tap here to Edit Profile & update Roast Date!
+                </div>`;
+            }
+        }
+        document.getElementById('stale-warning-container').innerHTML = staleWarningHtml;
         document.getElementById('detail-date').innerText = roastDate;
         if(roastDate !== "Unknown") {
             const days = Math.floor((new Date() - new Date(roastDate)) / (1000 * 60 * 60 * 24));
@@ -575,6 +598,7 @@ const app = {
         ['input-bean-id', 'input-roaster', 'input-roaster-location', 'input-name', 'input-origin', 'input-ten-bean-weight'].forEach(id => {
             document.getElementById(id).value = '';
         });
+        document.getElementById('input-roast-date').value = new Date().toISOString().split('T')[0];
         document.getElementById('input-roast-level').value = 'Medium';
         currentEditingTags = [];
         app.renderEditingTags();
