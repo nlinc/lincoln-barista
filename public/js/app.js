@@ -31,9 +31,10 @@ let chartTrend = null;
 let chartDist = null;
 let userProfile = {
     machineName: 'Lelit Elizabeth',
-    infusion: 3,
-    bloom: 7,
-    aiEnabled: true
+    aiEnabled: true,
+    defaultDose: 18,
+    b1: { infusion: 3, bloom: 7, brew: 20 },
+    b2: { infusion: 0, bloom: 0, brew: 30 }
 };
 let aiCache = {};
 
@@ -416,11 +417,12 @@ const app = {
         const butlerText = document.getElementById('butler-detail-text');
         const machineBadge = document.getElementById('machine-badge');
 
-        machineBadge.innerText = `${userProfile.machineName || 'Generic'} • ${(userProfile.infusion||0)+(userProfile.bloom||0)}s Offset`;
+        const b1Offset = (parseInt(userProfile.b1?.infusion)||0) + (parseInt(userProfile.b1?.bloom)||0);
+        machineBadge.innerText = `${userProfile.machineName || 'Generic'} • ${b1Offset}s Offset (P1)`;
 
         if(logsCache.length > 0) {
             const lastLog = logsCache[0];
-            const heuristicAdvice = getAIAdvice(lastLog, userProfile.machineName);
+            const heuristicAdvice = getAIAdvice(lastLog, currentActiveBean?.roastLevel);
             butlerText.innerHTML = `"${heuristicAdvice.text}"`;
             butlerCard.classList.remove('hidden');
 
@@ -469,18 +471,20 @@ const app = {
                 const ratio = (parseFloat(log.yield) / parseFloat(log.dose)).toFixed(1);
                 
                 row.innerHTML = `
-                    <div style="text-align:center;">
-                        <div style="font-weight:700; font-size:1.1rem;">${log.time || '--'}s</div>
-                        <div class="advice-text" style="color: var(--text-muted);">${advice.text}</div>
+                    <div class="log-row-metrics">
+                        <div style="text-align:center;">
+                            <div style="font-weight:700; font-size:1.1rem;">${log.time || '--'}s</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.75rem; color:var(--text-muted);">GRIND</div>
+                            <div style="font-weight:700;">${log.grind}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-weight:600; color:var(--primary);">1:${ratio}</div>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">${log.dose}g → ${log.yield}g</div>
+                        </div>
                     </div>
-                    <div>
-                        <div style="font-size:0.75rem; color:var(--text-muted);">GRIND</div>
-                        <div style="font-weight:700;">${log.grind}</div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-weight:600; color:var(--primary);">1:${ratio}</div>
-                        <div style="font-size:0.7rem; color:var(--text-muted);">${log.dose}g → ${log.yield}g</div>
-                    </div>
+                    <div class="advice-text">${advice.text}</div>
                 `;
                 row.onclick = () => { haptic('light'); app.openEditShot(log.id); };
                 container.appendChild(row);
@@ -648,9 +652,17 @@ const app = {
         document.getElementById('log-display-date').innerText = currentActiveBean?.currentRoastDate || "N/A";
         
         // Smarter defaults
-        document.getElementById('input-shot-dose').value = '18';
-        document.getElementById('input-shot-yield').value = '36';
+        const defaultDose = userProfile.defaultDose || 18;
+        document.getElementById('input-shot-dose').value = defaultDose;
+        document.getElementById('input-shot-yield').value = defaultDose * 2;
         document.getElementById('input-shot-grind').value = logsCache[0]?.grind || '';
+        document.getElementById('input-shot-time').value = '';
+        
+        const b1Total = userProfile.b1 ? ((parseInt(userProfile.b1.infusion)||0) + (parseInt(userProfile.b1.bloom)||0) + (parseInt(userProfile.b1.brew)||0)) : 30;
+        const b2Total = userProfile.b2 ? ((parseInt(userProfile.b2.infusion)||0) + (parseInt(userProfile.b2.bloom)||0) + (parseInt(userProfile.b2.brew)||0)) : 30;
+        
+        document.getElementById('btn-time-1').innerText = `P1 (${b1Total}s)`;
+        document.getElementById('btn-time-2').innerText = `P2 (${b2Total}s)`;
         
         document.getElementById('btn-delete-shot').classList.add('hidden');
         
@@ -659,6 +671,18 @@ const app = {
         document.getElementById('log-butler-preview-text').innerText = "Input data to see extraction advice.";
 
         app.router('log-shot');
+    },
+
+    setTimeFromProfile: (btnNum) => {
+        let total = 30;
+        if(btnNum === 1 && userProfile.b1) {
+            total = (parseInt(userProfile.b1.infusion)||0) + (parseInt(userProfile.b1.bloom)||0) + (parseInt(userProfile.b1.brew)||0);
+        } else if(btnNum === 2 && userProfile.b2) {
+            total = (parseInt(userProfile.b2.infusion)||0) + (parseInt(userProfile.b2.bloom)||0) + (parseInt(userProfile.b2.brew)||0);
+        }
+        document.getElementById('input-shot-time').value = total;
+        app.liveButlerPreview();
+        haptic('light');
     },
 
     liveButlerPreview: () => {
@@ -670,7 +694,7 @@ const app = {
 
         if(time && dose && yieldVal) {
             const mockShot = { time, dose, yield: yieldVal };
-            const advice = getAIAdvice(mockShot, userProfile.machineName);
+            const advice = getAIAdvice(mockShot, currentActiveBean?.roastLevel);
             previewText.innerText = `Butler predicts: ${advice.text}`;
             previewEl.classList.remove('hidden');
             previewEl.style.backgroundColor = advice.status === 'good' ? 'var(--success-bg)' : 'var(--warning-bg)';
@@ -717,41 +741,81 @@ const app = {
             const snap = await getDoc(docRef);
 
             if (snap.exists()) {
-                userProfile = snap.data();
+                const data = snap.data();
+                userProfile = {
+                    machineName: data.machineName || 'Lelit Elizabeth',
+                    aiEnabled: data.aiEnabled !== false,
+                    defaultDose: parseFloat(data.defaultDose) || 18,
+                    b1: data.b1 || { infusion: data.infusion || 3, bloom: data.bloom || 7, brew: 20 },
+                    b2: data.b2 || { infusion: 0, bloom: 0, brew: 30 }
+                };
             } else {
-                userProfile = { machineName: 'Lelit Elizabeth', infusion: 3, bloom: 7, aiEnabled: true };
+                userProfile = {
+                    machineName: 'Lelit Elizabeth',
+                    aiEnabled: true,
+                    defaultDose: 18,
+                    b1: { infusion: 3, bloom: 7, brew: 20 },
+                    b2: { infusion: 0, bloom: 0, brew: 30 }
+                };
                 await setDoc(docRef, userProfile);
             }
         } catch(e) { console.error("Profile fetch error:", e); }
     },
 
     updateSettingsDisplay: () => {
-        const infusion = parseInt(document.getElementById('profile-infusion').value) || 0;
-        const bloom = parseInt(document.getElementById('profile-bloom').value) || 0;
-        document.getElementById('profile-offset-display').innerText = infusion + bloom;
+        const b1Total = (parseInt(document.getElementById('profile-b1-infusion').value)||0) + 
+                        (parseInt(document.getElementById('profile-b1-bloom').value)||0) + 
+                        (parseInt(document.getElementById('profile-b1-brew').value)||0);
+        
+        const b2Total = (parseInt(document.getElementById('profile-b2-infusion').value)||0) + 
+                        (parseInt(document.getElementById('profile-b2-bloom').value)||0) + 
+                        (parseInt(document.getElementById('profile-b2-brew').value)||0);
+
+        document.getElementById('profile-b1-total-display').innerText = b1Total;
+        document.getElementById('profile-b2-total-display').innerText = b2Total;
     },
 
     openSettings: () => {
         haptic('light');
         document.getElementById('profile-machine-name').value = userProfile.machineName || '';
-        document.getElementById('profile-infusion').value = userProfile.infusion || 0;
-        document.getElementById('profile-bloom').value = userProfile.bloom || 0;
         document.getElementById('profile-ai-enabled').checked = userProfile.aiEnabled !== false;
+        document.getElementById('profile-default-dose').value = userProfile.defaultDose || 18;
         
-        const offset = (parseInt(userProfile.infusion)||0) + (parseInt(userProfile.bloom)||0);
-        document.getElementById('profile-offset-display').innerText = offset;
+        if(userProfile.b1) {
+            document.getElementById('profile-b1-infusion').value = userProfile.b1.infusion || 0;
+            document.getElementById('profile-b1-bloom').value = userProfile.b1.bloom || 0;
+            document.getElementById('profile-b1-brew').value = userProfile.b1.brew || 0;
+        }
+        
+        if(userProfile.b2) {
+            document.getElementById('profile-b2-infusion').value = userProfile.b2.infusion || 0;
+            document.getElementById('profile-b2-bloom').value = userProfile.b2.bloom || 0;
+            document.getElementById('profile-b2-brew').value = userProfile.b2.brew || 0;
+        }
 
+        app.updateSettingsDisplay();
         app.router('settings');
     },
 
     saveProfile: async () => {
         haptic('medium');
         const name = document.getElementById('profile-machine-name').value;
-        const infusion = parseInt(document.getElementById('profile-infusion').value) || 0;
-        const bloom = parseInt(document.getElementById('profile-bloom').value) || 0;
         const aiEnabled = document.getElementById('profile-ai-enabled').checked;
+        const defaultDose = parseFloat(document.getElementById('profile-default-dose').value) || 18;
+        
+        const b1 = {
+            infusion: parseInt(document.getElementById('profile-b1-infusion').value) || 0,
+            bloom: parseInt(document.getElementById('profile-b1-bloom').value) || 0,
+            brew: parseInt(document.getElementById('profile-b1-brew').value) || 0
+        };
 
-        userProfile = { machineName: name, infusion, bloom, aiEnabled };
+        const b2 = {
+            infusion: parseInt(document.getElementById('profile-b2-infusion').value) || 0,
+            bloom: parseInt(document.getElementById('profile-b2-bloom').value) || 0,
+            brew: parseInt(document.getElementById('profile-b2-brew').value) || 0
+        };
+
+        userProfile = { machineName: name, aiEnabled, defaultDose, b1, b2 };
         
         try {
             await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
@@ -775,7 +839,7 @@ const app = {
             const result = await analyzeFn({ 
                 shot, 
                 bean: { name: bean.name, roastLevel: bean.roastLevel, origin: bean.origin },
-                machine: { name: userProfile.machineName, infusion: userProfile.infusion, bloom: userProfile.bloom }
+                machine: { name: userProfile.machineName, infusion: userProfile.b1?.infusion || 3, bloom: userProfile.b1?.bloom || 7 }
             });
             
             aiCache[cacheKey] = result.data.text.trim();
