@@ -37,6 +37,8 @@ let userProfile = {
     b2: { infusion: 0, bloom: 0, brew: 30 }
 };
 let aiCache = {};
+let currentEditingTags = [];
+let currentEditingImage = null;
 
 // --- UTILS ---
 const haptic = (type = 'light') => {
