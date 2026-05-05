@@ -1,18 +1,106 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsNewDoc() {
+      return signedIn() && request.resource.data.uid == request.auth.uid;
+    }
+
+    function ownsExistingDoc() {
+      return signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    function keepsOwner() {
+      return ownsExistingDoc() && request.resource.data.uid == resource.data.uid;
+    }
+
+    function optionalString(data, field) {
+      return !(field in data) || data[field] is string || data[field] == null;
+    }
+
+    function optionalTimestamp(data, field) {
+      return !(field in data) || data[field] is timestamp;
+    }
+
+    function optionalNumberText(data, field) {
+      return !(field in data) || data[field] is string || data[field] == null;
+    }
+
+    function validRating(data) {
+      return !(("rating" in data)) || (data.rating is int && data.rating >= 0 && data.rating <= 5);
+    }
+
+    function validTags(data) {
+      return !(("tags" in data)) || (data.tags is list && data.tags.size() <= 20);
+    }
+
+    function validProfile(data) {
+      return data.keys().hasOnly(["machineName", "aiEnabled", "defaultDose", "b1", "b2"]) &&
+        optionalString(data, "machineName") &&
+        (!("aiEnabled" in data) || data.aiEnabled is bool) &&
+        (!("defaultDose" in data) || data.defaultDose is int || data.defaultDose is float) &&
+        (!("b1" in data) || data.b1 is map) &&
+        (!("b2" in data) || data.b2 is map);
+    }
+
+    function validBean(data) {
+      return data.keys().hasOnly([
+          "uid", "roaster", "roasterLocation", "name", "origin", "roastLevel",
+          "tenBeanWeight", "tags", "rating", "image", "currentRoastDate",
+          "createdAt", "updatedAt"
+        ]) &&
+        data.keys().hasAll(["uid", "name"]) &&
+        data.uid is string &&
+        data.name is string &&
+        data.name.size() > 0 &&
+        optionalString(data, "roaster") &&
+        optionalString(data, "roasterLocation") &&
+        optionalString(data, "origin") &&
+        optionalString(data, "roastLevel") &&
+        optionalString(data, "currentRoastDate") &&
+        optionalNumberText(data, "tenBeanWeight") &&
+        optionalString(data, "image") &&
+        validTags(data) &&
+        validRating(data) &&
+        optionalTimestamp(data, "createdAt") &&
+        optionalTimestamp(data, "updatedAt");
+    }
+
+    function validBrewLog(data) {
+      return data.keys().hasOnly([
+          "uid", "beanId", "grind", "time", "dose", "yield", "date", "roastDate"
+        ]) &&
+        data.keys().hasAll(["uid", "beanId", "grind", "date"]) &&
+        data.uid is string &&
+        data.beanId is string &&
+        data.grind is string &&
+        data.grind.size() > 0 &&
+        optionalNumberText(data, "time") &&
+        optionalNumberText(data, "dose") &&
+        optionalNumberText(data, "yield") &&
+        optionalString(data, "roastDate") &&
+        data.date is timestamp;
+    }
+
     match /user_profiles/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow create, update: if signedIn() && request.auth.uid == userId && validProfile(request.resource.data);
+      allow delete: if signedIn() && request.auth.uid == userId;
     }
+
     match /beans/{docId} {
-      allow read, delete: if request.auth != null && resource.data.uid == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
-      allow update: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow read, delete: if ownsExistingDoc();
+      allow create: if ownsNewDoc() && validBean(request.resource.data);
+      allow update: if keepsOwner() && validBean(request.resource.data);
     }
+
     match /brew_logs/{docId} {
-      allow read, delete: if request.auth != null && resource.data.uid == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
-      allow update: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow read, delete: if ownsExistingDoc();
+      allow create: if ownsNewDoc() && validBrewLog(request.resource.data);
+      allow update: if keepsOwner() && validBrewLog(request.resource.data);
     }
   }
 }

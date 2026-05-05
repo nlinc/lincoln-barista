@@ -48,6 +48,24 @@ const haptic = (type = 'light') => {
     else if (type === 'heavy') window.navigator.vibrate([50, 30, 50]);
 };
 
+const el = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+};
+
+const renderTip = (target, text) => {
+    target.replaceChildren();
+    target.append("💡 ");
+    target.appendChild(el("strong", "", "Daily Tip:"));
+    target.append(` ${text}`);
+};
+
+const renderEmpty = (target, text) => {
+    target.replaceChildren(el("div", "empty-state", text));
+};
+
 // AI Brew Butler Logic
 const getAIAdvice = (shot, roastLevel = 'Medium') => {
     const ratio = parseFloat(shot.yield) / parseFloat(shot.dose);
@@ -146,15 +164,15 @@ const app = {
         try {
             const getTipFn = httpsCallable(functions, 'getDailyTip');
             const result = await getTipFn({});
-            tipEl.innerHTML = `💡 <b>Daily Tip:</b> ${result.data.text}`;
-        } catch(e) { console.error("Tip error:", e); tipEl.innerHTML = "💡 <b>Daily Tip:</b> Grind finer for light roasts!"; }
+            renderTip(tipEl, result.data.text || "Grind finer for light roasts!");
+        } catch(e) { console.error("Tip error:", e); renderTip(tipEl, "Grind finer for light roasts!"); }
     },
 
     renderBeanList: () => {
         const container = document.getElementById('bean-list-container');
         const filterBar = document.getElementById('filter-bar');
-        container.innerHTML = '';
-        filterBar.innerHTML = '';
+        container.replaceChildren();
+        filterBar.replaceChildren();
 
         let visibleBeans = beans.filter(b => {
             if(activeFilters.size === 0) return true;
@@ -187,32 +205,53 @@ const app = {
         } else { filterBar.classList.add('hidden'); }
 
         if(visibleBeans.length === 0) {
-            container.innerHTML = `<div style="text-align:center; padding: 3rem; color: var(--text-muted);">No beans found. Start by adding a new bag.</div>`;
+            renderEmpty(container, "No beans found. Start by adding a new bag.");
             return;
         }
 
         visibleBeans.forEach(b => {
             const card = document.createElement('div');
             card.className = `card bean-card roast-${b.roastLevel || 'Medium'}`;
-            const ratingStars = b.rating > 0 ? `<span style="color:#fbbf24;">${'★'.repeat(b.rating)}</span>` : '';
-            const img = b.image ? `<img src="${b.image}" class="bean-card-thumb">` : `<div class="bean-card-thumb" style="display:flex; align-items:center; justify-content:center; font-size:1.5rem;">☕</div>`;
-            
-            card.innerHTML = `
-                ${img}
-                <div style="flex:1;">
-                    <div style="font-size:0.65rem; color:var(--primary); font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">
-                        ${b.roaster} • ${b.roastLevel || ''} ${ratingStars}
-                    </div>
-                    <div style="font-weight:700; font-size:1.1rem; color:var(--text-main);">${b.name}</div>
-                    <div style="margin-top:4px;">
-                        ${b.origin ? `<span class="tag-pill">📍 ${b.origin}</span>` : ''}
-                        ${(b.tags || []).slice(0, 2).map(t => `<span class="tag-pill">#${t}</span>`).join('')}
-                    </div>
-                </div>
-            `;
+
+            let thumb;
+            if (b.image) {
+                thumb = document.createElement('img');
+                thumb.src = b.image;
+                thumb.alt = `${b.name || "Coffee"} bag`;
+                thumb.className = "bean-card-thumb";
+            } else {
+                thumb = el("div", "bean-card-thumb", "☕");
+                thumb.style.display = "flex";
+                thumb.style.alignItems = "center";
+                thumb.style.justifyContent = "center";
+                thumb.style.fontSize = "1.5rem";
+            }
+
+            const body = el("div", "bean-card-body");
+            const meta = el("div", "bean-card-meta");
+            meta.textContent = `${b.roaster || "Unknown roaster"} • ${b.roastLevel || ""}`;
+            if (b.rating > 0) {
+                const stars = el("span", "", ` ${"★".repeat(b.rating)}`);
+                stars.style.color = "#fbbf24";
+                meta.appendChild(stars);
+            }
+            body.appendChild(meta);
+            body.appendChild(el("div", "bean-card-name", b.name || "Untitled coffee"));
+
+            const tags = el("div", "bean-card-tags");
+            if (b.origin) tags.appendChild(el("span", "tag-pill", `📍 ${b.origin}`));
+            (b.tags || []).slice(0, 2).forEach(t => tags.appendChild(el("span", "tag-pill", `#${t}`)));
+            body.appendChild(tags);
+
+            card.append(thumb, body);
             card.onclick = () => { haptic('light'); app.loadBeanDetail(b.id); };
             container.appendChild(card);
         });
+    },
+
+    setSort: (value) => {
+        currentSort = value;
+        app.renderBeanList();
     },
 
     saveBean: async () => {
@@ -387,7 +426,8 @@ const app = {
 
         // Stale Roast Date Alert Check
         const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-        let staleWarningHtml = '';
+        const staleWarningContainer = document.getElementById('stale-warning-container');
+        staleWarningContainer.replaceChildren();
         if (roastDate !== "Unknown") {
             const rd = new Date(roastDate).getTime();
             const now = Date.now();
@@ -395,12 +435,12 @@ const app = {
             
             // If the roast date is older than 2 weeks AND we haven't logged a shot in over a week, remind user.
             if ((now - rd > 2 * ONE_WEEK_MS) && (!lastLogTime || (now - lastLogTime > ONE_WEEK_MS))) {
-                staleWarningHtml = `<div style="background:var(--accent); color:#000; padding:10px; border-radius:var(--radius-sm); font-size:0.8rem; font-weight:bold; margin-top:10px; cursor:pointer;" onclick="app.editActiveBean()">
-                    ⚠️ Is this a new bag? Tap here to Edit Profile & update Roast Date!
-                </div>`;
+                const warning = el("button", "stale-warning", "⚠️ Is this a new bag? Tap here to Edit Profile & update Roast Date!");
+                warning.type = "button";
+                warning.onclick = () => app.editActiveBean();
+                staleWarningContainer.appendChild(warning);
             }
         }
-        document.getElementById('stale-warning-container').innerHTML = staleWarningHtml;
         document.getElementById('detail-date').innerText = roastDate;
         if(roastDate !== "Unknown") {
             const days = Math.floor((new Date() - new Date(roastDate)) / (1000 * 60 * 60 * 24));
@@ -425,7 +465,7 @@ const app = {
         if(logsCache.length > 0) {
             const lastLog = logsCache[0];
             const heuristicAdvice = getAIAdvice(lastLog, currentActiveBean?.roastLevel);
-            butlerText.innerHTML = `"${heuristicAdvice.text}"`;
+            butlerText.textContent = `"${heuristicAdvice.text}"`;
             butlerCard.classList.remove('hidden');
 
             // Trigger True AI if enabled and not cached
@@ -445,10 +485,10 @@ const app = {
 
     renderHistory: () => {
         const container = document.getElementById('history-container');
-        container.innerHTML = '';
+        container.replaceChildren();
         
         if(logsCache.length === 0) {
-            container.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--text-muted);">No shots logged yet. Press ☕ to start.</div>`;
+            renderEmpty(container, "No shots logged yet. Press ☕ to start.");
             return;
         }
 
@@ -461,9 +501,7 @@ const app = {
         });
 
         Object.keys(groups).sort().reverse().forEach(batch => {
-            const header = document.createElement('div');
-            header.style = "font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--primary); margin: 1.5rem 0 0.5rem 0.5rem;";
-            header.innerText = `Batch: ${batch}`;
+            const header = el("div", "batch-header", `Batch: ${batch}`);
             container.appendChild(header);
 
             groups[batch].forEach(log => {
@@ -471,23 +509,21 @@ const app = {
                 const row = document.createElement('div');
                 row.className = `log-row ext-${advice.status}`;
                 const ratio = (parseFloat(log.yield) / parseFloat(log.dose)).toFixed(1);
-                
-                row.innerHTML = `
-                    <div class="log-row-metrics">
-                        <div style="text-align:center;">
-                            <div style="font-weight:700; font-size:1.1rem;">${log.time || '--'}s</div>
-                        </div>
-                        <div>
-                            <div style="font-size:0.75rem; color:var(--text-muted);">GRIND</div>
-                            <div style="font-weight:700;">${log.grind}</div>
-                        </div>
-                        <div style="text-align:right;">
-                            <div style="font-weight:600; color:var(--primary);">1:${ratio}</div>
-                            <div style="font-size:0.7rem; color:var(--text-muted);">${log.dose}g → ${log.yield}g</div>
-                        </div>
-                    </div>
-                    <div class="advice-text">${advice.text}</div>
-                `;
+
+                const metrics = el("div", "log-row-metrics");
+                const timeBox = document.createElement("div");
+                timeBox.style.textAlign = "center";
+                timeBox.appendChild(el("div", "metric-value metric-time", `${log.time || "--"}s`));
+
+                const grindBox = document.createElement("div");
+                grindBox.append(el("div", "metric-label", "GRIND"), el("div", "metric-value", log.grind || "--"));
+
+                const ratioBox = document.createElement("div");
+                ratioBox.style.textAlign = "right";
+                ratioBox.append(el("div", "metric-ratio", `1:${ratio}`), el("div", "metric-subtext", `${log.dose || "--"}g → ${log.yield || "--"}g`));
+
+                metrics.append(timeBox, grindBox, ratioBox);
+                row.append(metrics, el("div", "advice-text", advice.text));
                 row.onclick = () => { haptic('light'); app.openEditShot(log.id); };
                 container.appendChild(row);
             });
@@ -496,7 +532,7 @@ const app = {
 
     renderDialInSummary: () => {
         const tbody = document.getElementById('dial-in-table-body');
-        tbody.innerHTML = '';
+        tbody.replaceChildren();
         
         const grouped = {};
         logsCache.forEach(l => {
@@ -515,7 +551,14 @@ const app = {
         })).sort((a,b) => Math.abs(a.avgRatio - 2.0) - Math.abs(b.avgRatio - 2.0));
 
         if(rows.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:1rem; opacity:0.5;">Awaiting data...</td></tr>`;
+            const tr = document.createElement('tr');
+            const td = el("td", "", "Awaiting data...");
+            td.colSpan = 4;
+            td.style.textAlign = "center";
+            td.style.padding = "1rem";
+            td.style.opacity = "0.5";
+            tr.appendChild(td);
+            tbody.appendChild(tr);
             return;
         }
 
@@ -523,12 +566,18 @@ const app = {
             const isBest = i === 0;
             const tr = document.createElement('tr');
             tr.style = isBest ? "background: var(--success-bg); font-weight: 600;" : "border-bottom: 1px solid #efefef;";
-            tr.innerHTML = `
-                <td style="padding:0.75rem 0.5rem; color:var(--primary);">${row.grind}</td>
-                <td style="padding:0.75rem 0.5rem;">1:${row.avgRatio.toFixed(1)}</td>
-                <td style="padding:0.75rem 0.5rem;">${row.avgTime}s</td>
-                <td style="padding:0.75rem 0.5rem; opacity:0.6;">${row.count}x</td>
-            `;
+            [
+                { text: row.grind, color: "var(--primary)" },
+                { text: `1:${row.avgRatio.toFixed(1)}` },
+                { text: `${row.avgTime}s` },
+                { text: `${row.count}x`, opacity: "0.6" }
+            ].forEach(cell => {
+                const td = el("td", "", cell.text);
+                td.style.padding = "0.75rem 0.5rem";
+                if (cell.color) td.style.color = cell.color;
+                if (cell.opacity) td.style.opacity = cell.opacity;
+                tr.appendChild(td);
+            });
             tbody.appendChild(tr);
         });
     },
@@ -552,18 +601,16 @@ const app = {
         statsCard.classList.remove('hidden');
 
         const top = Object.entries(grinds).sort((a,b) => b[1]-a[1]).slice(0,2);
-        statsContent.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:flex-end;">
-                <div>
-                    <div style="font-size:1.5rem; font-weight:800; color:var(--primary); line-height:1;">${total}</div>
-                    <div style="font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Total Extractions</div>
-                </div>
-                <div style="text-align:right;">
-                    <div style="font-size:0.9rem; font-weight:700;">${top.map(t => t[0]).join(', ')}</div>
-                    <div style="font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Legacy Grinds</div>
-                </div>
-            </div>
-        `;
+        const stats = el("div", "stats-grid");
+        const totalBox = document.createElement("div");
+        totalBox.append(el("div", "stats-number", total), el("div", "stats-label", "Total Extractions"));
+
+        const grindBox = document.createElement("div");
+        grindBox.style.textAlign = "right";
+        grindBox.append(el("div", "stats-top", top.map(t => t[0]).join(", ") || "None"), el("div", "stats-label", "Legacy Grinds"));
+
+        stats.append(totalBox, grindBox);
+        statsContent.replaceChildren(stats);
     },
 
     // --- PHOTO HANDLING ---
@@ -624,11 +671,22 @@ const app = {
 
     renderEditingTags: () => {
         const container = document.getElementById('editing-tags-container');
-        container.innerHTML = '';
+        container.replaceChildren();
         currentEditingTags.forEach((t, i) => {
             const pill = document.createElement('span');
             pill.className = 'tag-pill active';
-            pill.innerHTML = `${t} <span style="margin-left:5px; opacity:0.6;" onclick="app.removeTag(${i})">✕</span>`;
+            pill.append(t, " ");
+            const remove = el("button", "", "✕");
+            remove.type = "button";
+            remove.setAttribute("aria-label", `Remove ${t}`);
+            remove.style.marginLeft = "5px";
+            remove.style.opacity = "0.75";
+            remove.style.border = "0";
+            remove.style.background = "transparent";
+            remove.style.color = "inherit";
+            remove.style.cursor = "pointer";
+            remove.onclick = () => app.removeTag(i);
+            pill.appendChild(remove);
             container.appendChild(pill);
         });
     },
@@ -830,11 +888,11 @@ const app = {
         const butlerText = document.getElementById('butler-detail-text');
         const cacheKey = `${shot.id}_${shot.yield}`;
         if(aiCache[cacheKey]) {
-            butlerText.innerHTML = `🤵🏻‍♂️ <i>${aiCache[cacheKey]}</i>`;
+            butlerText.textContent = `🤵🏻‍♂️ ${aiCache[cacheKey]}`;
             return;
         }
 
-        butlerText.innerHTML = "🤵🏻‍♂️ <i>Butler is analyzing the flavor profile...</i>";
+        butlerText.textContent = "🤵🏻‍♂️ Butler is analyzing the flavor profile...";
         
         try {
             const analyzeFn = httpsCallable(functions, 'analyzeShot');
@@ -845,10 +903,10 @@ const app = {
             });
             
             aiCache[cacheKey] = result.data.text.trim();
-            butlerText.innerHTML = `🤵🏻‍♂️ <i>${aiCache[cacheKey]}</i>`;
+            butlerText.textContent = `🤵🏻‍♂️ ${aiCache[cacheKey]}`;
         } catch(e) { 
             console.error("AI Analysis error:", e);
-            butlerText.innerHTML = "🤵🏻‍♂️ <i>Butler is momentarily unavailable. Check your grind manually!</i>";
+            butlerText.textContent = "🤵🏻‍♂️ Butler is momentarily unavailable. Check your grind manually!";
         }
     },
 
@@ -953,18 +1011,18 @@ const app = {
         const avgYield = allLogs.reduce((acc, l) => acc + (parseFloat(l.yield) || 0), 0) / allLogs.length;
         const topGrind = distLabels[distValues.indexOf(Math.max(...distValues))];
         
-        let insight = `Your most consistent grind is **${topGrind}**. `;
+        let insight = `Your most consistent grind is ${topGrind}. `;
         if (trendData.length > 5) {
             const firstHalf = trendData.slice(0, Math.floor(trendData.length/2));
             const secondHalf = trendData.slice(Math.floor(trendData.length/2));
             const avg1 = firstHalf.reduce((a,b) => a + parseFloat(b.grind), 0) / firstHalf.length;
             const avg2 = secondHalf.reduce((a,b) => a + parseFloat(b.grind), 0) / secondHalf.length;
             
-            if (avg2 > avg1 + 0.5) insight += "You've been grinding **coarser** recently—likely enjoying darker roasts.";
-            else if (avg2 < avg1 - 0.5) insight += "You've been grinding **finer** recently—hitting those high-extraction light roasts.";
+            if (avg2 > avg1 + 0.5) insight += "You've been grinding coarser recently, likely enjoying darker roasts.";
+            else if (avg2 < avg1 - 0.5) insight += "You've been grinding finer recently, hitting those high-extraction light roasts.";
             else insight += "You have incredible grind stability across roasters.";
         }
-        insightEl.innerHTML = insight;
+        insightEl.textContent = insight;
     }
 };
 
