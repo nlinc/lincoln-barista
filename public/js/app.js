@@ -67,6 +67,11 @@ const renderEmpty = (target, text) => {
     target.replaceChildren(el("div", "empty-state", text));
 };
 
+const on = (id, eventName, handler) => {
+    const node = document.getElementById(id);
+    if (node) node.addEventListener(eventName, handler);
+};
+
 const app = {
     // --- ROUTING ---
     router: (viewName, addToHistory = true) => {
@@ -984,6 +989,63 @@ const app = {
 window.app = app;
 
 // --- LISTENERS ---
+const bindUiEvents = () => {
+    on("btn-login", "click", () => app.login());
+    on("btn-open-analytics", "click", () => app.renderAnalytics());
+    on("btn-open-settings", "click", () => app.openSettings());
+    on("btn-logout", "click", () => app.logout());
+    on("input-sort-beans", "change", (event) => app.setSort(event.target.value));
+
+    on("fab-add-bean", "click", () => {
+        app.resetBeanForm();
+        app.router("edit-bean");
+    });
+    on("fab-log-shot", "click", () => app.openLogShot());
+
+    on("input-bean-image", "change", (event) => app.handleImageUpload(event));
+    on("btn-remove-image", "click", () => app.removeImage());
+    on("btn-add-tag", "click", () => app.addTag());
+    on("input-new-tag", "keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            app.addTag();
+        }
+    });
+
+    document.querySelectorAll(".bean-star").forEach(star => {
+        star.addEventListener("click", () => app.setBeanRating(parseInt(star.dataset.rating, 10)));
+    });
+
+    on("btn-save-bean", "click", () => app.saveBean());
+    on("btn-cancel-bean", "click", () => app.router("list"));
+    on("btn-delete-bean", "click", () => app.deleteBean());
+    on("btn-edit-active-bean", "click", () => app.editActiveBean());
+    on("btn-update-roast-date", "click", () => app.promptNewDate());
+
+    document.querySelectorAll("[data-route]").forEach(button => {
+        button.addEventListener("click", () => app.router(button.dataset.route));
+    });
+
+    document.querySelectorAll(".shot-preview-input").forEach(input => {
+        input.addEventListener("input", () => app.liveButlerPreview());
+    });
+    document.querySelectorAll(".time-profile-btn").forEach(button => {
+        button.addEventListener("click", () => app.setTimeFromProfile(parseInt(button.dataset.profile, 10)));
+    });
+    on("btn-save-shot", "click", () => app.saveShot());
+    on("btn-cancel-shot", "click", () => app.router("detail"));
+    on("btn-delete-shot", "click", () => app.deleteShot());
+
+    document.querySelectorAll(".settings-total-input").forEach(input => {
+        input.addEventListener("input", () => app.updateSettingsDisplay());
+    });
+    on("profile-ai-enabled", "change", () => app.saveProfile());
+    on("btn-save-profile", "click", () => app.saveProfile());
+    on("btn-export-data", "click", () => app.exportData());
+};
+
+bindUiEvents();
+
 onAuthStateChanged(auth, u => {
     if(u) {
         currentUser = u;
