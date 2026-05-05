@@ -187,6 +187,24 @@ textarea:focus-visible {
     text-align: center;
 }
 
+.status-strip {
+    margin-bottom: 1rem;
+    padding: 0.65rem 0.85rem;
+    border: 1px solid #d6d3d1;
+    border-radius: var(--radius-sm);
+    background: white;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.status-strip.error {
+    border-color: #fecaca;
+    background: var(--error-bg);
+    color: var(--error-text);
+}
+
 .section-toolbar {
     display: flex;
     justify-content: space-between;
@@ -303,6 +321,50 @@ textarea:focus-visible {
     padding: 2.5rem 1rem;
     color: var(--text-muted);
     text-align: center;
+}
+
+.empty-panel {
+    padding: 2.25rem 1.25rem;
+    border: 1px dashed #d6d3d1;
+    border-radius: var(--radius-md);
+    background: rgba(255,255,255,0.45);
+    text-align: center;
+}
+
+.empty-panel-title {
+    color: var(--text-main);
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.empty-panel-copy {
+    max-width: 320px;
+    margin: 0.4rem auto 1rem;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+}
+
+.empty-panel-action {
+    max-width: 220px;
+    margin: 0 auto;
+}
+
+.thumb-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.rating-stars {
+    color: #fbbf24;
+}
+
+.tag-pill.clear-filter {
+    border: 0;
+    background: var(--error-text);
+    color: white;
 }
 
 .center-card {
@@ -514,6 +576,17 @@ input:focus, select:focus {
 .tag-pill.active {
     background: var(--primary);
     color: white;
+    border: 0;
+    cursor: pointer;
+}
+
+.tag-remove {
+    margin-left: 5px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.75;
 }
 
 /* --- ANALYTICS & LOGS --- */
@@ -572,6 +645,14 @@ input:focus, select:focus {
     font-size: 1.1rem;
 }
 
+.metric-center {
+    text-align: center;
+}
+
+.metric-right {
+    text-align: right;
+}
+
 .metric-ratio {
     color: var(--primary);
     font-weight: 700;
@@ -614,6 +695,10 @@ input:focus, select:focus {
 .stats-top {
     font-size: 0.9rem;
     font-weight: 800;
+}
+
+.stats-right {
+    text-align: right;
 }
 
 /* --- SHOT DETAIL / CHART --- */
@@ -807,6 +892,33 @@ canvas {
     padding: 0.5rem;
 }
 
+.summary-table td {
+    padding: 0.75rem 0.5rem;
+}
+
+.summary-row {
+    border-bottom: 1px solid #efefef;
+}
+
+.summary-best-row {
+    background: var(--success-bg);
+    font-weight: 700;
+}
+
+.summary-primary {
+    color: var(--primary);
+}
+
+.summary-muted {
+    opacity: 0.6;
+}
+
+.summary-empty {
+    padding: 1rem;
+    color: var(--text-muted);
+    text-align: center;
+}
+
 .section-stack {
     margin-top: 2rem;
 }
@@ -847,6 +959,21 @@ canvas {
     text-align: center;
 }
 
+.warning-card.good-preview {
+    border-color: #bbf7d0;
+    background: var(--success-bg);
+}
+
+.warning-card.good-preview .warning-kicker,
+.warning-card.good-preview .warning-copy {
+    color: var(--success-text);
+}
+
+.warning-card.warning-preview {
+    border-color: var(--accent);
+    background: var(--warning-bg);
+}
+
 .warning-kicker {
     margin-bottom: 0.25rem;
     color: var(--warning-text);
@@ -863,6 +990,18 @@ canvas {
 
 .chart-area {
     position: relative;
+}
+
+.chart-empty {
+    display: flex;
+    min-height: 100%;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    color: var(--text-muted);
+    font-size: 0.86rem;
+    font-weight: 700;
+    text-align: center;
 }
 
 .trend-area {

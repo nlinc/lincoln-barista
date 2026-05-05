@@ -55,6 +55,7 @@
             💡 <b>Daily Tip:</b> Analyzing your beans for insights...
         </div>
 
+        <div id="collection-status" class="status-strip hidden"></div>
         <div id="filter-bar" class="filter-bar"></div>
         <div id="bean-list-container"></div>
         
@@ -262,6 +263,7 @@
             <div class="chart-title">Grind vs. Yield (Last 30 Days)</div>
             <div class="chart-area trend-area">
                 <canvas id="trendChart"></canvas>
+                <div id="trend-empty-state" class="chart-empty hidden">Log a few shots to see grind and yield trends.</div>
             </div>
         </div>
 
@@ -269,6 +271,7 @@
             <div class="chart-title">Grind Frequency</div>
             <div class="chart-area dist-area">
                 <canvas id="distChart"></canvas>
+                <div id="dist-empty-state" class="chart-empty hidden">Grind frequency appears after your first extraction logs.</div>
             </div>
         </div>
         

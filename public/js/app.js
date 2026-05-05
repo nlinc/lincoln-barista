@@ -67,6 +67,26 @@ const renderEmpty = (target, text) => {
     target.replaceChildren(el("div", "empty-state", text));
 };
 
+const renderEmptyAction = (target, title, body, actionText, action) => {
+    const empty = el("div", "empty-panel");
+    empty.append(el("div", "empty-panel-title", title), el("div", "empty-panel-copy", body));
+    if (actionText && action) {
+        const button = el("button", "btn empty-panel-action", actionText);
+        button.type = "button";
+        button.addEventListener("click", action);
+        empty.appendChild(button);
+    }
+    target.replaceChildren(empty);
+};
+
+const setStatus = (text, tone = "neutral") => {
+    const status = document.getElementById("collection-status");
+    if (!status) return;
+    status.textContent = text || "";
+    status.className = `status-strip ${tone}`;
+    status.classList.toggle("hidden", !text);
+};
+
 const on = (id, eventName, handler) => {
     const node = document.getElementById(id);
     if (node) node.addEventListener(eventName, handler);
@@ -107,13 +127,24 @@ const app = {
 
     // --- BEAN MANAGEMENT ---
     fetchBeans: async () => {
-        const q = query(collection(db, "beans"), where("uid", "==", currentUser.uid));
-        const snapshot = await getDocs(q);
-        beans = [];
-        snapshot.forEach((doc) => beans.push({ id: doc.id, ...doc.data() }));
-        app.renderBeanList();
-        app.renderGlobalStats();
-        app.renderDailyTip();
+        const container = document.getElementById('bean-list-container');
+        if (container) renderEmpty(container, "Loading your coffee collection...");
+        setStatus("Syncing collection...", "neutral");
+
+        try {
+            const q = query(collection(db, "beans"), where("uid", "==", currentUser.uid));
+            const snapshot = await getDocs(q);
+            beans = [];
+            snapshot.forEach((doc) => beans.push({ id: doc.id, ...doc.data() }));
+            setStatus("");
+            app.renderBeanList();
+            app.renderGlobalStats();
+            app.renderDailyTip();
+        } catch(e) {
+            console.error("Bean fetch error:", e);
+            setStatus("Could not sync the collection. Check your connection and try again.", "error");
+            renderEmptyAction(container, "Collection unavailable", "Your saved beans could not be loaded right now.", "Try Again", () => app.fetchBeans());
+        }
     },
 
     renderDailyTip: async () => {
@@ -148,15 +179,17 @@ const app = {
         // Filter Bar UI
         if(activeFilters.size > 0) {
             filterBar.classList.remove('hidden');
-            const clearBtn = document.createElement('div');
+            const clearBtn = document.createElement('button');
             clearBtn.className = 'tag-pill active';
-            clearBtn.style.background = 'var(--error-text)';
+            clearBtn.type = "button";
+            clearBtn.classList.add("clear-filter");
             clearBtn.innerText = '✕ Clear All';
             clearBtn.onclick = () => { activeFilters.clear(); app.renderBeanList(); };
             filterBar.appendChild(clearBtn);
             activeFilters.forEach(f => {
-                const chip = document.createElement('div');
+                const chip = document.createElement('button');
                 chip.className = 'tag-pill active';
+                chip.type = "button";
                 chip.innerText = f;
                 chip.onclick = () => { activeFilters.delete(f); app.renderBeanList(); };
                 filterBar.appendChild(chip);
@@ -164,7 +197,14 @@ const app = {
         } else { filterBar.classList.add('hidden'); }
 
         if(visibleBeans.length === 0) {
-            renderEmpty(container, "No beans found. Start by adding a new bag.");
+            const hasFilters = activeFilters.size > 0;
+            renderEmptyAction(
+                container,
+                hasFilters ? "No beans match those filters" : "Start your first coffee profile",
+                hasFilters ? "Clear filters or adjust the collection sort to get back to your bags." : "Add a bag once, then log shots against each roast batch as you dial it in.",
+                hasFilters ? "Clear Filters" : "Add Bean",
+                hasFilters ? () => { activeFilters.clear(); app.renderBeanList(); } : () => { app.resetBeanForm(); app.router("edit-bean"); }
+            );
             return;
         }
 
@@ -180,18 +220,14 @@ const app = {
                 thumb.className = "bean-card-thumb";
             } else {
                 thumb = el("div", "bean-card-thumb", "☕");
-                thumb.style.display = "flex";
-                thumb.style.alignItems = "center";
-                thumb.style.justifyContent = "center";
-                thumb.style.fontSize = "1.5rem";
+                thumb.classList.add("thumb-placeholder");
             }
 
             const body = el("div", "bean-card-body");
             const meta = el("div", "bean-card-meta");
             meta.textContent = `${b.roaster || "Unknown roaster"} • ${b.roastLevel || ""}`;
             if (b.rating > 0) {
-                const stars = el("span", "", ` ${"★".repeat(b.rating)}`);
-                stars.style.color = "#fbbf24";
+                const stars = el("span", "rating-stars", ` ${"★".repeat(b.rating)}`);
                 meta.appendChild(stars);
             }
             body.appendChild(meta);
@@ -401,6 +437,7 @@ const app = {
             }
         }
         document.getElementById('detail-date').innerText = roastDate;
+        document.getElementById('detail-age').innerText = "";
         if(roastDate !== "Unknown") {
             const days = Math.floor((new Date() - new Date(roastDate)) / (1000 * 60 * 60 * 24));
             document.getElementById('detail-age').innerText = `${days} days since roast`;
@@ -447,7 +484,13 @@ const app = {
         container.replaceChildren();
         
         if(logsCache.length === 0) {
-            renderEmpty(container, "No shots logged yet. Press ☕ to start.");
+            renderEmptyAction(
+                container,
+                "No extractions yet",
+                "Log the first shot for this batch to start seeing dial-in guidance.",
+                "Log Shot",
+                () => app.openLogShot()
+            );
             return;
         }
 
@@ -471,14 +514,14 @@ const app = {
 
                 const metrics = el("div", "log-row-metrics");
                 const timeBox = document.createElement("div");
-                timeBox.style.textAlign = "center";
+                timeBox.className = "metric-center";
                 timeBox.appendChild(el("div", "metric-value metric-time", `${log.time || "--"}s`));
 
                 const grindBox = document.createElement("div");
                 grindBox.append(el("div", "metric-label", "GRIND"), el("div", "metric-value", log.grind || "--"));
 
                 const ratioBox = document.createElement("div");
-                ratioBox.style.textAlign = "right";
+                ratioBox.className = "metric-right";
                 ratioBox.append(el("div", "metric-ratio", `1:${ratio}`), el("div", "metric-subtext", `${log.dose || "--"}g → ${log.yield || "--"}g`));
 
                 metrics.append(timeBox, grindBox, ratioBox);
@@ -511,11 +554,8 @@ const app = {
 
         if(rows.length === 0) {
             const tr = document.createElement('tr');
-            const td = el("td", "", "Awaiting data...");
+            const td = el("td", "summary-empty", "Awaiting extraction data...");
             td.colSpan = 4;
-            td.style.textAlign = "center";
-            td.style.padding = "1rem";
-            td.style.opacity = "0.5";
             tr.appendChild(td);
             tbody.appendChild(tr);
             return;
@@ -524,17 +564,14 @@ const app = {
         rows.forEach((row, i) => {
             const isBest = i === 0;
             const tr = document.createElement('tr');
-            tr.style = isBest ? "background: var(--success-bg); font-weight: 600;" : "border-bottom: 1px solid #efefef;";
+            tr.className = isBest ? "summary-best-row" : "summary-row";
             [
-                { text: row.grind, color: "var(--primary)" },
+                { text: row.grind, className: "summary-primary" },
                 { text: `1:${row.avgRatio.toFixed(1)}` },
                 { text: `${row.avgTime}s` },
-                { text: `${row.count}x`, opacity: "0.6" }
+                { text: `${row.count}x`, className: "summary-muted" }
             ].forEach(cell => {
-                const td = el("td", "", cell.text);
-                td.style.padding = "0.75rem 0.5rem";
-                if (cell.color) td.style.color = cell.color;
-                if (cell.opacity) td.style.opacity = cell.opacity;
+                const td = el("td", cell.className || "", cell.text);
                 tr.appendChild(td);
             });
             tbody.appendChild(tr);
@@ -565,7 +602,7 @@ const app = {
         totalBox.append(el("div", "stats-number", total), el("div", "stats-label", "Total Extractions"));
 
         const grindBox = document.createElement("div");
-        grindBox.style.textAlign = "right";
+        grindBox.className = "stats-right";
         grindBox.append(el("div", "stats-top", top.map(t => t[0]).join(", ") || "None"), el("div", "stats-label", "Legacy Grinds"));
 
         stats.append(totalBox, grindBox);
@@ -637,13 +674,8 @@ const app = {
             pill.append(t, " ");
             const remove = el("button", "", "✕");
             remove.type = "button";
+            remove.className = "tag-remove";
             remove.setAttribute("aria-label", `Remove ${t}`);
-            remove.style.marginLeft = "5px";
-            remove.style.opacity = "0.75";
-            remove.style.border = "0";
-            remove.style.background = "transparent";
-            remove.style.color = "inherit";
-            remove.style.cursor = "pointer";
             remove.onclick = () => app.removeTag(i);
             pill.appendChild(remove);
             container.appendChild(pill);
@@ -716,10 +748,11 @@ const app = {
             const advice = getAIAdvice(mockShot, currentActiveBean?.roastLevel);
             previewText.innerText = `Butler predicts: ${advice.text}`;
             previewEl.classList.remove('hidden');
-            previewEl.style.backgroundColor = advice.status === 'good' ? 'var(--success-bg)' : 'var(--warning-bg)';
-            previewEl.style.color = advice.status === 'good' ? 'var(--success-text)' : 'var(--warning-text)';
+            previewEl.classList.toggle("good-preview", advice.status === "good");
+            previewEl.classList.toggle("warning-preview", advice.status !== "good");
         } else {
             previewEl.classList.add('hidden');
+            previewEl.classList.remove("good-preview", "warning-preview");
         }
     },
 
@@ -872,13 +905,33 @@ const app = {
     renderAnalytics: async () => {
         haptic('light');
         app.router('analytics');
+        const trendEmpty = document.getElementById("trend-empty-state");
+        const distEmpty = document.getElementById("dist-empty-state");
+        const insightEl = document.getElementById('analytics-insight-text');
+        const trendCanvas = document.getElementById("trendChart");
+        const distCanvas = document.getElementById("distChart");
+
+        trendEmpty?.classList.add("hidden");
+        distEmpty?.classList.add("hidden");
+        trendCanvas?.classList.remove("hidden");
+        distCanvas?.classList.remove("hidden");
+        insightEl.textContent = "Analyzing your data for patterns...";
 
         const q = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
         const snap = await getDocs(q);
         const allLogs = [];
         snap.forEach(d => allLogs.push(d.data()));
 
-        if (allLogs.length === 0) return;
+        if (allLogs.length === 0) {
+            if (chartTrend) chartTrend.destroy();
+            if (chartDist) chartDist.destroy();
+            trendCanvas?.classList.add("hidden");
+            distCanvas?.classList.add("hidden");
+            trendEmpty?.classList.remove("hidden");
+            distEmpty?.classList.remove("hidden");
+            insightEl.textContent = "Log a few extractions to unlock trends, grind frequency, and pattern insights.";
+            return;
+        }
 
         // Group by Date for Trend
         const last30 = new Date();
@@ -966,7 +1019,6 @@ const app = {
         });
 
         // AI Insight Generation
-        const insightEl = document.getElementById('analytics-insight-text');
         const avgYield = allLogs.reduce((acc, l) => acc + (parseFloat(l.yield) || 0), 0) / allLogs.length;
         const topGrind = distLabels[distValues.indexOf(Math.max(...distValues))];
         
