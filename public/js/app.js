@@ -40,6 +40,7 @@ let userProfile = {
 let aiCache = {};
 let currentEditingTags = [];
 let currentEditingImage = null;
+let currentRecipeShot = null;
 
 // --- UTILS ---
 const haptic = (type = 'light') => {
@@ -85,6 +86,40 @@ const setStatus = (text, tone = "neutral") => {
     status.textContent = text || "";
     status.className = `status-strip ${tone}`;
     status.classList.toggle("hidden", !text);
+};
+
+const ratioFor = (shot) => {
+    const dose = parseFloat(shot?.dose);
+    const yieldVal = parseFloat(shot?.yield);
+    if (!dose || Number.isNaN(dose) || Number.isNaN(yieldVal)) return null;
+    return yieldVal / dose;
+};
+
+const formatShotDate = (shot) => {
+    if (!shot?.date?.seconds) return "date unknown";
+    const shotDate = new Date(shot.date.seconds * 1000);
+    const days = Math.floor((Date.now() - shotDate.getTime()) / (1000 * 60 * 60 * 24));
+    if (days <= 0) return "today";
+    if (days === 1) return "yesterday";
+    return `${days} days ago`;
+};
+
+const chooseCurrentRecipe = (logs, roastLevel) => {
+    if (!logs.length) return null;
+    const latestGood = logs.find(log => getAIAdvice(log, roastLevel).status === "good");
+    return {
+        shot: latestGood || logs[0],
+        source: latestGood ? "Latest settled shot" : "Most recent shot",
+        status: latestGood ? "Dialed" : "Resume"
+    };
+};
+
+const summarizeRecipeMemory = (shot, logs) => {
+    const ratio = ratioFor(shot);
+    const ratioText = ratio ? `1:${ratio.toFixed(1)}` : "ratio unknown";
+    const shotCount = logs.length;
+    const used = formatShotDate(shot);
+    return `${ratioText}, last used ${used}. ${shotCount} logged ${shotCount === 1 ? "shot" : "shots"} for this bean.`;
 };
 
 const on = (id, eventName, handler) => {
@@ -352,6 +387,47 @@ const app = {
         app.router('log-shot');
     },
 
+    prefillShotForm: (shot, title = "Adjust Recipe") => {
+        haptic('light');
+        document.getElementById('log-shot-title').innerText = title;
+        document.getElementById('input-log-bean-id').value = currentActiveBean?.id || shot?.beanId || '';
+        document.getElementById('input-log-shot-id').value = '';
+        document.getElementById('log-display-date').innerText = currentActiveBean?.currentRoastDate || shot?.roastDate || "N/A";
+        document.getElementById('input-shot-grind').value = shot?.grind || '';
+        document.getElementById('input-shot-time').value = shot?.time || '';
+        document.getElementById('input-shot-dose').value = shot?.dose || userProfile.defaultDose || 18;
+        document.getElementById('input-shot-yield').value = shot?.yield || (userProfile.defaultDose || 18) * 2;
+        document.getElementById('btn-save-shot').innerText = "Log Adjusted Shot";
+        document.getElementById('btn-delete-shot').classList.add('hidden');
+        app.liveButlerPreview();
+        app.router('log-shot');
+    },
+
+    repeatCurrentRecipe: async () => {
+        if (!currentRecipeShot || !currentActiveBean) return app.openLogShot();
+        if(!confirm("Log the current recipe as a new shot?")) return;
+
+        haptic('medium');
+        try {
+            const data = {
+                beanId: currentActiveBean.id,
+                uid: currentUser.uid,
+                grind: currentRecipeShot.grind || '',
+                time: currentRecipeShot.time || '',
+                dose: currentRecipeShot.dose || '',
+                yield: currentRecipeShot.yield || '',
+                roastDate: currentActiveBean.currentRoastDate || currentRecipeShot.roastDate || "Unknown",
+                date: new Date()
+            };
+
+            if(!data.grind) throw new Error("Current recipe is missing a grind setting.");
+            await addDoc(collection(db, "brew_logs"), data);
+            await app.loadBeanDetail(currentActiveBean.id);
+        } catch(e) {
+            alert(e.message);
+        }
+    },
+
     deleteShot: async () => {
         if(confirm("Delete this shot log?")) {
             haptic('heavy');
@@ -449,8 +525,9 @@ const app = {
 
         app.renderHistory();
         app.renderDialInSummary();
+        app.renderCurrentRecipe();
 
-        // Reveal the Butler
+        // Reveal memory summary
         const butlerCard = document.getElementById('butler-advice-card');
         const butlerText = document.getElementById('butler-detail-text');
         const machineBadge = document.getElementById('machine-badge');
@@ -460,8 +537,7 @@ const app = {
 
         if(logsCache.length > 0) {
             const lastLog = logsCache[0];
-            const heuristicAdvice = getAIAdvice(lastLog, currentActiveBean?.roastLevel);
-            butlerText.textContent = `"${heuristicAdvice.text}"`;
+            butlerText.textContent = app.getMemorySummary();
             butlerCard.classList.remove('hidden');
 
             // Trigger True AI if enabled and not cached
@@ -477,6 +553,45 @@ const app = {
             console.error("Critical error in loadBeanDetail:", e);
             app.router('list');
         }
+    },
+
+    renderCurrentRecipe: () => {
+        const card = document.getElementById("current-recipe-card");
+        if (!card) return;
+
+        const recipe = chooseCurrentRecipe(logsCache, currentActiveBean?.roastLevel);
+        currentRecipeShot = recipe?.shot || null;
+
+        if (!currentRecipeShot) {
+            card.classList.add("hidden");
+            return;
+        }
+
+        const ratio = ratioFor(currentRecipeShot);
+        document.getElementById("recipe-source").textContent = recipe.source;
+        document.getElementById("recipe-status").textContent = recipe.status;
+        document.getElementById("recipe-grind").textContent = currentRecipeShot.grind || "--";
+        document.getElementById("recipe-dose").textContent = currentRecipeShot.dose ? `${currentRecipeShot.dose}g` : "--";
+        document.getElementById("recipe-yield").textContent = currentRecipeShot.yield ? `${currentRecipeShot.yield}g` : "--";
+        document.getElementById("recipe-time").textContent = currentRecipeShot.time ? `${currentRecipeShot.time}s` : "--";
+        document.getElementById("recipe-memory").textContent = summarizeRecipeMemory(currentRecipeShot, logsCache);
+        document.getElementById("recipe-status").className = `recipe-status ${recipe.status === "Dialed" ? "dialed" : "resume"}`;
+        card.classList.remove("hidden");
+    },
+
+    getMemorySummary: () => {
+        if (!logsCache.length) return "\"No shot history yet.\"";
+        const recipe = chooseCurrentRecipe(logsCache, currentActiveBean?.roastLevel);
+        const first = logsCache[logsCache.length - 1];
+        const last = logsCache[0];
+        const ratio = ratioFor(recipe.shot);
+        const ratioText = ratio ? `1:${ratio.toFixed(1)}` : "a remembered ratio";
+        const grindDrift = parseFloat(last.grind) - parseFloat(first.grind);
+        let driftText = "Grind has been fairly stable.";
+        if (!Number.isNaN(grindDrift) && Math.abs(grindDrift) >= 0.4) {
+            driftText = grindDrift > 0 ? "You moved coarser over this bag." : "You moved finer over this bag.";
+        }
+        return `"Settled around ${ratioText} at grind ${recipe.shot.grind || "--"}. ${driftText}"`;
     },
 
     renderHistory: () => {
@@ -697,17 +812,17 @@ const app = {
     // --- SHOT LOGGING ---
     openLogShot: () => {
         haptic('light');
-        document.getElementById('log-shot-title').innerText = "Modern Extraction Log";
+        document.getElementById('log-shot-title').innerText = currentRecipeShot ? "Log From Current Recipe" : "Log Extraction";
         document.getElementById('input-log-bean-id').value = currentActiveBean?.id || '';
         document.getElementById('input-log-shot-id').value = '';
         document.getElementById('log-display-date').innerText = currentActiveBean?.currentRoastDate || "N/A";
         
-        // Smarter defaults
+        // Resume from the remembered recipe when possible.
         const defaultDose = userProfile.defaultDose || 18;
-        document.getElementById('input-shot-dose').value = defaultDose;
-        document.getElementById('input-shot-yield').value = defaultDose * 2;
-        document.getElementById('input-shot-grind').value = logsCache[0]?.grind || '';
-        document.getElementById('input-shot-time').value = '';
+        document.getElementById('input-shot-dose').value = currentRecipeShot?.dose || defaultDose;
+        document.getElementById('input-shot-yield').value = currentRecipeShot?.yield || defaultDose * 2;
+        document.getElementById('input-shot-grind').value = currentRecipeShot?.grind || logsCache[0]?.grind || '';
+        document.getElementById('input-shot-time').value = currentRecipeShot?.time || '';
         
         const b1Total = userProfile.b1 ? ((parseInt(userProfile.b1.infusion)||0) + (parseInt(userProfile.b1.bloom)||0) + (parseInt(userProfile.b1.brew)||0)) : 30;
         const b2Total = userProfile.b2 ? ((parseInt(userProfile.b2.infusion)||0) + (parseInt(userProfile.b2.bloom)||0) + (parseInt(userProfile.b2.brew)||0)) : 30;
@@ -716,10 +831,12 @@ const app = {
         document.getElementById('btn-time-2').innerText = `P2 (${b2Total}s)`;
         
         document.getElementById('btn-delete-shot').classList.add('hidden');
+        document.getElementById('btn-save-shot').innerText = "Log Extraction";
         
-        // Butler Preview Reset
+        // Memory Preview Reset
         document.getElementById('log-butler-preview').classList.add('hidden');
-        document.getElementById('log-butler-preview-text').innerText = "Input data to see extraction advice.";
+        document.getElementById('log-butler-preview-text').innerText = "Input data to see how this compares to your remembered recipe.";
+        app.liveButlerPreview();
 
         app.router('log-shot');
     },
@@ -746,7 +863,11 @@ const app = {
         if(time && dose && yieldVal) {
             const mockShot = { time, dose, yield: yieldVal };
             const advice = getAIAdvice(mockShot, currentActiveBean?.roastLevel);
-            previewText.innerText = `Butler predicts: ${advice.text}`;
+            const ratio = ratioFor(mockShot);
+            const ratioText = ratio ? `1:${ratio.toFixed(1)}` : "ratio unknown";
+            previewText.innerText = advice.status === "good"
+                ? `Memory check: ${ratioText}, in your usual range.`
+                : `Memory check: ${ratioText}. ${advice.text}`;
             previewEl.classList.remove('hidden');
             previewEl.classList.toggle("good-preview", advice.status === "good");
             previewEl.classList.toggle("warning-preview", advice.status !== "good");
@@ -884,7 +1005,7 @@ const app = {
             return;
         }
 
-        butlerText.textContent = "🤵🏻‍♂️ Butler is analyzing the flavor profile...";
+        butlerText.textContent = "🤵🏻‍♂️ Summarizing where this bean left off...";
         
         try {
             const analyzeFn = httpsCallable(functions, 'analyzeShot');
@@ -898,7 +1019,7 @@ const app = {
             butlerText.textContent = `🤵🏻‍♂️ ${aiCache[cacheKey]}`;
         } catch(e) { 
             console.error("AI Analysis error:", e);
-            butlerText.textContent = "🤵🏻‍♂️ Butler is momentarily unavailable. Check your grind manually!";
+            butlerText.textContent = "🤵🏻‍♂️ Memory summary is momentarily unavailable; your latest recipe is still saved.";
         }
     },
 
@@ -1073,6 +1194,8 @@ const bindUiEvents = () => {
     on("btn-delete-bean", "click", () => app.deleteBean());
     on("btn-edit-active-bean", "click", () => app.editActiveBean());
     on("btn-update-roast-date", "click", () => app.promptNewDate());
+    on("btn-repeat-recipe", "click", () => app.repeatCurrentRecipe());
+    on("btn-adjust-recipe", "click", () => app.prefillShotForm(currentRecipeShot, "Adjust Current Recipe"));
 
     document.querySelectorAll("[data-route]").forEach(button => {
         button.addEventListener("click", () => app.router(button.dataset.route));

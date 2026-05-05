@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/751/751621.png">
 
     <!-- Design System & Libraries -->
-    <link rel="stylesheet" href="style.css?v=1.1.3">
+    <link rel="stylesheet" href="style.css?v=1.1.4">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -163,11 +163,47 @@
             </div>
         </div>
 
+        <div id="current-recipe-card" class="card recipe-card hidden">
+            <div class="row-between recipe-head">
+                <div>
+                    <div class="field-kicker">Current Recipe</div>
+                    <div id="recipe-source" class="subtle-note recipe-source">Latest settled shot</div>
+                </div>
+                <div id="recipe-status" class="recipe-status">Ready</div>
+            </div>
+
+            <div class="recipe-grid">
+                <div>
+                    <div class="recipe-label">Grind</div>
+                    <div id="recipe-grind" class="recipe-value">--</div>
+                </div>
+                <div>
+                    <div class="recipe-label">Dose</div>
+                    <div id="recipe-dose" class="recipe-value">--</div>
+                </div>
+                <div>
+                    <div class="recipe-label">Yield</div>
+                    <div id="recipe-yield" class="recipe-value">--</div>
+                </div>
+                <div>
+                    <div class="recipe-label">Time</div>
+                    <div id="recipe-time" class="recipe-value">--</div>
+                </div>
+            </div>
+
+            <div id="recipe-memory" class="recipe-memory">Open this bean to pick up where you left off.</div>
+
+            <div class="recipe-actions">
+                <button class="btn recipe-repeat-btn" id="btn-repeat-recipe" type="button">Log Same Shot</button>
+                <button class="btn btn-secondary recipe-adjust-btn" id="btn-adjust-recipe" type="button">Adjust</button>
+            </div>
+        </div>
+
         <div id="butler-advice-card" class="card butler-card hidden">
             <div class="butler-icon">🤵🏻‍♂️</div>
             <div>
-                <div class="success-kicker">AI Brew Butler</div>
-                <div id="butler-detail-text" class="success-copy">"Ready to analyze your next extraction."</div>
+                <div class="success-kicker">Shot Memory</div>
+                <div id="butler-detail-text" class="success-copy">"Ready to summarize this bean's pattern."</div>
                 <div id="machine-badge" class="subtle-note">LELIT ELIZABETH • 3/7/20 PROFILING</div>
             </div>
         </div>
@@ -354,6 +390,6 @@
     </div>
 
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.1.3"></script>
+    <script type="module" src="js/app.js?v=1.1.4"></script>
 </body>
 </html>

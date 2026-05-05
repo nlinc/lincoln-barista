@@ -17,12 +17,12 @@ exports.analyzeShot = onCall({ secrets: [geminiApiKey] }, async (request) => {
     const { shot, bean, machine } = request.data;
     
     try {
-        const prompt = `You are an expert Barista. Analyze this espresso shot:
+        const prompt = `You are an espresso history assistant for an experienced home barista. Summarize this shot as memory, not coaching:
         Bean: ${bean.name} (${bean.roastLevel} roast from ${bean.origin})
         Shot: ${shot.dose}g in, ${shot.yield}g out in ${shot.time}s.
         Machine Settings: ${machine.name} with ${machine.infusion}s infusion and ${machine.bloom}s rest.
         
-        Give a 1-sentence scientific explanation of the flavor (e.g. over-extracted, bright acidity) and one specific suggestion for improvement. Keep it concise.`;
+        Give one concise sentence that helps the user remember where they left off with this bean. Do not give basic advice like "grind finer" unless the shot is obviously extreme.`;
 
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${getApiKey()}`, {
             method: "POST",
@@ -32,7 +32,7 @@ exports.analyzeShot = onCall({ secrets: [geminiApiKey] }, async (request) => {
 
         if (!res.ok) {
             console.error("Gemini API Error:", await res.text());
-            return { text: "The Butler is momentarily unavailable. Please check your grind settings manually." };
+            return { text: "Memory summary is momentarily unavailable; your latest recipe is still saved." };
         }
 
         const data = await res.json();
@@ -42,7 +42,7 @@ exports.analyzeShot = onCall({ secrets: [geminiApiKey] }, async (request) => {
         };
     } catch (e) {
         console.error("AI Analysis error:", e);
-        return { text: "The Butler encountered a scientific anomaly. Try again in a moment." };
+        return { text: "Memory summary is momentarily unavailable; your latest recipe is still saved." };
     }
 });
 
