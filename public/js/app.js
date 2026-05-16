@@ -258,7 +258,9 @@ const app = {
             
             const card = document.createElement('div');
             card.className = `bean-card`;
-            card.style = `--i:${idx}; --roast-color:${color}; --roast-glow:${glow};`;
+            card.style.setProperty('--i', idx);
+            card.style.setProperty('--roast-color', color);
+            card.style.setProperty('--roast-glow', glow);
 
             let thumbHtml = '';
             if (b.image) {
