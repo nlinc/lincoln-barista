@@ -19,6 +19,7 @@
     
     --page-bg: #0c0a09; /* Deep stone */
     --panel-bg: rgba(255, 255, 255, 0.03);
+    --panel-strong: rgba(255, 255, 255, 0.05);
     --panel-border: rgba(255, 255, 255, 0.08);
     --glass-blur: blur(14px);
     
@@ -36,15 +37,45 @@
     --roast-light: #f59e0b;
     --roast-medium: #d97706;
     --roast-dark: #78350f;
+
+    --dark-bg: #1c1917;
+}
+
+/* --- RESET & BASE --- */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: 
+        radial-gradient(circle at top right, rgba(120, 53, 15, 0.12), transparent 60%),
+        radial-gradient(circle at bottom left, rgba(68, 64, 60, 0.08), transparent 60%),
+        var(--page-bg);
+    color: var(--text-main);
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
 }
 
 /* --- LAYOUT & VIEWS --- */
 .view {
+    display: none;
     padding: 1.5rem;
     max-width: 800px;
     margin: 0 auto;
     width: 100%;
 }
+
+.view.active {
+    display: block;
+    animation: fadeIn 0.3s ease both;
+}
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.hidden { display: none !important; }
 
 #top-bar {
     background: #1c1917;
