@@ -204,14 +204,25 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--r
     border-radius: var(--radius-md); font-weight: 700; font-size: 0.95rem;
     cursor: pointer; width: 100%; transition: all 0.2s ease;
     box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    text-decoration: none;
 }
 .btn:active { transform: scale(0.97); }
 .btn-secondary { background: var(--panel-strong); border: 1px solid var(--panel-border); color: var(--text-main); box-shadow: none; }
+.btn-secondary:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); }
 .btn-danger { background: var(--error-bg); color: var(--error-text); box-shadow: none; }
-.btn-danger:hover { background: rgba(239, 68, 68, 0.15); }
+
+.small-btn {
+    width: auto; padding: 0.4rem 1rem; font-size: 0.75rem; border-radius: var(--radius-sm);
+    min-height: auto;
+}
+
+.back-btn {
+    width: auto; margin-bottom: 1.5rem; padding: 0.5rem 1rem; font-size: 0.8rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+}
 
 .fab {
-    position: fixed; bottom: 2rem; right: 1.5rem; width: 60px; height: 64px;
+    position: fixed; bottom: 2rem; right: 1.5rem; width: 60px; height: 60px;
     border-radius: var(--radius-md); background: var(--primary); color: white;
     display: flex; align-items: center; justify-content: center; font-size: 1.8rem;
     box-shadow: 0 12px 24px rgba(0,0,0,0.4); z-index: 100; border: 0; cursor: pointer;
@@ -230,18 +241,26 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--r
 .ext-slow::before { background: var(--accent-amber); }
 
 .log-row-metrics { display: flex; justify-content: space-between; align-items: center; }
-.metric-value { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.1rem; }
-.metric-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800; }
+.metric-value { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.15rem; color: var(--text-main); }
+.metric-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }
 
 .chart-wrapper { background: var(--panel-bg); border-radius: var(--radius-md); padding: 1.25rem; border: 1px solid var(--panel-border); margin-bottom: 2rem; }
 
 /* --- SUMMARY TABLES --- */
-.summary-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: center; margin: 1rem 0; }
-.summary-table thead tr { color: var(--text-muted); font-size: 0.65rem; text-transform: uppercase; font-weight: 800; }
-.summary-table th, .summary-table td { padding: 0.8rem 0.5rem; }
+.summary-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: center; margin: 1rem 0; color: var(--text-main); }
+.summary-table thead tr { color: var(--text-muted); font-size: 0.65rem; text-transform: uppercase; font-weight: 800; border-bottom: 1px solid var(--panel-border); }
+.summary-table th, .summary-table td { padding: 1rem 0.5rem; }
 .summary-row { border-bottom: 1px solid var(--panel-border); }
-.summary-best-row { background: var(--success-bg); font-weight: 800; color: var(--success-text); }
+.summary-best-row { background: var(--success-bg); font-weight: 800; color: var(--success-text); border-radius: var(--radius-sm); }
 .summary-primary { color: var(--roast-light); font-weight: 800; }
+.summary-muted { color: var(--text-muted); opacity: 0.8; }
+.summary-empty { padding: 2rem; color: var(--text-muted); font-style: italic; }
+
+/* --- SPECIAL BLOCKS --- */
+.field-kicker { color: var(--text-muted); font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem; }
+.primary-value { font-family: 'Outfit', sans-serif; font-size: 1.2rem; font-weight: 700; color: var(--text-main); }
+.recipe-label { color: var(--text-muted); font-size: 0.6rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.1rem; }
+.recipe-value { font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 800; color: var(--roast-light); }
 
 /* --- AI BUTLER & ADVICE --- */
 .butler-card {
