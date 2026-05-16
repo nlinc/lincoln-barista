@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/751/751621.png">
 
     <!-- Design System & Libraries -->
-    <link rel="stylesheet" href="style.css?v=1.1.4">
+    <link rel="stylesheet" href="style.css?v=1.3.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -163,64 +163,56 @@
             </div>
         </div>
 
-        <div id="current-recipe-card" class="card recipe-card hidden">
-            <div class="row-between recipe-head">
-                <div>
-                    <div class="field-kicker">Current Recipe</div>
-                    <div id="recipe-source" class="subtle-note recipe-source">Latest settled shot</div>
-                </div>
-                <div id="recipe-status" class="recipe-status">Ready</div>
+        <div id="dial-in-console" class="console-card hidden">
+            <div class="console-header">
+                <div class="console-title">Current Dial-In Recipe</div>
+                <div id="recipe-status" class="console-status">Ready</div>
             </div>
 
             <div class="recipe-grid">
-                <div>
+                <div class="recipe-item">
                     <div class="recipe-label">Grind</div>
                     <div id="recipe-grind" class="recipe-value">--</div>
                 </div>
-                <div>
+                <div class="recipe-item">
                     <div class="recipe-label">Dose</div>
                     <div id="recipe-dose" class="recipe-value">--</div>
                 </div>
-                <div>
+                <div class="recipe-item">
                     <div class="recipe-label">Yield</div>
                     <div id="recipe-yield" class="recipe-value">--</div>
                 </div>
-                <div>
+                <div class="recipe-item">
                     <div class="recipe-label">Time</div>
                     <div id="recipe-time" class="recipe-value">--</div>
                 </div>
             </div>
 
-            <div id="recipe-memory" class="recipe-memory">Open this bean to pick up where you left off.</div>
+            <div class="memory-block" id="memory-block">
+                <div class="memory-icon">🤵🏻‍♂️</div>
+                <div>
+                    <div id="butler-detail-text" class="memory-text">"Syncing memory..."</div>
+                    <div id="machine-badge" class="machine-badge">LELIT ELIZABETH • 3/7/20 PROFILING</div>
+                </div>
+            </div>
 
             <div class="recipe-actions">
-                <button class="btn recipe-repeat-btn" id="btn-repeat-recipe" type="button">Log Same Shot</button>
-                <button class="btn btn-secondary recipe-adjust-btn" id="btn-adjust-recipe" type="button">Adjust</button>
+                <button class="btn" id="btn-repeat-recipe" type="button">Log Same Shot</button>
+                <button class="btn btn-secondary" id="btn-adjust-recipe" type="button">Adjust</button>
             </div>
         </div>
 
-        <div id="butler-advice-card" class="card butler-card hidden">
-            <div class="butler-icon">🤵🏻‍♂️</div>
-            <div>
-                <div class="success-kicker">Shot Memory</div>
-                <div id="butler-detail-text" class="success-copy">"Ready to summarize this bean's pattern."</div>
-                <div id="machine-badge" class="subtle-note">LELIT ELIZABETH • 3/7/20 PROFILING</div>
+        <div class="batch-card">
+            <div class="batch-info">
+                <div class="field-kicker">Active Batch</div>
+                <div id="detail-date" class="batch-date"></div>
             </div>
-        </div>
-
-        <div class="card stack-card">
-            <div class="row-between">
-                <div>
-                    <div class="field-kicker">Active Batch</div>
-                    <div id="detail-date" class="primary-value"></div>
-                </div>
-                <button class="btn-secondary small-btn" id="btn-update-roast-date" type="button">Update Date</button>
-            </div>
-            <div id="stale-warning-container"></div>
+            <button class="btn-secondary small-btn" id="btn-update-roast-date" type="button">Update Date</button>
+            <div id="stale-warning-container" class="hidden"></div>
         </div>
         
-        <div class="chart-wrapper">
-            <div class="chart-title centered">Dial-In Efficiency</div>
+        <div class="card">
+            <div class="field-kicker" style="margin-bottom:1rem; text-align:center;">Dial-In Efficiency</div>
             <table class="summary-table">
                 <thead>
                     <tr>
@@ -234,8 +226,8 @@
             </table>
         </div>
 
-        <div class="section-stack">
-            <div class="section-label padded-label">Extraction Logs</div>
+        <div class="section-stack" style="margin-top:3rem;">
+            <div class="field-kicker" style="margin-bottom:1rem;">Extraction Logs</div>
             <div id="history-container"></div>
         </div>
         
@@ -249,9 +241,9 @@
         <input type="hidden" id="input-log-shot-id">
         
         <div class="card">
-            <div class="batch-summary">
+            <div class="batch-summary" style="text-align:center; margin-bottom:1.5rem;">
                 <div class="field-kicker">Active Batch</div>
-                <div id="log-display-date" class="primary-value compact-value"></div>
+                <div id="log-display-date" class="primary-value"></div>
             </div>
             
             <div class="form-grid two-col">
@@ -262,9 +254,9 @@
                 <div class="form-group">
                     <label class="split-label">
                         Time (s)
-                        <div class="mini-actions">
-                            <button id="btn-time-1" class="btn-secondary time-profile-btn" type="button" data-profile="1">P1</button>
-                            <button id="btn-time-2" class="btn-secondary time-profile-btn" type="button" data-profile="2">P2</button>
+                        <div class="mini-actions" style="float:right; display:flex; gap:4px;">
+                            <button id="btn-time-1" class="btn-secondary small-btn" style="padding:2px 8px; font-size:0.65rem;" type="button" data-profile="1">P1</button>
+                            <button id="btn-time-2" class="btn-secondary small-btn" style="padding:2px 8px; font-size:0.65rem;" type="button" data-profile="2">P2</button>
                         </div>
                     </label>
                     <input type="number" inputmode="decimal" id="input-shot-time" placeholder="30" class="shot-preview-input">
@@ -280,14 +272,14 @@
             </div>
         </div>
 
-        <div id="log-butler-preview" class="card warning-card hidden">
-            <div class="warning-kicker">🤵🏻‍♂️ Butler's Preview</div>
-            <div id="log-butler-preview-text" class="warning-copy">Input data to see extraction advice.</div>
+        <div id="log-butler-preview" class="card hidden" style="border-left: 6px solid var(--roast-light); background: var(--warning-bg);">
+            <div class="field-kicker">🤵🏻‍♂️ Butler's Preview</div>
+            <div id="log-butler-preview-text" style="font-weight:600; font-size:0.9rem;">Input data to see extraction advice.</div>
         </div>
 
         <button class="btn" id="btn-save-shot" type="button">Log Extraction</button>
-        <button class="btn btn-secondary stack-action" id="btn-cancel-shot" type="button">Cancel</button>
-        <button class="btn btn-danger hidden danger-action" id="btn-delete-shot" type="button">Delete Log</button>
+        <button class="btn btn-secondary stack-action" id="btn-cancel-shot" type="button" style="margin-top:0.75rem;">Cancel</button>
+        <button class="btn btn-danger hidden" id="btn-delete-shot" type="button" style="margin-top:1.5rem;">Delete Log</button>
     </div>
 
     <!-- VIEW: ANALYTICS -->
@@ -296,24 +288,24 @@
         <h2 class="view-heading">Visual Trends</h2>
 
         <div class="card">
-            <div class="chart-title">Grind vs. Yield (Last 30 Days)</div>
-            <div class="chart-area trend-area">
+            <div class="field-kicker" style="margin-bottom:1rem;">Grind vs. Yield (Last 30 Days)</div>
+            <div class="chart-area" style="height:250px;">
                 <canvas id="trendChart"></canvas>
-                <div id="trend-empty-state" class="chart-empty hidden">Log a few shots to see grind and yield trends.</div>
+                <div id="trend-empty-state" class="empty-state hidden">Log a few shots to see trends.</div>
             </div>
         </div>
 
         <div class="card">
-            <div class="chart-title">Grind Frequency</div>
-            <div class="chart-area dist-area">
+            <div class="field-kicker" style="margin-bottom:1rem;">Grind Frequency</div>
+            <div class="chart-area" style="height:200px;">
                 <canvas id="distChart"></canvas>
-                <div id="dist-empty-state" class="chart-empty hidden">Grind frequency appears after your first extraction logs.</div>
+                <div id="dist-empty-state" class="empty-state hidden">Log a few shots to see distribution.</div>
             </div>
         </div>
         
-        <div id="analytics-insights" class="card insight-card">
-            <div class="success-kicker">AI Insight</div>
-            <div id="analytics-insight-text" class="success-copy normal-weight">Analyzing your data for patterns...</div>
+        <div id="analytics-insights" class="card" style="background: var(--success-bg); border-color: rgba(74, 222, 128, 0.2);">
+            <div class="field-kicker" style="color: var(--success-text);">AI Insight</div>
+            <div id="analytics-insight-text" style="font-weight:600; color: var(--success-text);">Analyzing your data for patterns...</div>
         </div>
     </div>
 
@@ -323,7 +315,7 @@
         <h2 class="large-heading">Profile & Gear</h2>
 
         <div class="card">
-            <div class="section-label roomy-label">Machine Profile</div>
+            <div class="section-label">Machine Profile</div>
             
             <div class="form-group">
                 <label>Machine Name</label>
@@ -339,15 +331,15 @@
             <div class="form-grid three-col">
                 <div class="form-group">
                     <label>Pre (s)</label>
-                    <input type="number" id="profile-b1-infusion" placeholder="3" class="settings-total-input">
+                    <input type="number" id="profile-b1-infusion" placeholder="3">
                 </div>
                 <div class="form-group">
                     <label>Bloom (s)</label>
-                    <input type="number" id="profile-b1-bloom" placeholder="7" class="settings-total-input">
+                    <input type="number" id="profile-b1-bloom" placeholder="7">
                 </div>
                 <div class="form-group">
                     <label>Brew (s)</label>
-                    <input type="number" id="profile-b1-brew" placeholder="20" class="settings-total-input">
+                    <input type="number" id="profile-b1-brew" placeholder="20">
                 </div>
             </div>
 
@@ -355,15 +347,15 @@
             <div class="form-grid three-col">
                 <div class="form-group">
                     <label>Pre (s)</label>
-                    <input type="number" id="profile-b2-infusion" placeholder="0" class="settings-total-input">
+                    <input type="number" id="profile-b2-infusion" placeholder="0">
                 </div>
                 <div class="form-group">
                     <label>Bloom (s)</label>
-                    <input type="number" id="profile-b2-bloom" placeholder="0" class="settings-total-input">
+                    <input type="number" id="profile-b2-bloom" placeholder="0">
                 </div>
                 <div class="form-group">
                     <label>Brew (s)</label>
-                    <input type="number" id="profile-b2-brew" placeholder="30" class="settings-total-input">
+                    <input type="number" id="profile-b2-brew" placeholder="30">
                 </div>
             </div>
             
@@ -373,23 +365,23 @@
         <div class="card">
             <div class="section-label">Intelligence</div>
             <div class="row-between">
-                <div class="setting-title">Enable True AI (Gemini)</div>
+                <div style="font-weight:700; font-size:0.95rem;">Enable True AI (Gemini)</div>
                 <label class="switch">
                     <input type="checkbox" id="profile-ai-enabled" checked>
-                    <span class="slider round"></span>
+                    <span class="slider"></span>
                 </label>
             </div>
-            <div class="subtle-note">Enable high-fidelity bean analysis & daily tips.</div>
+            <div class="subtle-note" style="margin-top:0.75rem;">Enable high-fidelity bean analysis & daily tips.</div>
         </div>
 
         <button class="btn" id="btn-save-profile" type="button">Update Profile</button>
         
         <div class="export-panel">
-            <button class="btn-secondary export-btn" id="btn-export-data" type="button">Export Data (CSV)</button>
+            <button class="btn-secondary small-btn" id="btn-export-data" type="button" style="padding:0.7rem 1.2rem;">Export Data (CSV)</button>
         </div>
     </div>
 
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.1.4"></script>
+    <script type="module" src="js/app.js?v=1.3.0"></script>
 </body>
 </html>

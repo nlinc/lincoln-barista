@@ -1,7 +1,6 @@
 /**
  * Lincoln Barista "Platinum Roast" - Main Application Logic
- * Modularized and Optimized for Mobile. v1.1 - Secure Backend Edition.
- * Build Version: 1.1.0-VERIFY
+ * Modularized and Optimized for Mobile. v1.3.2 - Definitive Edition.
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -15,11 +14,8 @@ import { getAIAdvice } from "./brew-advice.js";
 const appInstance = initializeApp(firebaseConfig);
 const auth = getAuth(appInstance);
 const db = getFirestore(appInstance);
-const functions = getFunctions(appInstance);
+const functions = getFunctions(appInstance, 'us-central1');
 const provider = new GoogleAuthProvider();
-
-// AI Config
-// Moved to secure Cloud Functions backend.
 
 // App State
 let currentUser = null;
@@ -58,10 +54,7 @@ const el = (tag, className, text) => {
 };
 
 const renderTip = (target, text) => {
-    target.replaceChildren();
-    target.append("💡 ");
-    target.appendChild(el("strong", "", "Daily Tip:"));
-    target.append(` ${text}`);
+    target.innerHTML = \`💡 <b>Daily Tip:</b> \${text}\`;
 };
 
 const renderEmpty = (target, text) => {
@@ -80,14 +73,6 @@ const renderEmptyAction = (target, title, body, actionText, action) => {
     target.replaceChildren(empty);
 };
 
-const setStatus = (text, tone = "neutral") => {
-    const status = document.getElementById("collection-status");
-    if (!status) return;
-    status.textContent = text || "";
-    status.className = `status-strip ${tone}`;
-    status.classList.toggle("hidden", !text);
-};
-
 const ratioFor = (shot) => {
     const dose = parseFloat(shot?.dose);
     const yieldVal = parseFloat(shot?.yield);
@@ -95,31 +80,13 @@ const ratioFor = (shot) => {
     return yieldVal / dose;
 };
 
-const formatShotDate = (shot) => {
-    if (!shot?.date?.seconds) return "date unknown";
-    const shotDate = new Date(shot.date.seconds * 1000);
-    const days = Math.floor((Date.now() - shotDate.getTime()) / (1000 * 60 * 60 * 24));
-    if (days <= 0) return "today";
-    if (days === 1) return "yesterday";
-    return `${days} days ago`;
-};
-
 const chooseCurrentRecipe = (logs, roastLevel) => {
     if (!logs.length) return null;
     const latestGood = logs.find(log => getAIAdvice(log, roastLevel).status === "good");
     return {
         shot: latestGood || logs[0],
-        source: latestGood ? "Latest settled shot" : "Most recent shot",
         status: latestGood ? "Dialed" : "Resume"
     };
-};
-
-const summarizeRecipeMemory = (shot, logs) => {
-    const ratio = ratioFor(shot);
-    const ratioText = ratio ? `1:${ratio.toFixed(1)}` : "ratio unknown";
-    const shotCount = logs.length;
-    const used = formatShotDate(shot);
-    return `${ratioText}, last used ${used}. ${shotCount} logged ${shotCount === 1 ? "shot" : "shots"} for this bean.`;
 };
 
 const on = (id, eventName, handler) => {
@@ -128,232 +95,113 @@ const on = (id, eventName, handler) => {
 };
 
 const app = {
-    // --- ROUTING ---
     router: (viewName, addToHistory = true) => {
         document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-        const targetView = document.getElementById(`view-${viewName}`);
+        const targetView = document.getElementById(\`view-\${viewName}\`);
         if (targetView) targetView.classList.add('active');
-        
-        document.getElementById('top-bar').style.display = (viewName === 'login') ? 'none' : 'flex';
-        
+        const topBar = document.getElementById('top-bar');
+        if (topBar) topBar.style.display = (viewName === 'login') ? 'none' : 'flex';
         if (addToHistory) {
             const state = { view: viewName };
             const url = "#" + viewName;
-            if (viewName === 'list' && !history.state) {
-                history.replaceState(state, "", url);
-            } else {
-                history.pushState(state, "", url);
-            }
+            if (viewName === 'list' && !history.state) history.replaceState(state, "", url);
+            else history.pushState(state, "", url);
         }
         window.scrollTo(0, 0);
     },
 
-    // --- AUTH ---
-    login: async () => { 
-        haptic('medium');
-        try { await signInWithPopup(auth, provider); } catch(e) { alert(e.message); } 
-    },
-    logout: () => { 
-        if(confirm("Logout?")) {
-            haptic('heavy');
-            signOut(auth).then(() => location.reload()); 
-        }
-    },
+    login: async () => { haptic('medium'); try { await signInWithPopup(auth, provider); } catch(e) { alert(e.message); } },
+    logout: () => { if(confirm("Logout?")) { haptic('heavy'); signOut(auth).then(() => location.reload()); } },
 
-    // --- BEAN MANAGEMENT ---
     fetchBeans: async () => {
         const container = document.getElementById('bean-list-container');
-        if (container) renderEmpty(container, "Loading your coffee collection...");
-        setStatus("Syncing collection...", "neutral");
-
+        if (container) renderEmpty(container, "Syncing collection...");
         try {
             const q = query(collection(db, "beans"), where("uid", "==", currentUser.uid));
             const snapshot = await getDocs(q);
             beans = [];
             snapshot.forEach((doc) => beans.push({ id: doc.id, ...doc.data() }));
-            setStatus("");
             app.renderBeanList();
             app.renderGlobalStats();
             app.renderDailyTip();
-        } catch(e) {
-            console.error("Bean fetch error:", e);
-            setStatus("Could not sync the collection. Check your connection and try again.", "error");
-            renderEmptyAction(container, "Collection unavailable", "Your saved beans could not be loaded right now.", "Try Again", () => app.fetchBeans());
-        }
+        } catch(e) { console.error("Bean fetch error:", e); }
     },
 
     renderDailyTip: async () => {
         const tipEl = document.getElementById('daily-tip-text');
         if(!tipEl || !userProfile.aiEnabled) return;
-        
         try {
             const getTipFn = httpsCallable(functions, 'getDailyTip');
             const result = await getTipFn({});
             renderTip(tipEl, result.data.text || "Grind finer for light roasts!");
-        } catch(e) { console.error("Tip error:", e); renderTip(tipEl, "Grind finer for light roasts!"); }
+        } catch(e) { renderTip(tipEl, "Keep your coffee station clean!"); }
     },
 
     getRoastColor: (level = 'Medium') => {
-        const colors = { 'Light': 'var(--roast-light)', 'Medium': 'var(--roast-medium)', 'Dark': 'var(--roast-dark)' };
-        return colors[level] || 'var(--roast-medium)';
+        const colors = { 'Light': '#f59e0b', 'Medium': '#d97706', 'Dark': '#78350f', 'Espresso': '#1c1917' };
+        return colors[level] || '#d97706';
     },
     getRoastGlow: (level = 'Medium') => {
         const glows = { 'Light': 'rgba(245, 158, 11, 0.15)', 'Medium': 'rgba(217, 119, 6, 0.15)', 'Dark': 'rgba(120, 53, 15, 0.15)' };
         return glows[level] || 'rgba(217, 119, 6, 0.15)';
     },
+
     renderBeanList: () => {
         const container = document.getElementById('bean-list-container');
         const filterBar = document.getElementById('filter-bar');
         if (!container || !filterBar) return;
         container.replaceChildren();
         filterBar.replaceChildren();
-
         let visibleBeans = beans.filter(b => {
             if(activeFilters.size === 0) return true;
             const searchable = [b.roastLevel, b.origin, b.roaster, ...(b.tags || [])].map(t => (t||'').toLowerCase());
             for(let f of activeFilters) { if(!searchable.includes(f.toLowerCase())) return false; }
             return true;
         });
-
-        // Sorting
         if(currentSort === 'name') visibleBeans.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
         else if (currentSort === 'rating') visibleBeans.sort((a,b) => (b.rating || 0) - (a.rating || 0));
         else visibleBeans.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-
-        // Filter Bar UI
-        if(activeFilters.size > 0) {
-            filterBar.classList.remove('hidden');
-            const clearBtn = document.createElement('button');
-            clearBtn.className = 'tag-pill active';
-            clearBtn.type = "button";
-            clearBtn.classList.add("clear-filter");
-            clearBtn.innerText = '✕ Clear All';
-            clearBtn.onclick = () => { activeFilters.clear(); app.renderBeanList(); };
-            filterBar.appendChild(clearBtn);
-            activeFilters.forEach(f => {
-                const chip = document.createElement('button');
-                chip.className = 'tag-pill active';
-                chip.type = "button";
-                chip.innerText = f;
-                chip.onclick = () => { activeFilters.delete(f); app.renderBeanList(); };
-                filterBar.appendChild(chip);
-            });
-        } else { filterBar.classList.add('hidden'); }
-
-        if(visibleBeans.length === 0) {
-            const hasFilters = activeFilters.size > 0;
-            renderEmptyAction(
-                container,
-                hasFilters ? "No beans match those filters" : "Start your first coffee profile",
-                hasFilters ? "Clear filters or adjust the collection sort to get back to your bags." : "Add a bag once, then log shots against each roast batch as you dial it in.",
-                hasFilters ? "Clear Filters" : "Add Bean",
-                hasFilters ? () => { activeFilters.clear(); app.renderBeanList(); } : () => { app.resetBeanForm(); app.router("edit-bean"); }
-            );
-            return;
-        }
-
+        if(visibleBeans.length === 0) { renderEmptyAction(container, "No coffee found", "Start a new profile.", "Add Bean", () => { app.resetBeanForm(); app.router("edit-bean"); }); return; }
         visibleBeans.forEach((b, idx) => {
-            const color = app.getRoastColor(b.roastLevel);
-            const glow = app.getRoastGlow(b.roastLevel);
-            
             const card = document.createElement('div');
-            card.className = `bean-card`;
-            card.style.setProperty('--i', idx);
-            card.style.setProperty('--roast-color', color);
-            card.style.setProperty('--roast-glow', glow);
-
-            let thumbHtml = '';
-            if (b.image) {
-                thumbHtml = `<div class="bean-card-thumb" style="background-image: url('${b.image}'); background-size: cover; background-position: center;"></div>`;
-            } else {
-                thumbHtml = `<div class="bean-card-thumb thumb-placeholder">☕</div>`;
-            }
-
-            const ratingHtml = b.rating > 0 ? `<span class="card-rating">★${b.rating}</span>` : '';
-            
-            const tagsHtml = [
-                b.origin ? `<span class="tag-pill">📍 ${b.origin}</span>` : '',
-                ...(b.tags || []).slice(0, 2).map(t => `<span class="tag-pill">#${t}</span>`)
-            ].filter(Boolean).join('');
-
-            card.innerHTML = `
+            card.className = \`bean-card\`;
+            card.style.setProperty('--roast-color', app.getRoastColor(b.roastLevel));
+            card.style.setProperty('--roast-glow', app.getRoastGlow(b.roastLevel));
+            let thumbHtml = b.image ? \`<div class="bean-card-thumb" style="background-image: url('\${b.image}')"></div>\` : \`<div class="bean-card-thumb thumb-placeholder">☕</div>\`;
+            card.innerHTML = \`
                 <div class="roast-bar"></div>
-                ${thumbHtml}
+                \${thumbHtml}
                 <div class="bean-card-body">
-                    <div class="bean-card-meta">
-                        <span class="roaster-name">${b.roaster || "Unknown"}</span>
-                        ${ratingHtml}
-                    </div>
-                    <div class="bean-card-name">${b.name || "Untitled coffee"}</div>
-                    <div class="bean-card-tags">
-                        ${tagsHtml}
-                    </div>
-                    <div class="bean-card-roast-badge">${b.roastLevel || "Medium"} Roast</div>
+                    <div class="roaster-name">\${b.roaster || "Unknown"} \${b.rating ? '★'+b.rating : ''}</div>
+                    <div class="bean-card-name">\${b.name || "Untitled"}</div>
+                    <div class="bean-card-tags">\${(b.tags || []).slice(0, 2).map(t => \`<span class="tag-pill">#\${t}</span>\`).join('')}</div>
                 </div>
-            `;
-            
-            card.onclick = () => { haptic('light'); app.loadBeanDetail(b.id); };
+            \`;
+            card.onclick = () => app.loadBeanDetail(b.id);
             container.appendChild(card);
         });
     },
 
-    setSort: (value) => {
-        currentSort = value;
-        app.renderBeanList();
-    },
+    setSort: (value) => { currentSort = value; app.renderBeanList(); },
 
     saveBean: async () => {
         haptic('medium');
         const btn = document.getElementById('btn-save-bean');
         const originalText = btn.innerText;
         btn.innerText = "Processing...";
-        
         try {
             const id = document.getElementById('input-bean-id').value;
-            const data = {
-                uid: currentUser.uid,
-                roaster: document.getElementById('input-roaster').value,
-                roasterLocation: document.getElementById('input-roaster-location').value,
-                name: document.getElementById('input-name').value,
-                origin: document.getElementById('input-origin').value,
-                roastLevel: document.getElementById('input-roast-level').value,
-                tenBeanWeight: document.getElementById('input-ten-bean-weight').value.trim(),
-                tags: currentEditingTags,
-                rating: parseInt(document.getElementById('input-bean-rating').value) || 0,
-                image: currentEditingImage,
-                updatedAt: new Date()
-            };
-
+            const data = { uid: currentUser.uid, roaster: document.getElementById('input-roaster').value, roasterLocation: document.getElementById('input-roaster-location').value, name: document.getElementById('input-name').value, origin: document.getElementById('input-origin').value, roastLevel: document.getElementById('input-roast-level').value, tenBeanWeight: document.getElementById('input-ten-bean-weight').value.trim(), tags: currentEditingTags, rating: parseInt(document.getElementById('input-bean-rating').value) || 0, image: currentEditingImage, updatedAt: new Date() };
             const manualRoastDate = document.getElementById('input-roast-date').value;
-
             if(!data.name) throw new Error("Bean name is required.");
-            
-            if(id) {
-                await updateDoc(doc(db, "beans", id), { ...data, currentRoastDate: manualRoastDate });
-            } else {
-                await addDoc(collection(db, "beans"), { ...data, currentRoastDate: manualRoastDate || new Date().toISOString().split('T')[0], createdAt: new Date() });
-            }
-            
+            if(id) await updateDoc(doc(db, "beans", id), { ...data, currentRoastDate: manualRoastDate });
+            else await addDoc(collection(db, "beans"), { ...data, currentRoastDate: manualRoastDate || new Date().toISOString().split('T')[0], createdAt: new Date() });
             await app.fetchBeans();
             app.router('list');
-        } catch(e) {
-            alert(e.message);
-            btn.innerText = originalText;
-        }
+        } catch(e) { alert(e.message); btn.innerText = originalText; }
     },
 
-    deleteBean: async () => {
-        if(confirm("Archive this bean?")) {
-            haptic('heavy');
-            await deleteDoc(doc(db, "beans", document.getElementById('input-bean-id').value));
-            await app.fetchBeans();
-            app.router('list');
-        }
-    },
-
-    promptNewDate: async () => {
-        app.editActiveBean();
-    },
+    deleteBean: async () => { if(confirm("Archive this bean?")) { haptic('heavy'); await deleteDoc(doc(db, "beans", document.getElementById('input-bean-id').value)); await app.fetchBeans(); app.router('list'); } },
 
     editActiveBean: () => {
         haptic('light');
@@ -367,299 +215,98 @@ const app = {
         document.getElementById('input-roast-level').value = b.roastLevel || 'Medium';
         document.getElementById('input-ten-bean-weight').value = b.tenBeanWeight || '';
         document.getElementById('input-roast-date').value = b.currentRoastDate || '';
-        
         currentEditingTags = b.tags ? [...b.tags] : [];
         app.renderEditingTags();
-
         if(b.image) {
             currentEditingImage = b.image;
             const preview = document.getElementById('edit-image-preview');
             preview.src = currentEditingImage;
             preview.classList.remove('hidden');
             document.getElementById('btn-remove-image').classList.remove('hidden');
-        } else {
-            app.removeImage();
-        }
-        
+        } else app.removeImage();
         app.setBeanRating(b.rating || 0);
         document.getElementById('btn-delete-bean').classList.remove('hidden');
         document.getElementById('btn-save-bean').innerText = "Update Profile";
         app.router('edit-bean');
     },
 
-    openEditShot: (shotId) => {
-        const log = logsCache.find(l => l.id === shotId);
-        if(!log) return;
-        haptic('light');
-        document.getElementById('log-shot-title').innerText = "Edit Extraction";
-        document.getElementById('input-log-bean-id').value = currentActiveBean ? currentActiveBean.id : log.beanId;
-        document.getElementById('input-log-shot-id').value = shotId;
-        document.getElementById('log-display-date').innerText = log.roastDate;
-        document.getElementById('input-shot-grind').value = log.grind || '';
-        document.getElementById('input-shot-time').value = log.time || '';
-        document.getElementById('input-shot-dose').value = log.dose || '';
-        document.getElementById('input-shot-yield').value = log.yield || '';
-        
-        document.getElementById('btn-save-shot').innerText = "Update Log";
-        document.getElementById('btn-delete-shot').classList.remove('hidden');
-        app.router('log-shot');
-    },
-
-    prefillShotForm: (shot, title = "Adjust Recipe") => {
-        haptic('light');
-        document.getElementById('log-shot-title').innerText = title;
-        document.getElementById('input-log-bean-id').value = currentActiveBean?.id || shot?.beanId || '';
-        document.getElementById('input-log-shot-id').value = '';
-        document.getElementById('log-display-date').innerText = currentActiveBean?.currentRoastDate || shot?.roastDate || "N/A";
-        document.getElementById('input-shot-grind').value = shot?.grind || '';
-        document.getElementById('input-shot-time').value = shot?.time || '';
-        document.getElementById('input-shot-dose').value = shot?.dose || userProfile.defaultDose || 18;
-        document.getElementById('input-shot-yield').value = shot?.yield || (userProfile.defaultDose || 18) * 2;
-        document.getElementById('btn-save-shot').innerText = "Log Adjusted Shot";
-        document.getElementById('btn-delete-shot').classList.add('hidden');
-        app.liveButlerPreview();
-        app.router('log-shot');
-    },
-
-    repeatCurrentRecipe: async () => {
-        if (!currentRecipeShot || !currentActiveBean) return app.openLogShot();
-        if(!confirm("Log the current recipe as a new shot?")) return;
-
-        haptic('medium');
-        try {
-            const data = {
-                beanId: currentActiveBean.id,
-                uid: currentUser.uid,
-                grind: currentRecipeShot.grind || '',
-                time: currentRecipeShot.time || '',
-                dose: currentRecipeShot.dose || '',
-                yield: currentRecipeShot.yield || '',
-                roastDate: currentActiveBean.currentRoastDate || currentRecipeShot.roastDate || "Unknown",
-                date: new Date()
-            };
-
-            if(!data.grind) throw new Error("Current recipe is missing a grind setting.");
-            await addDoc(collection(db, "brew_logs"), data);
-            await app.loadBeanDetail(currentActiveBean.id);
-        } catch(e) {
-            alert(e.message);
-        }
-    },
-
-    deleteShot: async () => {
-        if(confirm("Delete this shot log?")) {
-            haptic('heavy');
-            const shotId = document.getElementById('input-log-shot-id').value;
-            const beanId = document.getElementById('input-log-bean-id').value;
-            await deleteDoc(doc(db, "brew_logs", shotId));
-            await app.loadBeanDetail(beanId);
-        }
-    },
-
-    exportData: async () => {
-        if(!confirm("Download all data as CSV?")) return;
-        haptic('medium');
-        const qLogs = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
-        const snapLogs = await getDocs(qLogs);
-        let csvContent = "data:text/csv;charset=utf-8,Type,Date,Roaster,Bean,Grind,Time,Dose,Yield\n";
-        const beanMap = {};
-        beans.forEach(b => beanMap[b.id] = { name: b.name, roaster: b.roaster });
-        snapLogs.forEach(doc => {
-            const l = doc.data();
-            const b = beanMap[l.beanId] || { name: "Unknown", roaster: "Unknown" };
-            const cleanName = `"${b.name.replace(/"/g, '""')}"`;
-            const cleanRoaster = `"${b.roaster.replace(/"/g, '""')}"`;
-            const dateStr = l.date ? new Date(l.date.seconds * 1000).toISOString().split('T')[0] : "Unknown";
-            csvContent += `Shot,${dateStr},${cleanRoaster},${cleanName},${l.grind},${l.time},${l.dose},${l.yield}\n`;
-        });
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "lincoln_barista_export.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    },
-
     loadBeanDetail: async (id) => {
         try {
             currentActiveBean = beans.find(b => b.id === id);
             if(!currentActiveBean) return app.router('list');
-
-        // Dynamic Header
-        const imgEl = document.getElementById('detail-image');
-        if(currentActiveBean.image) {
-            imgEl.src = currentActiveBean.image;
-            imgEl.classList.remove('hidden');
-        } else {
-            imgEl.classList.add('hidden');
-        }
-
-        document.getElementById('detail-roaster').innerText = currentActiveBean.roaster;
-        document.getElementById('detail-name').innerText = currentActiveBean.name;
-        document.getElementById('detail-rating').innerText = '★'.repeat(currentActiveBean.rating || 0);
-        
-        const roastDate = currentActiveBean.currentRoastDate || "Unknown";
-        
-        // Fetch Logs (Local sorting to avoid missing index errors)
-        try {
+            const imgEl = document.getElementById('detail-image');
+            if(currentActiveBean.image) { imgEl.src = currentActiveBean.image; imgEl.classList.remove('hidden'); }
+            else imgEl.classList.add('hidden');
+            document.getElementById('detail-roaster').innerText = currentActiveBean.roaster;
+            document.getElementById('detail-name').innerText = currentActiveBean.name;
+            document.getElementById('detail-rating').innerText = '★'.repeat(currentActiveBean.rating || 0);
+            const roastDate = currentActiveBean.currentRoastDate || "Unknown";
+            document.getElementById('detail-date').innerText = roastDate;
             const q = query(collection(db, "brew_logs"), where("beanId", "==", id), where("uid", "==", currentUser.uid));
             const snapshot = await getDocs(q);
             logsCache = [];
             snapshot.forEach(doc => logsCache.push({ id: doc.id, ...doc.data() }));
             logsCache.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
-        } catch(e) {
-            console.error("Error fetching logs:", e);
-            logsCache = [];
-        }
-
-        // Stale Roast Date Alert Check
-        const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-        const staleWarningContainer = document.getElementById('stale-warning-container');
-        staleWarningContainer.replaceChildren();
-        if (roastDate !== "Unknown") {
-            const rd = new Date(roastDate).getTime();
-            const now = Date.now();
-            const lastLogTime = logsCache.length > 0 ? (logsCache[0].date?.seconds * 1000 || 0) : 0;
-            
-            // If the roast date is older than 2 weeks AND we haven't logged a shot in over a week, remind user.
-            if ((now - rd > 2 * ONE_WEEK_MS) && (!lastLogTime || (now - lastLogTime > ONE_WEEK_MS))) {
-                const warning = el("button", "stale-warning", "⚠️ Is this a new bag? Tap here to Edit Profile & update Roast Date!");
-                warning.type = "button";
-                warning.onclick = () => app.editActiveBean();
-                staleWarningContainer.appendChild(warning);
+            if(roastDate !== "Unknown") {
+                const days = Math.floor((new Date() - new Date(roastDate)) / (1000 * 60 * 60 * 24));
+                const msg = (days >= 7 && days <= 21) ? "✨ Peak Flavor Window" : (days < 7 ? "⏳ Resting..." : "🫘 Aging");
+                document.getElementById('detail-age').innerText = \`\${days} days since roast • \${msg}\`;
             }
-        }
-        document.getElementById('detail-date').innerText = roastDate;
-        document.getElementById('detail-age').innerText = "";
-        if(roastDate !== "Unknown") {
-            const days = Math.floor((new Date() - new Date(roastDate)) / (1000 * 60 * 60 * 24));
-            document.getElementById('detail-age').innerText = `${days} days since roast`;
-            
-            // Peak Flavor Hint
-            const msg = (days >= 7 && days <= 21) ? "✨ Peak Flavor Window" : (days < 7 ? "⏳ Resting..." : "🫘 Aging");
-            document.getElementById('detail-age').innerText += ` • ${msg}`;
-        }
+            app.renderHistory();
+            app.renderDialInSummary();
+            app.renderCurrentRecipe();
+            const machineBadge = document.getElementById('machine-badge');
+            const b1Offset = (parseInt(userProfile.b1?.infusion)||0) + (parseInt(userProfile.b1?.bloom)||0);
+            machineBadge.innerText = \`\${userProfile.machineName || 'Generic'} • \${b1Offset}s Offset (P1)\`;
+            const memoryBlock = document.getElementById('memory-block');
+            if(logsCache.length > 0 && userProfile.aiEnabled) { app.getGeminiAnalysis(logsCache[0], currentActiveBean).catch(console.error); memoryBlock.classList.remove('hidden'); }
+            else memoryBlock.classList.add('hidden');
+            app.router('detail');
+        } catch(e) { console.error("Detail error:", e); app.router('list'); }
+    },
 
-        app.renderHistory();
-        app.renderDialInSummary();
-        app.renderCurrentRecipe();
-
-        // Reveal memory summary
-        const butlerCard = document.getElementById('butler-advice-card');
+    getGeminiAnalysis: async (shot, bean) => {
         const butlerText = document.getElementById('butler-detail-text');
-        const machineBadge = document.getElementById('machine-badge');
-
-        const b1Offset = (parseInt(userProfile.b1?.infusion)||0) + (parseInt(userProfile.b1?.bloom)||0);
-        machineBadge.innerText = `${userProfile.machineName || 'Generic'} • ${b1Offset}s Offset (P1)`;
-
-        if(logsCache.length > 0) {
-            const lastLog = logsCache[0];
-            butlerText.textContent = app.getMemorySummary();
-            butlerCard.classList.remove('hidden');
-
-            // Trigger True AI if enabled and not cached
-            if(userProfile.aiEnabled) {
-                app.getGeminiAnalysis(lastLog, currentActiveBean).catch(console.error);
-            }
-        } else {
-            butlerCard.classList.add('hidden');
-        }
-
-        app.router('detail');
-        } catch(e) {
-            console.error("Critical error in loadBeanDetail:", e);
-            app.router('list');
-        }
+        if (!butlerText) return;
+        const cacheKey = \`\${shot.id}_\${shot.yield}\`;
+        if(aiCache[cacheKey]) { butlerText.textContent = \`"\${aiCache[cacheKey]}"\`; return; }
+        butlerText.textContent = "\\"Summarizing where this bean left off...\\"";
+        try {
+            const analyzeFn = httpsCallable(functions, 'analyzeShot');
+            const result = await analyzeFn({ shot, bean: { name: bean.name, roastLevel: bean.roastLevel, origin: bean.origin }, machine: { name: userProfile.machineName, infusion: userProfile.b1?.infusion || 3, bloom: userProfile.b1?.bloom || 7 } });
+            aiCache[cacheKey] = result.data.text.trim().replace(/^"|"$/g, '');
+            butlerText.textContent = \`"\${aiCache[cacheKey]}"\`;
+        } catch(e) { butlerText.textContent = "\\"Shot memory is momentarily unavailable.\\""; }
     },
 
     renderCurrentRecipe: () => {
-        const card = document.getElementById("current-recipe-card");
-        if (!card) return;
-
+        const consoleEl = document.getElementById("dial-in-console");
         const recipe = chooseCurrentRecipe(logsCache, currentActiveBean?.roastLevel);
         currentRecipeShot = recipe?.shot || null;
-
-        if (!currentRecipeShot) {
-            card.classList.add("hidden");
-            return;
-        }
-
-        const ratio = ratioFor(currentRecipeShot);
-        document.getElementById("recipe-source").textContent = recipe.source;
+        if (!currentRecipeShot) { consoleEl.classList.add("hidden"); return; }
         document.getElementById("recipe-status").textContent = recipe.status;
+        document.getElementById("recipe-status").className = \`console-status status-\${recipe.status.toLowerCase()}\`;
         document.getElementById("recipe-grind").textContent = currentRecipeShot.grind || "--";
-        document.getElementById("recipe-dose").textContent = currentRecipeShot.dose ? `${currentRecipeShot.dose}g` : "--";
-        document.getElementById("recipe-yield").textContent = currentRecipeShot.yield ? `${currentRecipeShot.yield}g` : "--";
-        document.getElementById("recipe-time").textContent = currentRecipeShot.time ? `${currentRecipeShot.time}s` : "--";
-        document.getElementById("recipe-memory").textContent = summarizeRecipeMemory(currentRecipeShot, logsCache);
-        document.getElementById("recipe-status").className = `recipe-status ${recipe.status === "Dialed" ? "dialed" : "resume"}`;
-        card.classList.remove("hidden");
-    },
-
-    getMemorySummary: () => {
-        if (!logsCache.length) return "\"No shot history yet.\"";
-        const recipe = chooseCurrentRecipe(logsCache, currentActiveBean?.roastLevel);
-        const first = logsCache[logsCache.length - 1];
-        const last = logsCache[0];
-        const ratio = ratioFor(recipe.shot);
-        const ratioText = ratio ? `1:${ratio.toFixed(1)}` : "a remembered ratio";
-        const grindDrift = parseFloat(last.grind) - parseFloat(first.grind);
-        let driftText = "Grind has been fairly stable.";
-        if (!Number.isNaN(grindDrift) && Math.abs(grindDrift) >= 0.4) {
-            driftText = grindDrift > 0 ? "You moved coarser over this bag." : "You moved finer over this bag.";
-        }
-        return `"Settled around ${ratioText} at grind ${recipe.shot.grind || "--"}. ${driftText}"`;
+        document.getElementById("recipe-dose").textContent = currentRecipeShot.dose ? \`\${currentRecipeShot.dose}g\` : "--";
+        document.getElementById("recipe-yield").textContent = currentRecipeShot.yield ? \`\${currentRecipeShot.yield}g\` : "--";
+        document.getElementById("recipe-time").textContent = currentRecipeShot.time ? \`\${currentRecipeShot.time}s\` : "--";
+        consoleEl.classList.remove("hidden");
     },
 
     renderHistory: () => {
         const container = document.getElementById('history-container');
         container.replaceChildren();
-        
-        if(logsCache.length === 0) {
-            renderEmptyAction(
-                container,
-                "No extractions yet",
-                "Log the first shot for this batch to start seeing dial-in guidance.",
-                "Log Shot",
-                () => app.openLogShot()
-            );
-            return;
-        }
-
-        // Group by roast date (batch)
+        if(logsCache.length === 0) { renderEmptyAction(container, "No logs", "Log your first extraction.", "Log Shot", () => app.openLogShot()); return; }
         const groups = {};
-        logsCache.forEach(log => {
-            const k = log.roastDate || "Original Batch";
-            if(!groups[k]) groups[k] = [];
-            groups[k].push(log);
-        });
-
+        logsCache.forEach(log => { const k = log.roastDate || "Original Batch"; if(!groups[k]) groups[k] = []; groups[k].push(log); });
         Object.keys(groups).sort().reverse().forEach(batch => {
-            const header = el("div", "batch-header", `Batch: ${batch}`);
-            container.appendChild(header);
-
+            container.appendChild(el("div", "field-kicker", \`Batch: \${batch}\`));
             groups[batch].forEach(log => {
                 const advice = getAIAdvice(log, currentActiveBean?.roastLevel);
-                const row = document.createElement('div');
-                row.className = `log-row ext-${advice.status}`;
                 const ratio = (parseFloat(log.yield) / parseFloat(log.dose)).toFixed(1);
-
-                const metrics = el("div", "log-row-metrics");
-                const timeBox = document.createElement("div");
-                timeBox.className = "metric-center";
-                timeBox.appendChild(el("div", "metric-value metric-time", `${log.time || "--"}s`));
-
-                const grindBox = document.createElement("div");
-                grindBox.append(el("div", "metric-label", "GRIND"), el("div", "metric-value", log.grind || "--"));
-
-                const ratioBox = document.createElement("div");
-                ratioBox.className = "metric-right";
-                ratioBox.append(el("div", "metric-ratio", `1:${ratio}`), el("div", "metric-subtext", `${log.dose || "--"}g → ${log.yield || "--"}g`));
-
-                metrics.append(timeBox, grindBox, ratioBox);
-                row.append(metrics, el("div", "advice-text", advice.text));
-                row.onclick = () => { haptic('light'); app.openEditShot(log.id); };
+                const row = el("div", \`log-row ext-\${advice.status}\`);
+                row.innerHTML = \`<div class="log-row-metrics"><div class="metric-value">\${log.time}s</div><div style="text-align:center"><div class="recipe-label">Grind</div><div class="metric-value">\${log.grind}</div></div><div style="text-align:right"><div class="metric-value">1:\${ratio}</div><div class="recipe-label">\${log.dose}g → \${log.yield}g</div></div></div><div class="advice-text">\${advice.text}</div>\`;
+                row.onclick = () => app.openEditShot(log.id);
                 container.appendChild(row);
             });
         });
@@ -668,594 +315,78 @@ const app = {
     renderDialInSummary: () => {
         const tbody = document.getElementById('dial-in-table-body');
         tbody.replaceChildren();
-        
         const grouped = {};
-        logsCache.forEach(l => {
-            const g = l.grind;
-            if(!grouped[g]) grouped[g] = { ratioSum: 0, timeSum: 0, count: 0 };
-            const r = parseFloat(l.yield) / parseFloat(l.dose);
-            if(!isNaN(r)) { grouped[g].ratioSum += r; grouped[g].count++; }
-            if(!isNaN(parseFloat(l.time))) grouped[g].timeSum += parseFloat(l.time);
-        });
-
-        const rows = Object.keys(grouped).map(g => ({
-            grind: g,
-            avgRatio: grouped[g].ratioSum / grouped[g].count,
-            avgTime: Math.round(grouped[g].timeSum / grouped[g].count),
-            count: grouped[g].count
-        })).sort((a,b) => Math.abs(a.avgRatio - 2.0) - Math.abs(b.avgRatio - 2.0));
-
-        if(rows.length === 0) {
-            const tr = document.createElement('tr');
-            const td = el("td", "summary-empty", "Awaiting extraction data...");
-            td.colSpan = 4;
-            tr.appendChild(td);
-            tbody.appendChild(tr);
-            return;
-        }
-
-        rows.forEach((row, i) => {
-            const isBest = i === 0;
-            const tr = document.createElement('tr');
-            tr.className = isBest ? "summary-best-row" : "summary-row";
-            [
-                { text: row.grind, className: "summary-primary" },
-                { text: `1:${row.avgRatio.toFixed(1)}` },
-                { text: `${row.avgTime}s` },
-                { text: `${row.count}x`, className: "summary-muted" }
-            ].forEach(cell => {
-                const td = el("td", cell.className || "", cell.text);
-                tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
-        });
+        logsCache.forEach(l => { const g = l.grind; if(!grouped[g]) grouped[g] = { ratioSum: 0, timeSum: 0, count: 0 }; const r = parseFloat(l.yield) / parseFloat(l.dose); if(!isNaN(r)) { grouped[g].ratioSum += r; grouped[g].count++; } if(!isNaN(parseFloat(l.time))) grouped[g].timeSum += parseFloat(l.time); });
+        const rows = Object.keys(grouped).map(g => ({ grind: g, avgRatio: grouped[g].ratioSum / grouped[g].count, avgTime: Math.round(grouped[g].timeSum / grouped[g].count), count: grouped[g].count })).sort((a,b) => Math.abs(a.avgRatio - 2.0) - Math.abs(b.avgRatio - 2.0));
+        if(rows.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No data yet</td></tr>'; return; }
+        rows.forEach((row, i) => { const tr = document.createElement('tr'); if(i === 0) tr.className = "summary-best-row"; tr.innerHTML = \`<td class="summary-primary">\${row.grind}</td><td>1:\${row.avgRatio.toFixed(1)}</td><td>\${row.avgTime}s</td><td style="opacity:0.6">\${row.count}x</td>\`; tbody.appendChild(tr); });
     },
 
     renderGlobalStats: async () => {
         const statsCard = document.getElementById('global-stats-card');
         const statsContent = document.getElementById('global-stats-content');
-        
         const q = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
         const snap = await getDocs(q);
-        
-        let total = 0;
-        const grinds = {};
-        snap.forEach(d => {
-            total++;
-            const g = d.data().grind;
-            if(g) grinds[g] = (grinds[g] || 0) + 1;
-        });
-
+        let total = 0; const grinds = {};
+        snap.forEach(d => { total++; const g = d.data().grind; if(g) grinds[g] = (grinds[g] || 0) + 1; });
         if(total === 0) { statsCard.classList.add('hidden'); return; }
         statsCard.classList.remove('hidden');
-
         const top = Object.entries(grinds).sort((a,b) => b[1]-a[1]).slice(0,2);
-        
-        statsContent.innerHTML = `
-            <div class="stat-item">
-                <strong>${total}</strong>
-                <span>Total Logs</span>
-            </div>
-            <div class="stat-item">
-                <strong>${top.map(t => t[0]).join(", ") || "None"}</strong>
-                <span>Legacy Grinds</span>
-            </div>
-        `;
+        statsContent.innerHTML = \`<div class="stat-item"><strong>\${total}</strong><span>Total Logs</span></div><div class="stat-item"><strong>\${top.map(t => t[0]).join(", ") || "None"}</strong><span>Legacy Grinds</span></div>\`;
     },
 
-    // --- PHOTO HANDLING ---
     handleImageUpload: (event) => {
-        const file = event.target.files[0];
-        if(!file) return;
-        haptic('light');
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const MAX_W = 600;
-                const scale = MAX_W / img.width;
-                canvas.width = MAX_W;
-                canvas.height = img.height * scale;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                currentEditingImage = canvas.toDataURL('image/jpeg', 0.8);
-                const preview = document.getElementById('edit-image-preview');
-                preview.src = currentEditingImage;
-                preview.classList.remove('hidden');
-                document.getElementById('btn-remove-image').classList.remove('hidden');
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+        const file = event.target.files[0]; if(!file) return; haptic('light');
+        const reader = new FileReader(); reader.onload = (e) => {
+            const img = new Image(); img.onload = () => {
+                const canvas = document.createElement('canvas'); const MAX_W = 600; const scale = MAX_W / img.width; canvas.width = MAX_W; canvas.height = img.height * scale;
+                const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height); currentEditingImage = canvas.toDataURL('image/jpeg', 0.8);
+                const preview = document.getElementById('edit-image-preview'); preview.src = currentEditingImage; preview.classList.remove('hidden'); document.getElementById('btn-remove-image').classList.remove('hidden');
+            }; img.src = e.target.result;
+        }; reader.readAsDataURL(file);
     },
-
-    removeImage: () => {
-        currentEditingImage = null;
-        document.getElementById('edit-image-preview').classList.add('hidden');
-        document.getElementById('btn-remove-image').classList.add('hidden');
-    },
-
-    // --- FORM HELPERS ---
-    resetBeanForm: () => {
-        ['input-bean-id', 'input-roaster', 'input-roaster-location', 'input-name', 'input-origin', 'input-ten-bean-weight'].forEach(id => {
-            document.getElementById(id).value = '';
-        });
-        document.getElementById('input-roast-date').value = new Date().toISOString().split('T')[0];
-        document.getElementById('input-roast-level').value = 'Medium';
-        currentEditingTags = [];
-        app.renderEditingTags();
-        app.removeImage();
-        app.setBeanRating(0);
-        document.getElementById('bean-form-header').innerText = "New Coffee Profile";
-        document.getElementById('btn-delete-bean').classList.add('hidden');
-        document.getElementById('btn-save-bean').innerText = "Begin Profile";
-    },
-
-    setBeanRating: (n) => {
-        haptic('light');
-        document.getElementById('input-bean-rating').value = n;
-        document.querySelectorAll('.bean-star').forEach((el, i) => { el.classList.toggle('selected', i < n); });
-    },
-
-    renderEditingTags: () => {
-        const container = document.getElementById('editing-tags-container');
-        container.replaceChildren();
-        currentEditingTags.forEach((t, i) => {
-            const pill = document.createElement('span');
-            pill.className = 'tag-pill active';
-            pill.append(t, " ");
-            const remove = el("button", "", "✕");
-            remove.type = "button";
-            remove.className = "tag-remove";
-            remove.setAttribute("aria-label", `Remove ${t}`);
-            remove.onclick = () => app.removeTag(i);
-            pill.appendChild(remove);
-            container.appendChild(pill);
-        });
-    },
-
-    addTag: () => {
-        const input = document.getElementById('input-new-tag');
-        const tag = input.value.trim();
-        if(tag && !currentEditingTags.includes(tag)) {
-            currentEditingTags.push(tag);
-            input.value = '';
-            app.renderEditingTags();
-        }
-    },
-
+    removeImage: () => { currentEditingImage = null; document.getElementById('edit-image-preview').classList.add('hidden'); document.getElementById('btn-remove-image').classList.add('hidden'); },
+    resetBeanForm: () => { ['input-bean-id', 'input-roaster', 'input-roaster-location', 'input-name', 'input-origin', 'input-ten-bean-weight'].forEach(id => { document.getElementById(id).value = ''; }); document.getElementById('input-roast-date').value = new Date().toISOString().split('T')[0]; document.getElementById('input-roast-level').value = 'Medium'; currentEditingTags = []; app.renderEditingTags(); app.removeImage(); app.setBeanRating(0); document.getElementById('bean-form-header').innerText = "New Coffee Profile"; document.getElementById('btn-delete-bean').classList.add('hidden'); document.getElementById('btn-save-bean').innerText = "Begin Profile"; },
+    setBeanRating: (n) => { haptic('light'); document.getElementById('input-bean-rating').value = n; document.querySelectorAll('.bean-star').forEach((el, i) => { el.classList.toggle('selected', i < n); }); },
+    renderEditingTags: () => { const container = document.getElementById('editing-tags-container'); container.replaceChildren(); currentEditingTags.forEach((t, i) => { const pill = document.createElement('span'); pill.className = 'tag-pill active'; pill.append(t, " "); const remove = el("button", "tag-remove", "✕"); remove.type = "button"; remove.onclick = () => app.removeTag(i); pill.appendChild(remove); container.appendChild(pill); }); },
+    addTag: () => { const input = document.getElementById('input-new-tag'); const tag = input.value.trim(); if(tag && !currentEditingTags.includes(tag)) { currentEditingTags.push(tag); input.value = ''; app.renderEditingTags(); } },
     removeTag: (i) => { currentEditingTags.splice(i, 1); app.renderEditingTags(); },
-
-    // --- SHOT LOGGING ---
-    openLogShot: () => {
-        haptic('light');
-        document.getElementById('log-shot-title').innerText = currentRecipeShot ? "Log From Current Recipe" : "Log Extraction";
-        document.getElementById('input-log-bean-id').value = currentActiveBean?.id || '';
-        document.getElementById('input-log-shot-id').value = '';
-        document.getElementById('log-display-date').innerText = currentActiveBean?.currentRoastDate || "N/A";
-        
-        // Resume from the remembered recipe when possible.
-        const defaultDose = userProfile.defaultDose || 18;
-        document.getElementById('input-shot-dose').value = currentRecipeShot?.dose || defaultDose;
-        document.getElementById('input-shot-yield').value = currentRecipeShot?.yield || defaultDose * 2;
-        document.getElementById('input-shot-grind').value = currentRecipeShot?.grind || logsCache[0]?.grind || '';
-        document.getElementById('input-shot-time').value = currentRecipeShot?.time || '';
-        
-        const b1Total = userProfile.b1 ? ((parseInt(userProfile.b1.infusion)||0) + (parseInt(userProfile.b1.bloom)||0) + (parseInt(userProfile.b1.brew)||0)) : 30;
-        const b2Total = userProfile.b2 ? ((parseInt(userProfile.b2.infusion)||0) + (parseInt(userProfile.b2.bloom)||0) + (parseInt(userProfile.b2.brew)||0)) : 30;
-        
-        document.getElementById('btn-time-1').innerText = `P1 (${b1Total}s)`;
-        document.getElementById('btn-time-2').innerText = `P2 (${b2Total}s)`;
-        
-        document.getElementById('btn-delete-shot').classList.add('hidden');
-        document.getElementById('btn-save-shot').innerText = "Log Extraction";
-        
-        // Memory Preview Reset
-        document.getElementById('log-butler-preview').classList.add('hidden');
-        document.getElementById('log-butler-preview-text').innerText = "Input data to see how this compares to your remembered recipe.";
-        app.liveButlerPreview();
-
-        app.router('log-shot');
-    },
-
-    setTimeFromProfile: (btnNum) => {
-        let total = 30;
-        if(btnNum === 1 && userProfile.b1) {
-            total = (parseInt(userProfile.b1.infusion)||0) + (parseInt(userProfile.b1.bloom)||0) + (parseInt(userProfile.b1.brew)||0);
-        } else if(btnNum === 2 && userProfile.b2) {
-            total = (parseInt(userProfile.b2.infusion)||0) + (parseInt(userProfile.b2.bloom)||0) + (parseInt(userProfile.b2.brew)||0);
-        }
-        document.getElementById('input-shot-time').value = total;
-        app.liveButlerPreview();
-        haptic('light');
-    },
-
-    liveButlerPreview: () => {
-        const time = document.getElementById('input-shot-time').value;
-        const dose = document.getElementById('input-shot-dose').value;
-        const yieldVal = document.getElementById('input-shot-yield').value;
-        const previewEl = document.getElementById('log-butler-preview');
-        const previewText = document.getElementById('log-butler-preview-text');
-
-        if(time && dose && yieldVal) {
-            const mockShot = { time, dose, yield: yieldVal };
-            const advice = getAIAdvice(mockShot, currentActiveBean?.roastLevel);
-            const ratio = ratioFor(mockShot);
-            const ratioText = ratio ? `1:${ratio.toFixed(1)}` : "ratio unknown";
-            previewText.innerText = advice.status === "good"
-                ? `Memory check: ${ratioText}, in your usual range.`
-                : `Memory check: ${ratioText}. ${advice.text}`;
-            previewEl.classList.remove('hidden');
-            previewEl.classList.toggle("good-preview", advice.status === "good");
-            previewEl.classList.toggle("warning-preview", advice.status !== "good");
-        } else {
-            previewEl.classList.add('hidden');
-            previewEl.classList.remove("good-preview", "warning-preview");
-        }
-    },
-
-    saveShot: async () => {
-        haptic('medium');
-        const btn = document.getElementById('btn-save-shot');
-        btn.innerText = "Syncing...";
-        
-        try {
-            const beanId = document.getElementById('input-log-bean-id').value;
-            const shotId = document.getElementById('input-log-shot-id').value;
-            
-            const data = {
-                beanId, uid: currentUser.uid,
-                grind: document.getElementById('input-shot-grind').value.trim(),
-                time: document.getElementById('input-shot-time').value.trim(),
-                dose: document.getElementById('input-shot-dose').value.trim(),
-                yield: document.getElementById('input-shot-yield').value.trim(),
-                date: new Date()
-            };
-            
-            if(!data.grind) throw new Error("Grind setting is mandatory.");
-            
-            if(shotId) await updateDoc(doc(db, "brew_logs", shotId), data);
-            else {
-                data.roastDate = currentActiveBean?.currentRoastDate || "Unknown";
-                await addDoc(collection(db, "brew_logs"), data);
-            }
-            
-            await app.loadBeanDetail(beanId);
-        } catch(e) { alert(e.message); btn.innerText = "Retry"; }
-    },
-
-    // --- USER PROFILE ---
-    fetchProfile: async () => {
-        try {
-            const docRef = doc(db, "user_profiles", currentUser.uid);
-            const snap = await getDoc(docRef);
-
-            if (snap.exists()) {
-                const data = snap.data();
-                userProfile = {
-                    machineName: data.machineName || 'Lelit Elizabeth',
-                    aiEnabled: data.aiEnabled !== false,
-                    defaultDose: parseFloat(data.defaultDose) || 18,
-                    b1: data.b1 || { infusion: data.infusion || 3, bloom: data.bloom || 7, brew: 20 },
-                    b2: data.b2 || { infusion: 0, bloom: 0, brew: 30 }
-                };
-            } else {
-                userProfile = {
-                    machineName: 'Lelit Elizabeth',
-                    aiEnabled: true,
-                    defaultDose: 18,
-                    b1: { infusion: 3, bloom: 7, brew: 20 },
-                    b2: { infusion: 0, bloom: 0, brew: 30 }
-                };
-                await setDoc(docRef, userProfile);
-            }
-        } catch(e) { console.error("Profile fetch error:", e); }
-    },
-
-    updateSettingsDisplay: () => {
-        const b1Total = (parseInt(document.getElementById('profile-b1-infusion').value)||0) + 
-                        (parseInt(document.getElementById('profile-b1-bloom').value)||0) + 
-                        (parseInt(document.getElementById('profile-b1-brew').value)||0);
-        
-        const b2Total = (parseInt(document.getElementById('profile-b2-infusion').value)||0) + 
-                        (parseInt(document.getElementById('profile-b2-bloom').value)||0) + 
-                        (parseInt(document.getElementById('profile-b2-brew').value)||0);
-
-        document.getElementById('profile-b1-total-display').innerText = b1Total;
-        document.getElementById('profile-b2-total-display').innerText = b2Total;
-    },
-
-    openSettings: () => {
-        haptic('light');
-        document.getElementById('profile-machine-name').value = userProfile.machineName || '';
-        document.getElementById('profile-ai-enabled').checked = userProfile.aiEnabled !== false;
-        document.getElementById('profile-default-dose').value = userProfile.defaultDose || 18;
-        
-        if(userProfile.b1) {
-            document.getElementById('profile-b1-infusion').value = userProfile.b1.infusion || 0;
-            document.getElementById('profile-b1-bloom').value = userProfile.b1.bloom || 0;
-            document.getElementById('profile-b1-brew').value = userProfile.b1.brew || 0;
-        }
-        
-        if(userProfile.b2) {
-            document.getElementById('profile-b2-infusion').value = userProfile.b2.infusion || 0;
-            document.getElementById('profile-b2-bloom').value = userProfile.b2.bloom || 0;
-            document.getElementById('profile-b2-brew').value = userProfile.b2.brew || 0;
-        }
-
-        app.updateSettingsDisplay();
-        app.router('settings');
-    },
-
-    saveProfile: async () => {
-        haptic('medium');
-        const name = document.getElementById('profile-machine-name').value;
-        const aiEnabled = document.getElementById('profile-ai-enabled').checked;
-        const defaultDose = parseFloat(document.getElementById('profile-default-dose').value) || 18;
-        
-        const b1 = {
-            infusion: parseInt(document.getElementById('profile-b1-infusion').value) || 0,
-            bloom: parseInt(document.getElementById('profile-b1-bloom').value) || 0,
-            brew: parseInt(document.getElementById('profile-b1-brew').value) || 0
-        };
-
-        const b2 = {
-            infusion: parseInt(document.getElementById('profile-b2-infusion').value) || 0,
-            bloom: parseInt(document.getElementById('profile-b2-bloom').value) || 0,
-            brew: parseInt(document.getElementById('profile-b2-brew').value) || 0
-        };
-
-        userProfile = { machineName: name, aiEnabled, defaultDose, b1, b2 };
-        
-        try {
-            await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
-            app.renderDailyTip();
-            app.router('list');
-        } catch(e) { alert(e.message); }
-    },
-
-    getGeminiAnalysis: async (shot, bean) => {
-        const butlerText = document.getElementById('butler-detail-text');
-        const cacheKey = `${shot.id}_${shot.yield}`;
-        if(aiCache[cacheKey]) {
-            butlerText.textContent = `🤵🏻‍♂️ ${aiCache[cacheKey]}`;
-            return;
-        }
-
-        butlerText.textContent = "🤵🏻‍♂️ Summarizing where this bean left off...";
-        
-        try {
-            const analyzeFn = httpsCallable(functions, 'analyzeShot');
-            const result = await analyzeFn({ 
-                shot, 
-                bean: { name: bean.name, roastLevel: bean.roastLevel, origin: bean.origin },
-                machine: { name: userProfile.machineName, infusion: userProfile.b1?.infusion || 3, bloom: userProfile.b1?.bloom || 7 }
-            });
-            
-            aiCache[cacheKey] = result.data.text.trim();
-            butlerText.textContent = `🤵🏻‍♂️ ${aiCache[cacheKey]}`;
-        } catch(e) { 
-            console.error("AI Analysis error:", e);
-            butlerText.textContent = "🤵🏻‍♂️ Memory summary is momentarily unavailable; your latest recipe is still saved.";
-        }
-    },
-
-    renderAnalytics: async () => {
-        haptic('light');
-        app.router('analytics');
-        const trendEmpty = document.getElementById("trend-empty-state");
-        const distEmpty = document.getElementById("dist-empty-state");
-        const insightEl = document.getElementById('analytics-insight-text');
-        const trendCanvas = document.getElementById("trendChart");
-        const distCanvas = document.getElementById("distChart");
-
-        trendEmpty?.classList.add("hidden");
-        distEmpty?.classList.add("hidden");
-        trendCanvas?.classList.remove("hidden");
-        distCanvas?.classList.remove("hidden");
-        insightEl.textContent = "Analyzing your data for patterns...";
-
-        const q = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
-        const snap = await getDocs(q);
-        const allLogs = [];
-        snap.forEach(d => allLogs.push(d.data()));
-
-        if (allLogs.length === 0) {
-            if (chartTrend) chartTrend.destroy();
-            if (chartDist) chartDist.destroy();
-            trendCanvas?.classList.add("hidden");
-            distCanvas?.classList.add("hidden");
-            trendEmpty?.classList.remove("hidden");
-            distEmpty?.classList.remove("hidden");
-            insightEl.textContent = "Log a few extractions to unlock trends, grind frequency, and pattern insights.";
-            return;
-        }
-
-        // Group by Date for Trend
-        const last30 = new Date();
-        last30.setDate(last30.getDate() - 30);
-        
-        const trendData = allLogs
-            .filter(l => l.date && l.date.toDate() > last30)
-            .sort((a,b) => a.date.toDate() - b.date.toDate());
-
-        // Process Grind Distribution
-        const grindCounts = {};
-        allLogs.forEach(l => {
-            if(l.grind) {
-                const g = parseFloat(l.grind).toFixed(1);
-                grindCounts[g] = (grindCounts[g] || 0) + 1;
-            }
-        });
-        const distLabels = Object.keys(grindCounts).sort((a,b) => parseFloat(a) - parseFloat(b));
-        const distValues = distLabels.map(l => grindCounts[l]);
-
-        // Cleanup existing charts
-        if (chartTrend) chartTrend.destroy();
-        if (chartDist) chartDist.destroy();
-
-        // 1. Trend Chart (Grind & Yield over time)
-        const ctxTrend = document.getElementById('trendChart').getContext('2d');
-        chartTrend = new Chart(ctxTrend, {
-            type: 'line',
-            data: {
-                labels: trendData.map(l => l.date.toDate().toLocaleDateString(undefined, {month:'short', day:'numeric'})),
-                datasets: [
-                    {
-                        label: 'Grind Setting',
-                        data: trendData.map(l => parseFloat(l.grind)),
-                        borderColor: '#6f4e37',
-                        backgroundColor: 'rgba(111, 78, 55, 0.1)',
-                        borderWidth: 3,
-                        tension: 0.4,
-                        yAxisID: 'y'
-                    },
-                    {
-                        label: 'Yield (g)',
-                        data: trendData.map(l => parseFloat(l.yield)),
-                        borderColor: '#d2b48c',
-                        borderWidth: 2,
-                        borderDash: [5, 5],
-                        fill: false,
-                        yAxisID: 'y1'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { display: false },
-                    y: { position: 'left', title: { display: true, text: 'Grind' } },
-                    y1: { position: 'right', display: false, grid: { drawOnChartArea: false } }
-                },
-                plugins: { legend: { display: false } }
-            }
-        });
-
-        // 2. Distribution Chart
-        const ctxDist = document.getElementById('distChart').getContext('2d');
-        chartDist = new Chart(ctxDist, {
-            type: 'bar',
-            data: {
-                labels: distLabels,
-                datasets: [{
-                    data: distValues,
-                    backgroundColor: 'rgba(111, 78, 55, 0.6)',
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { 
-                    y: { beginAtZero: true, grid: { display: false } },
-                    x: { grid: { display : false } }
-                }
-            }
-        });
-
-        // AI Insight Generation
-        const avgYield = allLogs.reduce((acc, l) => acc + (parseFloat(l.yield) || 0), 0) / allLogs.length;
-        const topGrind = distLabels[distValues.indexOf(Math.max(...distValues))];
-        
-        let insight = `Your most consistent grind is ${topGrind}. `;
-        if (trendData.length > 5) {
-            const firstHalf = trendData.slice(0, Math.floor(trendData.length/2));
-            const secondHalf = trendData.slice(Math.floor(trendData.length/2));
-            const avg1 = firstHalf.reduce((a,b) => a + parseFloat(b.grind), 0) / firstHalf.length;
-            const avg2 = secondHalf.reduce((a,b) => a + parseFloat(b.grind), 0) / secondHalf.length;
-            
-            if (avg2 > avg1 + 0.5) insight += "You've been grinding coarser recently, likely enjoying darker roasts.";
-            else if (avg2 < avg1 - 0.5) insight += "You've been grinding finer recently, hitting those high-extraction light roasts.";
-            else insight += "You have incredible grind stability across roasters.";
-        }
-        insightEl.textContent = insight;
-    }
+    openLogShot: () => { haptic('light'); document.getElementById('log-shot-title').innerText = currentRecipeShot ? "Log From Current Recipe" : "Log Extraction"; document.getElementById('input-log-bean-id').value = currentActiveBean?.id || ''; document.getElementById('input-log-shot-id').value = ''; document.getElementById('log-display-date').innerText = currentActiveBean?.currentRoastDate || "N/A"; const defaultDose = userProfile.defaultDose || 18; document.getElementById('input-shot-dose').value = currentRecipeShot?.dose || defaultDose; document.getElementById('input-shot-yield').value = currentRecipeShot?.yield || defaultDose * 2; document.getElementById('input-shot-grind').value = currentRecipeShot?.grind || logsCache[0]?.grind || ''; document.getElementById('input-shot-time').value = currentRecipeShot?.time || ''; const b1Total = userProfile.b1 ? ((parseInt(userProfile.b1.infusion)||0) + (parseInt(userProfile.b1.bloom)||0) + (parseInt(userProfile.b1.brew)||0)) : 30; const b2Total = userProfile.b2 ? ((parseInt(userProfile.b2.infusion)||0) + (parseInt(userProfile.b2.bloom)||0) + (parseInt(userProfile.b2.brew)||0)) : 30; document.getElementById('btn-time-1').innerText = \`P1 (\${b1Total}s)\`; document.getElementById('btn-time-2').innerText = \`P2 (\${b2Total}s)\`; document.getElementById('btn-delete-shot').classList.add('hidden'); document.getElementById('btn-save-shot').innerText = "Log Extraction"; document.getElementById('log-butler-preview').classList.add('hidden'); app.liveButlerPreview(); app.router('log-shot'); },
+    setTimeFromProfile: (btnNum) => { let total = 30; if(btnNum === 1 && userProfile.b1) total = (parseInt(userProfile.b1.infusion)||0) + (parseInt(userProfile.b1.bloom)||0) + (parseInt(userProfile.b1.brew)||0); else if(btnNum === 2 && userProfile.b2) total = (parseInt(userProfile.b2.infusion)||0) + (parseInt(userProfile.b2.bloom)||0) + (parseInt(userProfile.b2.brew)||0); document.getElementById('input-shot-time').value = total; app.liveButlerPreview(); haptic('light'); },
+    liveButlerPreview: () => { const time = document.getElementById('input-shot-time').value; const dose = document.getElementById('input-shot-dose').value; const yieldVal = document.getElementById('input-shot-yield').value; const previewEl = document.getElementById('log-butler-preview'); const previewText = document.getElementById('log-butler-preview-text'); if(time && dose && yieldVal) { const mockShot = { time, dose, yield: yieldVal }; const advice = getAIAdvice(mockShot, currentActiveBean?.roastLevel); const ratio = ratioFor(mockShot); previewText.innerText = \`Memory check: 1:\${ratio ? ratio.toFixed(1) : '?'}. \${advice.text}\`; previewEl.classList.remove('hidden'); } else previewEl.classList.add('hidden'); },
+    saveShot: async () => { haptic('medium'); const btn = document.getElementById('btn-save-shot'); btn.innerText = "Syncing..."; try { const beanId = document.getElementById('input-log-bean-id').value; const shotId = document.getElementById('input-log-shot-id').value; const data = { beanId, uid: currentUser.uid, grind: document.getElementById('input-shot-grind').value.trim(), time: document.getElementById('input-shot-time').value.trim(), dose: document.getElementById('input-shot-dose').value.trim(), yield: document.getElementById('input-shot-yield').value.trim(), date: new Date() }; if(!data.grind) throw new Error("Grind setting is mandatory."); if(shotId) await updateDoc(doc(db, "brew_logs", shotId), data); else { data.roastDate = currentActiveBean?.currentRoastDate || "Unknown"; await addDoc(collection(db, "brew_logs"), data); } await app.loadBeanDetail(beanId); } catch(e) { alert(e.message); btn.innerText = "Retry"; } },
+    openEditShot: (shotId) => { const log = logsCache.find(l => l.id === shotId); if(!log) return; haptic('light'); document.getElementById('log-shot-title').innerText = "Edit Extraction"; document.getElementById('input-log-bean-id').value = currentActiveBean?.id || log.beanId; document.getElementById('input-log-shot-id').value = shotId; document.getElementById('log-display-date').innerText = log.roastDate; document.getElementById('input-shot-grind').value = log.grind || ''; document.getElementById('input-shot-time').value = log.time || ''; document.getElementById('input-shot-dose').value = log.dose || ''; document.getElementById('input-shot-yield').value = log.yield || ''; document.getElementById('btn-save-shot').innerText = "Update Log"; document.getElementById('btn-delete-shot').classList.remove('hidden'); app.router('log-shot'); },
+    deleteShot: async () => { if(confirm("Delete log?")) { haptic('heavy'); const shotId = document.getElementById('input-log-shot-id').value; const beanId = document.getElementById('input-log-bean-id').value; await deleteDoc(doc(db, "brew_logs", shotId)); await app.loadBeanDetail(beanId); } },
+    fetchProfile: async () => { try { const docRef = doc(db, "user_profiles", currentUser.uid); const snap = await getDoc(docRef); if (snap.exists()) { const data = snap.data(); userProfile = { machineName: data.machineName || 'Lelit Elizabeth', aiEnabled: data.aiEnabled !== false, defaultDose: parseFloat(data.defaultDose) || 18, b1: data.b1 || { infusion: data.infusion || 3, bloom: data.bloom || 7, brew: 20 }, b2: data.b2 || { infusion: 0, bloom: 0, brew: 30 } }; } else { userProfile = { machineName: 'Lelit Elizabeth', aiEnabled: true, defaultDose: 18, b1: { infusion: 3, bloom: 7, brew: 20 }, b2: { infusion: 0, bloom: 0, brew: 30 } }; await setDoc(docRef, userProfile); } } catch(e) { console.error("Profile fetch error:", e); } },
+    updateSettingsDisplay: () => { const b1Total = (parseInt(document.getElementById('profile-b1-infusion').value)||0) + (parseInt(document.getElementById('profile-b1-bloom').value)||0) + (parseInt(document.getElementById('profile-b1-brew').value)||0); const b2Total = (parseInt(document.getElementById('profile-b2-infusion').value)||0) + (parseInt(document.getElementById('profile-b2-bloom').value)||0) + (parseInt(document.getElementById('profile-b2-brew').value)||0); document.getElementById('profile-b1-total-display').innerText = b1Total; document.getElementById('profile-b2-total-display').innerText = b2Total; },
+    openSettings: () => { haptic('light'); document.getElementById('profile-machine-name').value = userProfile.machineName || ''; document.getElementById('profile-ai-enabled').checked = userProfile.aiEnabled !== false; document.getElementById('profile-default-dose').value = userProfile.defaultDose || 18; if(userProfile.b1) { document.getElementById('profile-b1-infusion').value = userProfile.b1.infusion || 0; document.getElementById('profile-b1-bloom').value = userProfile.b1.bloom || 0; document.getElementById('profile-b1-brew').value = userProfile.b1.brew || 0; } if(userProfile.b2) { document.getElementById('profile-b2-infusion').value = userProfile.b2.infusion || 0; document.getElementById('profile-b2-bloom').value = userProfile.b2.bloom || 0; document.getElementById('profile-b2-brew').value = userProfile.b2.brew || 0; } app.updateSettingsDisplay(); app.router('settings'); },
+    saveProfile: async () => { haptic('medium'); const name = document.getElementById('profile-machine-name').value; const aiEnabled = document.getElementById('profile-ai-enabled').checked; const defaultDose = parseFloat(document.getElementById('profile-default-dose').value) || 18; const b1 = { infusion: parseInt(document.getElementById('profile-b1-infusion').value) || 0, bloom: parseInt(document.getElementById('profile-b1-bloom').value) || 0, brew: parseInt(document.getElementById('profile-b1-brew').value) || 0 }; const b2 = { infusion: parseInt(document.getElementById('profile-b2-infusion').value) || 0, bloom: parseInt(document.getElementById('profile-b2-bloom').value) || 0, brew: parseInt(document.getElementById('profile-b2-brew').value) || 0 }; userProfile = { machineName: name, aiEnabled, defaultDose, b1, b2 }; try { await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile); app.renderDailyTip(); app.router('list'); } catch(e) { alert(e.message); } },
+    openAnalytics: async () => { haptic('light'); app.router('analytics'); app.renderAnalytics(); },
+    renderAnalytics: async () => { const trendEmpty = document.getElementById("trend-empty-state"); const distEmpty = document.getElementById("dist-empty-state"); const insightEl = document.getElementById('analytics-insight-text'); const trendCanvas = document.getElementById("trendChart"); const distCanvas = document.getElementById("distChart"); trendEmpty?.classList.add("hidden"); distEmpty?.classList.add("hidden"); trendCanvas?.classList.remove("hidden"); distCanvas?.classList.remove("hidden"); const q = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid)); const snap = await getDocs(q); const allLogs = []; snap.forEach(d => allLogs.push(d.data())); if (allLogs.length === 0) { trendCanvas?.classList.add("hidden"); distCanvas?.classList.add("hidden"); trendEmpty?.classList.remove("hidden"); distEmpty?.classList.remove("hidden"); insightEl.textContent = "Log extractions to see trends."; return; } const last30 = new Date(); last30.setDate(last30.getDate() - 30); const trendData = allLogs.filter(l => l.date && l.date.toDate() > last30).sort((a,b) => a.date.toDate() - b.date.toDate()); const grindCounts = {}; allLogs.forEach(l => { if(l.grind) { const g = parseFloat(l.grind).toFixed(1); grindCounts[g] = (grindCounts[g] || 0) + 1; } }); const distLabels = Object.keys(grindCounts).sort((a,b) => parseFloat(a) - parseFloat(b)); const distValues = distLabels.map(l => grindCounts[l]); if (chartTrend) chartTrend.destroy(); if (chartDist) chartDist.destroy(); const ctxTrend = document.getElementById('trendChart').getContext('2d'); chartTrend = new Chart(ctxTrend, { type: 'line', data: { labels: trendData.map(l => l.date.toDate().toLocaleDateString(undefined, {month:'short', day:'numeric'})), datasets: [{ label: 'Grind Setting', data: trendData.map(l => parseFloat(l.grind)), borderColor: '#f59e0b', borderWidth: 3, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { display: true } }, plugins: { legend: { display: false } } } }); const ctxDist = document.getElementById('distChart').getContext('2d'); chartDist = new Chart(ctxDist, { type: 'bar', data: { labels: distLabels, datasets: [{ data: distValues, backgroundColor: 'rgba(217, 119, 6, 0.6)', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display : false } } } } }); insightEl.textContent = \`Your most consistent grind is \${distLabels[distValues.indexOf(Math.max(...distValues))]}.\`; },
+    exportData: async () => { if(!confirm("Download CSV?")) return; haptic('medium'); const snapLogs = await getDocs(query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid))); let csv = "Type,Date,Roaster,Bean,Grind,Time,Dose,Yield\n"; const beanMap = {}; beans.forEach(b => beanMap[b.id] = b); snapLogs.forEach(doc => { const l = doc.data(); const b = beanMap[l.beanId] || { name: "Unknown", roaster: "Unknown" }; csv += \`Shot,\${l.date ? new Date(l.date.seconds * 1000).toISOString().split('T')[0] : "N/A"},"\${b.roaster}","\${b.name}",\${l.grind},\${l.time},\${l.dose},\${l.yield}\n\`; }); const link = document.createElement("a"); link.setAttribute("href", encodeURI("data:text/csv;charset=utf-8," + csv)); link.setAttribute("download", "barista_export.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); },
+    repeatCurrentRecipe: async () => { if (!currentRecipeShot || !currentActiveBean) return app.openLogShot(); if(!confirm("Repeat recipe?")) return; haptic('medium'); try { const data = { beanId: currentActiveBean.id, uid: currentUser.uid, grind: currentRecipeShot.grind, time: currentRecipeShot.time, dose: currentRecipeShot.dose, yield: currentRecipeShot.yield, roastDate: currentActiveBean.currentRoastDate || "Unknown", date: new Date() }; await addDoc(collection(db, "brew_logs"), data); await app.loadBeanDetail(currentActiveBean.id); } catch(e) { alert(e.message); } },
+    promptNewDate: async () => { app.editActiveBean(); }
 };
 
-// Bind to window for HTML access
 window.app = app;
 
-// --- LISTENERS ---
 const bindUiEvents = () => {
-    on("btn-login", "click", () => app.login());
-    on("btn-open-analytics", "click", () => app.renderAnalytics());
-    on("btn-open-settings", "click", () => app.openSettings());
-    on("btn-logout", "click", () => app.logout());
-    on("input-sort-beans", "change", (event) => app.setSort(event.target.value));
-
-    on("fab-add-bean", "click", () => {
-        app.resetBeanForm();
-        app.router("edit-bean");
-    });
-    on("fab-log-shot", "click", () => app.openLogShot());
-
-    on("input-bean-image", "change", (event) => app.handleImageUpload(event));
-    on("btn-remove-image", "click", () => app.removeImage());
-    on("btn-add-tag", "click", () => app.addTag());
-    on("input-new-tag", "keydown", (event) => {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            app.addTag();
-        }
-    });
-
-    document.querySelectorAll(".bean-star").forEach(star => {
-        star.addEventListener("click", () => app.setBeanRating(parseInt(star.dataset.rating, 10)));
-    });
-
-    on("btn-save-bean", "click", () => app.saveBean());
-    on("btn-cancel-bean", "click", () => app.router("list"));
-    on("btn-delete-bean", "click", () => app.deleteBean());
-    on("btn-edit-active-bean", "click", () => app.editActiveBean());
-    on("btn-update-roast-date", "click", () => app.promptNewDate());
-    on("btn-repeat-recipe", "click", () => app.repeatCurrentRecipe());
-    on("btn-adjust-recipe", "click", () => app.prefillShotForm(currentRecipeShot, "Adjust Current Recipe"));
-
-    document.querySelectorAll("[data-route]").forEach(button => {
-        button.addEventListener("click", () => app.router(button.dataset.route));
-    });
-
-    document.querySelectorAll(".shot-preview-input").forEach(input => {
-        input.addEventListener("input", () => app.liveButlerPreview());
-    });
-    document.querySelectorAll(".time-profile-btn").forEach(button => {
-        button.addEventListener("click", () => app.setTimeFromProfile(parseInt(button.dataset.profile, 10)));
-    });
-    on("btn-save-shot", "click", () => app.saveShot());
-    on("btn-cancel-shot", "click", () => app.router("detail"));
-    on("btn-delete-shot", "click", () => app.deleteShot());
-
-    document.querySelectorAll(".settings-total-input").forEach(input => {
-        input.addEventListener("input", () => app.updateSettingsDisplay());
-    });
-    on("profile-ai-enabled", "change", () => app.saveProfile());
-    on("btn-save-profile", "click", () => app.saveProfile());
-    on("btn-export-data", "click", () => app.exportData());
+    on("btn-login", "click", () => app.login()); on("btn-open-analytics", "click", () => app.openAnalytics()); on("btn-open-settings", "click", () => app.openSettings()); on("btn-logout", "click", () => app.logout());
+    on("input-sort-beans", "change", (e) => app.setSort(e.target.value)); on("fab-add-bean", "click", () => { app.resetBeanForm(); app.router("edit-bean"); }); on("fab-log-shot", "click", () => app.openLogShot());
+    on("input-bean-image", "change", (e) => app.handleImageUpload(e)); on("btn-remove-image", "click", () => app.removeImage()); on("btn-add-tag", "click", () => app.addTag());
+    on("input-new-tag", "keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); app.addTag(); } });
+    document.querySelectorAll(".bean-star").forEach(star => { star.addEventListener("click", () => app.setBeanRating(parseInt(star.dataset.rating, 10))); });
+    on("btn-save-bean", "click", () => app.saveBean()); on("btn-cancel-bean", "click", () => app.router("list")); on("btn-delete-bean", "click", () => app.deleteBean());
+    on("btn-edit-active-bean", "click", () => app.editActiveBean()); on("btn-update-roast-date", "click", () => app.promptNewDate()); on("btn-repeat-recipe", "click", () => app.repeatCurrentRecipe());
+    on("btn-adjust-recipe", "click", () => app.openLogShot());
+    document.querySelectorAll("[data-route]").forEach(b => { b.addEventListener("click", () => app.router(b.dataset.route)); });
+    document.querySelectorAll(".shot-preview-input").forEach(i => { i.addEventListener("input", () => app.liveButlerPreview()); });
+    on("btn-time-1", "click", () => app.setTimeFromProfile(1));
+    on("btn-time-2", "click", () => app.setTimeFromProfile(2));
+    on("btn-save-shot", "click", () => app.saveShot()); on("btn-cancel-shot", "click", () => app.router("detail")); on("btn-delete-shot", "click", () => app.deleteShot());
+    on("btn-save-profile", "click", () => app.saveProfile()); on("btn-export-data", "click", () => app.exportData());
 };
-
 bindUiEvents();
-
-onAuthStateChanged(auth, u => {
-    if(u) {
-        currentUser = u;
-        app.fetchProfile().then(() => {
-            app.fetchBeans();
-            let hash = window.location.hash.substring(1);
-            if (hash === 'login') hash = 'list'; // Prevent authenticated users from getting stuck on the login view
-            app.router(hash || 'list');
-        });
-    } else {
-        app.router('login');
-    }
-});
-
-window.addEventListener('popstate', (e) => {
-    if (e.state?.view) app.router(e.state.view, false);
-});
-
-console.log("Lincoln Barista Platinum v1.0 Initialized");
+onAuthStateChanged(auth, u => { if(u) { currentUser = u; app.fetchProfile().then(() => { app.fetchBeans(); let hash = window.location.hash.substring(1); app.router(hash || 'list'); }); } else app.router('login'); });
+window.addEventListener('popstate', (e) => { if (e.state?.view) app.router(e.state.view, false); });
+console.log("Lincoln Barista Platinum v1.3.2 Initialized");
