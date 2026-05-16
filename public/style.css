@@ -207,60 +207,34 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--r
     text-decoration: none;
 }
 .btn:active { transform: scale(0.97); }
-.btn-secondary { background: var(--panel-strong); border: 1px solid var(--panel-border); color: var(--text-main); box-shadow: none; }
-.btn-secondary:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); }
-.btn-danger { background: var(--error-bg); color: var(--error-text); box-shadow: none; }
+.btn-secondary { background: rgba(255,255,255,0.05); border: 1px solid var(--panel-border); color: var(--text-main); box-shadow: none; }
+.btn-secondary:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+.btn-danger { background: var(--error-bg); color: var(--error-text); border: 1px solid rgba(239, 68, 68, 0.2); }
 
-.small-btn {
-    width: auto; padding: 0.4rem 1rem; font-size: 0.75rem; border-radius: var(--radius-sm);
-    min-height: auto;
-}
+.small-btn { width: auto; padding: 0.5rem 1rem; font-size: 0.72rem; border-radius: var(--radius-sm); min-height: auto; text-transform: uppercase; letter-spacing: 0.05em; }
+.back-btn { width: auto; margin-bottom: 1.5rem; padding: 0.5rem 1rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
 
-.back-btn {
-    width: auto; margin-bottom: 1.5rem; padding: 0.5rem 1rem; font-size: 0.8rem;
-    font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
-}
+/* --- EMPTY STATES --- */
+.empty-state { padding: 3rem 1rem; color: var(--text-muted); text-align: center; font-weight: 600; }
+.empty-panel { padding: 2.5rem 1.5rem; border: 1px dashed var(--panel-border); border-radius: var(--radius-md); background: rgba(255,255,255,0.02); text-align: center; }
+.empty-panel-title { color: var(--text-main); font-family: 'Outfit', sans-serif; font-size: 1.2rem; font-weight: 800; margin-bottom: 0.5rem; }
+.empty-panel-copy { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; max-width: 300px; margin-left: auto; margin-right: auto; }
+.empty-panel-action { max-width: 200px; margin: 0 auto; }
 
-.fab {
-    position: fixed; bottom: 2rem; right: 1.5rem; width: 60px; height: 60px;
-    border-radius: var(--radius-md); background: var(--primary); color: white;
-    display: flex; align-items: center; justify-content: center; font-size: 1.8rem;
-    box-shadow: 0 12px 24px rgba(0,0,0,0.4); z-index: 100; border: 0; cursor: pointer;
-}
+/* --- DETAIL HERO --- */
+.detail-hero { text-align: center; margin-bottom: 2.5rem; display: flex; flex-direction: column; align-items: center; }
+.detail-roaster { color: var(--roast-light); font-size: 0.8rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.25rem; }
+.detail-name { font-size: 2.4rem; font-weight: 850; line-height: 1.1; margin: 0.5rem 0; color: var(--text-main); letter-spacing: -0.02em; }
+.detail-rating { font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--accent-amber); }
+.detail-age { color: var(--text-muted); font-size: 0.85rem; font-weight: 600; }
+.detail-actions { margin-top: 1.5rem; }
 
-/* --- LOGS & BREW DATA --- */
-.log-row {
-    background: var(--panel-bg); padding: 1.25rem; border: 1px solid var(--panel-border);
-    border-radius: var(--radius-sm); margin-bottom: 0.75rem;
-    display: flex; flex-direction: column; gap: 0.75rem;
-    cursor: pointer; position: relative; overflow: hidden;
-}
-.log-row::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
-.ext-good::before { background: var(--accent-green); }
-.ext-fast::before { background: var(--accent-cyan); }
-.ext-slow::before { background: var(--accent-amber); }
-
-.log-row-metrics { display: flex; justify-content: space-between; align-items: center; }
-.metric-value { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.15rem; color: var(--text-main); }
-.metric-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }
-
-.chart-wrapper { background: var(--panel-bg); border-radius: var(--radius-md); padding: 1.25rem; border: 1px solid var(--panel-border); margin-bottom: 2rem; }
-
-/* --- SUMMARY TABLES --- */
-.summary-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: center; margin: 1rem 0; color: var(--text-main); }
-.summary-table thead tr { color: var(--text-muted); font-size: 0.65rem; text-transform: uppercase; font-weight: 800; border-bottom: 1px solid var(--panel-border); }
-.summary-table th, .summary-table td { padding: 1rem 0.5rem; }
-.summary-row { border-bottom: 1px solid var(--panel-border); }
-.summary-best-row { background: var(--success-bg); font-weight: 800; color: var(--success-text); border-radius: var(--radius-sm); }
-.summary-primary { color: var(--roast-light); font-weight: 800; }
-.summary-muted { color: var(--text-muted); opacity: 0.8; }
-.summary-empty { padding: 2rem; color: var(--text-muted); font-style: italic; }
-
-/* --- SPECIAL BLOCKS --- */
-.field-kicker { color: var(--text-muted); font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem; }
-.primary-value { font-family: 'Outfit', sans-serif; font-size: 1.2rem; font-weight: 700; color: var(--text-main); }
-.recipe-label { color: var(--text-muted); font-size: 0.6rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.1rem; }
-.recipe-value { font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 800; color: var(--roast-light); }
+/* --- BATCH & RECIPE CARDS --- */
+.stack-card { display: flex; flex-direction: column; gap: 0.75rem; }
+.field-kicker { color: var(--text-muted); font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+.primary-value { font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--text-main); line-height: 1; }
+.recipe-label { color: var(--text-muted); font-size: 0.62rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.2rem; }
+.recipe-value { font-family: 'Outfit', sans-serif; font-size: 1.15rem; font-weight: 800; color: var(--roast-light); }
 
 /* --- AI BUTLER & ADVICE --- */
 .butler-card {
