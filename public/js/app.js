@@ -269,11 +269,11 @@ const app = {
                 thumbHtml = `<div class="bean-card-thumb thumb-placeholder">☕</div>`;
             }
 
-            const ratingHtml = b.rating > 0 ? `<span style="color:var(--accent-amber); font-size: 0.7rem;">★${b.rating}</span>` : '';
+            const ratingHtml = b.rating > 0 ? `<span class="card-rating">★${b.rating}</span>` : '';
             
             const tagsHtml = [
                 b.origin ? `<span class="tag-pill">📍 ${b.origin}</span>` : '',
-                ...(b.tags || []).slice(0, 1).map(t => `<span class="tag-pill">#${t}</span>`)
+                ...(b.tags || []).slice(0, 2).map(t => `<span class="tag-pill">#${t}</span>`)
             ].filter(Boolean).join('');
 
             card.innerHTML = `
@@ -281,14 +281,14 @@ const app = {
                 ${thumbHtml}
                 <div class="bean-card-body">
                     <div class="bean-card-meta">
-                        <span>${b.roaster || "Unknown"}</span>
+                        <span class="roaster-name">${b.roaster || "Unknown"}</span>
                         ${ratingHtml}
                     </div>
                     <div class="bean-card-name">${b.name || "Untitled coffee"}</div>
                     <div class="bean-card-tags">
                         ${tagsHtml}
-                        <span class="tag-pill" style="margin-left:auto; border:none; background:none; opacity:0.6;">${b.roastLevel || ""}</span>
                     </div>
+                    <div class="bean-card-roast-badge">${b.roastLevel || "Medium"} Roast</div>
                 </div>
             `;
             
@@ -730,16 +730,17 @@ const app = {
         statsCard.classList.remove('hidden');
 
         const top = Object.entries(grinds).sort((a,b) => b[1]-a[1]).slice(0,2);
-        const stats = el("div", "stats-grid");
-        const totalBox = document.createElement("div");
-        totalBox.append(el("div", "stats-number", total), el("div", "stats-label", "Total Extractions"));
-
-        const grindBox = document.createElement("div");
-        grindBox.className = "stats-right";
-        grindBox.append(el("div", "stats-top", top.map(t => t[0]).join(", ") || "None"), el("div", "stats-label", "Legacy Grinds"));
-
-        stats.append(totalBox, grindBox);
-        statsContent.replaceChildren(stats);
+        
+        statsContent.innerHTML = `
+            <div class="stat-item">
+                <strong>${total}</strong>
+                <span>Total Logs</span>
+            </div>
+            <div class="stat-item">
+                <strong>${top.map(t => t[0]).join(", ") || "None"}</strong>
+                <span>Legacy Grinds</span>
+            </div>
+        `;
     },
 
     // --- PHOTO HANDLING ---
