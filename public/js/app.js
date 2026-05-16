@@ -193,9 +193,18 @@ const app = {
         } catch(e) { console.error("Tip error:", e); renderTip(tipEl, "Grind finer for light roasts!"); }
     },
 
+    getRoastColor: (level = 'Medium') => {
+        const colors = { 'Light': 'var(--roast-light)', 'Medium': 'var(--roast-medium)', 'Dark': 'var(--roast-dark)' };
+        return colors[level] || 'var(--roast-medium)';
+    },
+    getRoastGlow: (level = 'Medium') => {
+        const glows = { 'Light': 'rgba(245, 158, 11, 0.15)', 'Medium': 'rgba(217, 119, 6, 0.15)', 'Dark': 'rgba(120, 53, 15, 0.15)' };
+        return glows[level] || 'rgba(217, 119, 6, 0.15)';
+    },
     renderBeanList: () => {
         const container = document.getElementById('bean-list-container');
         const filterBar = document.getElementById('filter-bar');
+        if (!container || !filterBar) return;
         container.replaceChildren();
         filterBar.replaceChildren();
 
@@ -243,37 +252,44 @@ const app = {
             return;
         }
 
-        visibleBeans.forEach(b => {
+        visibleBeans.forEach((b, idx) => {
+            const color = app.getRoastColor(b.roastLevel);
+            const glow = app.getRoastGlow(b.roastLevel);
+            
             const card = document.createElement('div');
-            card.className = `card bean-card roast-${b.roastLevel || 'Medium'}`;
+            card.className = `bean-card`;
+            card.style = `--i:${idx}; --roast-color:${color}; --roast-glow:${glow};`;
 
-            let thumb;
+            let thumbHtml = '';
             if (b.image) {
-                thumb = document.createElement('img');
-                thumb.src = b.image;
-                thumb.alt = `${b.name || "Coffee"} bag`;
-                thumb.className = "bean-card-thumb";
+                thumbHtml = `<div class="bean-card-thumb" style="background-image: url('${b.image}'); background-size: cover; background-position: center;"></div>`;
             } else {
-                thumb = el("div", "bean-card-thumb", "☕");
-                thumb.classList.add("thumb-placeholder");
+                thumbHtml = `<div class="bean-card-thumb thumb-placeholder">☕</div>`;
             }
 
-            const body = el("div", "bean-card-body");
-            const meta = el("div", "bean-card-meta");
-            meta.textContent = `${b.roaster || "Unknown roaster"} • ${b.roastLevel || ""}`;
-            if (b.rating > 0) {
-                const stars = el("span", "rating-stars", ` ${"★".repeat(b.rating)}`);
-                meta.appendChild(stars);
-            }
-            body.appendChild(meta);
-            body.appendChild(el("div", "bean-card-name", b.name || "Untitled coffee"));
+            const ratingHtml = b.rating > 0 ? `<span style="color:var(--accent-amber); font-size: 0.7rem;">★${b.rating}</span>` : '';
+            
+            const tagsHtml = [
+                b.origin ? `<span class="tag-pill">📍 ${b.origin}</span>` : '',
+                ...(b.tags || []).slice(0, 1).map(t => `<span class="tag-pill">#${t}</span>`)
+            ].filter(Boolean).join('');
 
-            const tags = el("div", "bean-card-tags");
-            if (b.origin) tags.appendChild(el("span", "tag-pill", `📍 ${b.origin}`));
-            (b.tags || []).slice(0, 2).forEach(t => tags.appendChild(el("span", "tag-pill", `#${t}`)));
-            body.appendChild(tags);
-
-            card.append(thumb, body);
+            card.innerHTML = `
+                <div class="roast-bar"></div>
+                ${thumbHtml}
+                <div class="bean-card-body">
+                    <div class="bean-card-meta">
+                        <span>${b.roaster || "Unknown"}</span>
+                        ${ratingHtml}
+                    </div>
+                    <div class="bean-card-name">${b.name || "Untitled coffee"}</div>
+                    <div class="bean-card-tags">
+                        ${tagsHtml}
+                        <span class="tag-pill" style="margin-left:auto; border:none; background:none; opacity:0.6;">${b.roastLevel || ""}</span>
+                    </div>
+                </div>
+            `;
+            
             card.onclick = () => { haptic('light'); app.loadBeanDetail(b.id); };
             container.appendChild(card);
         });
