@@ -673,6 +673,7 @@ document.querySelectorAll(".bean-star").forEach(s => s.onclick = () => app.setBe
 on("btn-save-bean", "click", () => app.saveBean()); on("btn-cancel-bean", "click", () => app.router("list")); on("btn-delete-bean", "click", () => app.deleteBean());
 on("btn-edit-active-bean", "click", () => app.editActiveBean()); on("btn-update-roast-date", "click", () => app.promptNewDate()); on("btn-repeat-recipe", "click", () => app.repeatCurrentRecipe());
 on("btn-adjust-recipe", "click", () => app.openLogShot());
+on("btn-open-detail-analytics", "click", () => app.openAnalytics());
 document.querySelectorAll("[data-route]").forEach(b => b.onclick = () => app.router(b.dataset.route));
 on("btn-time-1", "click", () => app.setTimeFromProfile(1)); on("btn-time-2", "click", () => app.setTimeFromProfile(2));
 on("btn-save-shot", "click", () => app.saveShot()); on("btn-cancel-shot", "click", () => app.router("detail")); on("btn-delete-shot", "click", () => app.deleteShot());
