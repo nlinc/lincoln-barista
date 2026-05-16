@@ -76,15 +76,25 @@ const app = {
         document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
         const targetView = document.getElementById('view-' + viewName);
         if (targetView) targetView.classList.add('active');
+
         const topBar = document.getElementById('top-bar');
         if (topBar) topBar.style.display = (viewName === 'login') ? 'none' : 'flex';
+
+        // FAB Visibility Management
+        const fabAdd = document.getElementById('fab-add-bean');
+        const fabLog = document.getElementById('fab-log-shot');
+        if (fabAdd) fabAdd.classList.toggle('hidden', viewName !== 'list');
+        if (fabLog) fabLog.classList.toggle('hidden', viewName !== 'detail');
+
         if (addToHistory) {
-            const state = { view: viewName }; const url = "#" + viewName;
+            const state = { view: viewName };
+            const url = "#" + viewName;
             if (viewName === 'list' && !history.state) history.replaceState(state, "", url);
             else history.pushState(state, "", url);
         }
         window.scrollTo(0, 0);
     },
+
 
     login: async () => { haptic('medium'); try { await signInWithPopup(auth, provider); } catch(e) { alert(e.message); } },
     logout: () => { if(confirm("Logout?")) { haptic('heavy'); signOut(auth).then(() => location.reload()); } },

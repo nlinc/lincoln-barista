@@ -58,8 +58,6 @@
         <div id="collection-status" class="status-strip hidden"></div>
         <div id="filter-bar" class="filter-bar"></div>
         <div id="bean-list-container"></div>
-        
-        <button class="fab" id="fab-add-bean" type="button" aria-label="Add Bean">+</button>
     </div>
 
     <!-- VIEW: EDIT BEAN -->
@@ -230,8 +228,6 @@
             <div class="field-kicker" style="margin-bottom:1rem;">Extraction Logs</div>
             <div id="history-container"></div>
         </div>
-        
-        <button class="fab" id="fab-log-shot" type="button" aria-label="Log Shot">☕</button>
     </div>
 
     <!-- VIEW: LOG SHOT -->
@@ -381,7 +377,11 @@
         </div>
     </div>
 
+    <!-- Global Floating Buttons -->
+    <button class="fab hidden" id="fab-add-bean" type="button" aria-label="Add Bean">+</button>
+    <button class="fab hidden" id="fab-log-shot" type="button" aria-label="Log Shot">☕</button>
+
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.3.0"></script>
+    <script type="module" src="js/app.js?v=1.3.4"></script>
 </body>
 </html>
