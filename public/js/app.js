@@ -1,6 +1,6 @@
 /**
  * Lincoln Barista "Platinum Roast" - Main Application Logic
- * Modularized and Optimized for Mobile. v1.3.2 - Definitive Edition.
+ * Modularized and Optimized for Mobile. v1.3.2 - Final Recovery Edition.
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -71,6 +71,14 @@ const renderEmptyAction = (target, title, body, actionText, action) => {
         empty.appendChild(button);
     }
     target.replaceChildren(empty);
+};
+
+const setStatus = (text, tone = "neutral") => {
+    const status = document.getElementById("collection-status");
+    if (!status) return;
+    status.textContent = text || "";
+    status.className = \`status-strip \${tone}\`;
+    status.classList.toggle("hidden", !text);
 };
 
 const ratioFor = (shot) => {
@@ -167,7 +175,7 @@ const app = {
             card.className = \`bean-card\`;
             card.style.setProperty('--roast-color', app.getRoastColor(b.roastLevel));
             card.style.setProperty('--roast-glow', app.getRoastGlow(b.roastLevel));
-            let thumbHtml = b.image ? \`<div class="bean-card-thumb" style="background-image: url('\${b.image}')"></div>\` : \`<div class="bean-card-thumb thumb-placeholder">☕</div>\`;
+            let thumbHtml = b.image ? \`<div class="bean-card-thumb" style="background-image: url('\text{b.image}')"></div>\` : \`<div class="bean-card-thumb thumb-placeholder">☕</div>\`;
             card.innerHTML = \`
                 <div class="roast-bar"></div>
                 \${thumbHtml}
