@@ -6,6 +6,7 @@ const html = readFileSync(new URL("../public/index.html", import.meta.url), "utf
 const css = readFileSync(new URL("../public/style.css", import.meta.url), "utf8");
 const appJs = readFileSync(new URL("../public/js/app.js", import.meta.url), "utf8");
 const rules = readFileSync(new URL("../firestore.rules", import.meta.url), "utf8");
+const storageRules = readFileSync(new URL("../storage.rules", import.meta.url), "utf8");
 
 describe("UI smoke guardrails", () => {
     it("does not ship inline style attributes in the app shell", () => {
@@ -13,8 +14,8 @@ describe("UI smoke guardrails", () => {
     });
 
     it("keeps cache-busted app assets on the current release", () => {
-        assert.match(html, /style\.css\?v=1\.4\.0/);
-        assert.match(html, /js\/app\.js\?v=1\.4\.0/);
+        assert.match(html, /style\.css\?v=1\.5\.0/);
+        assert.match(html, /js\/app\.js\?v=1\.5\.0/);
     });
 
     it("caps detail bean images and hides the native file input", () => {
@@ -47,5 +48,17 @@ describe("Data safety guardrails", () => {
         assert.match(appJs, /MAX_IMAGE_EDGE\s*=\s*480/);
         assert.match(appJs, /MAX_IMAGE_BYTES\s*=\s*750000/);
         assert.match(rules, /data\.image\.size\(\) < 750000/);
+    });
+
+    it("stores new bean photos in Firebase Storage", () => {
+        assert.match(appJs, /getStorage\(appInstance,\s*'gs:\/\/espresso-4298d\.firebasestorage\.app'\)/);
+        assert.match(appJs, /uploadString\(ref,\s*dataUrl,\s*"data_url"/);
+        assert.match(appJs, /imageUrl/);
+        assert.match(appJs, /imagePath/);
+        assert.match(rules, /"imageUrl"/);
+        assert.match(rules, /"imagePath"/);
+        assert.match(storageRules, /match \/users\/\{userId\}\/beans\/\{beanId\}\/\{fileName\}/);
+        assert.match(storageRules, /request\.auth\.uid == userId/);
+        assert.match(storageRules, /request\.resource\.size < 750000/);
     });
 });

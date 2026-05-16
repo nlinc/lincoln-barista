@@ -7,6 +7,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { getAIAdvice } from "./brew-advice.js";
 
@@ -15,6 +16,7 @@ const appInstance = initializeApp(firebaseConfig);
 const auth = getAuth(appInstance);
 const db = getFirestore(appInstance);
 const functions = getFunctions(appInstance, 'us-central1');
+const storage = getStorage(appInstance, 'gs://espresso-4298d.firebasestorage.app');
 const provider = new GoogleAuthProvider();
 
 // App State
@@ -36,6 +38,7 @@ let userProfile = {
 let aiCache = {};
 let currentEditingTags = [];
 let currentEditingImage = null;
+let currentEditingImagePath = null;
 let currentRecipeShot = null;
 let analyticsScope = 'all';
 
@@ -114,6 +117,10 @@ const canvasToJpeg = (canvas, minQuality = 0.55) => {
     }
     return dataUrl;
 };
+
+const isDataUrl = (value) => typeof value === "string" && value.startsWith("data:");
+
+const beanImageSource = (bean) => bean?.imageUrl || bean?.image || null;
 
 const showStatus = (text, tone = "info") => {
     const status = document.getElementById("collection-status");
@@ -236,8 +243,9 @@ const app = {
             card.style.setProperty('--roast-glow', app.getRoastGlow(b.roastLevel));
 
             card.appendChild(el("div", "roast-bar"));
-            const thumb = el("div", b.image ? "bean-card-thumb" : "bean-card-thumb thumb-placeholder", b.image ? undefined : "☕");
-            if (b.image) thumb.style.backgroundImage = `url("${b.image}")`;
+            const imageSrc = beanImageSource(b);
+            const thumb = el("div", imageSrc ? "bean-card-thumb" : "bean-card-thumb thumb-placeholder", imageSrc ? undefined : "☕");
+            if (imageSrc) thumb.style.backgroundImage = `url("${imageSrc}")`;
             card.appendChild(thumb);
 
             const body = el("div", "bean-card-body");
@@ -261,6 +269,8 @@ const app = {
         btn.innerText = "Processing...";
         try {
             const id = document.getElementById('input-bean-id').value;
+            const existingBean = id ? beans.find(bean => bean.id === id) : null;
+            const beanRef = id ? doc(db, "beans", id) : doc(collection(db, "beans"));
             const data = {
                 uid: currentUser.uid,
                 roaster: document.getElementById('input-roaster').value,
@@ -271,16 +281,17 @@ const app = {
                 tenBeanWeight: document.getElementById('input-ten-bean-weight').value.trim(),
                 tags: currentEditingTags,
                 rating: parseInt(document.getElementById('input-bean-rating').value) || 0,
-                image: currentEditingImage,
                 updatedAt: new Date()
             };
 
             const manualRoastDate = document.getElementById('input-roast-date').value;
 
             if(!data.name) throw new Error("Bean name is required.");
+
+            const imageFields = await app.prepareBeanImageFields(beanRef.id, existingBean);
             
-            if(id) await updateDoc(doc(db, "beans", id), { ...data, currentRoastDate: manualRoastDate });
-            else await addDoc(collection(db, "beans"), { ...data, currentRoastDate: manualRoastDate || new Date().toISOString().split('T')[0], createdAt: new Date() });
+            if(id) await updateDoc(beanRef, { ...data, ...imageFields, currentRoastDate: manualRoastDate });
+            else await setDoc(beanRef, { ...data, ...imageFields, currentRoastDate: manualRoastDate || new Date().toISOString().split('T')[0], createdAt: new Date() });
             
             await app.fetchBeans();
             app.router('list');
@@ -309,10 +320,12 @@ const app = {
         document.getElementById('input-roast-date').value = b.currentRoastDate || '';
         currentEditingTags = b.tags ? [...b.tags] : [];
         app.renderEditingTags();
-        if(b.image) {
-            currentEditingImage = b.image;
+        const imageSrc = beanImageSource(b);
+        currentEditingImagePath = b.imagePath || null;
+        if(imageSrc) {
+            currentEditingImage = imageSrc;
             const preview = document.getElementById('edit-image-preview');
-            preview.src = b.image;
+            preview.src = imageSrc;
             preview.classList.remove('hidden');
             document.getElementById('btn-remove-image').classList.remove('hidden');
         } else app.removeImage();
@@ -328,7 +341,8 @@ const app = {
             if(!currentActiveBean) return app.router('list');
 
             const imgEl = document.getElementById('detail-image');
-            if(currentActiveBean.image) { imgEl.src = currentActiveBean.image; imgEl.classList.remove('hidden'); }
+            const imageSrc = beanImageSource(currentActiveBean);
+            if(imageSrc) { imgEl.src = imageSrc; imgEl.classList.remove('hidden'); }
             else { imgEl.classList.add('hidden'); }
 
             document.getElementById('detail-roaster').innerText = currentActiveBean.roaster;
@@ -513,6 +527,7 @@ const app = {
                     return;
                 }
                 currentEditingImage = dataUrl;
+                currentEditingImagePath = null;
                 const preview = document.getElementById('edit-image-preview'); preview.src = currentEditingImage; preview.classList.remove('hidden');
                 document.getElementById('btn-remove-image').classList.remove('hidden');
             };
@@ -521,7 +536,44 @@ const app = {
         };
         reader.readAsDataURL(file);
     },
-    removeImage: () => { currentEditingImage = null; document.getElementById('edit-image-preview').classList.add('hidden'); document.getElementById('btn-remove-image').classList.add('hidden'); },
+    uploadBeanImage: async (beanId, dataUrl) => {
+        const path = `users/${currentUser.uid}/beans/${beanId}/bag-${Date.now()}.jpg`;
+        const ref = storageRef(storage, path);
+        await uploadString(ref, dataUrl, "data_url", {
+            contentType: "image/jpeg",
+            customMetadata: { uid: currentUser.uid, beanId }
+        });
+        return { image: null, imageUrl: await getDownloadURL(ref), imagePath: path };
+    },
+    deleteStoredImage: async (path) => {
+        if (!path) return;
+        try {
+            await deleteObject(storageRef(storage, path));
+        } catch (e) {
+            console.warn("Storage cleanup skipped:", e);
+        }
+    },
+    prepareBeanImageFields: async (beanId, existingBean) => {
+        if (!currentEditingImage) {
+            await app.deleteStoredImage(existingBean?.imagePath);
+            return { image: null, imageUrl: null, imagePath: null };
+        }
+
+        if (isDataUrl(currentEditingImage)) {
+            const uploaded = await app.uploadBeanImage(beanId, currentEditingImage);
+            if (existingBean?.imagePath && existingBean.imagePath !== uploaded.imagePath) {
+                await app.deleteStoredImage(existingBean.imagePath);
+            }
+            return uploaded;
+        }
+
+        return {
+            image: existingBean?.image || null,
+            imageUrl: existingBean?.imageUrl || currentEditingImage,
+            imagePath: currentEditingImagePath || existingBean?.imagePath || null
+        };
+    },
+    removeImage: () => { currentEditingImage = null; currentEditingImagePath = null; document.getElementById('edit-image-preview').classList.add('hidden'); document.getElementById('btn-remove-image').classList.add('hidden'); },
     resetBeanForm: () => {
         ['input-bean-id', 'input-roaster', 'input-roaster-location', 'input-name', 'input-origin', 'input-ten-bean-weight'].forEach(id => { document.getElementById(id).value = ''; });
         document.getElementById('input-roast-date').value = new Date().toISOString().split('T')[0];
@@ -529,7 +581,7 @@ const app = {
         document.getElementById('bean-form-header').innerText = "New Profile";
         document.getElementById('btn-delete-bean').classList.add('hidden');
         document.getElementById('btn-save-bean').innerText = "Save Profile";
-        currentEditingTags = []; app.renderEditingTags(); app.removeImage(); app.setBeanRating(0);
+        currentEditingTags = []; currentEditingImagePath = null; app.renderEditingTags(); app.removeImage(); app.setBeanRating(0);
     },
     setBeanRating: (n) => { haptic('light'); document.getElementById('input-bean-rating').value = n; document.querySelectorAll('.bean-star').forEach((el, i) => el.classList.toggle('selected', i < n)); },
     renderEditingTags: () => {

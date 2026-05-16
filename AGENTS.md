@@ -12,6 +12,7 @@ This repo is a small Firebase/static PWA for tracking espresso beans, brew logs,
 - Firebase browser config: `public/js/firebase-config.js`.
 - Cloud Functions: `functions/index.js`.
 - Tests: `test/brew-advice.test.js`.
+- Storage rules: `storage.rules`.
 
 This is not a React, Vite, Next.js, or bundled frontend project. Do not add a build system unless explicitly asked.
 
@@ -41,6 +42,7 @@ If you change Cloud Functions dependencies, also review `functions/package.json`
 
 - Do not commit secrets. Firebase client config is public app configuration, but API secrets belong in Firebase/Google secret management.
 - Keep Firestore document ownership checks tied to `uid`.
+- Store new bean photos in Firebase Storage under `users/{uid}/beans/{beanId}/...`; keep legacy Firestore `image` data readable but do not create new base64 image fields.
 - Be careful with destructive operations. Beans should be archived with `archived: true` instead of deleted; shot logs can still be deleted after confirmation.
 - Cloud Functions use Firebase Functions v2 and Node 22.
 

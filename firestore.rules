@@ -53,7 +53,7 @@ service cloud.firestore {
     function validBean(data) {
       return data.keys().hasOnly([
           "uid", "roaster", "roasterLocation", "name", "origin", "roastLevel",
-          "tenBeanWeight", "tags", "rating", "image", "currentRoastDate",
+          "tenBeanWeight", "tags", "rating", "image", "imageUrl", "imagePath", "currentRoastDate",
           "createdAt", "updatedAt", "archived", "archivedAt"
         ]) &&
         data.keys().hasAll(["uid", "name"]) &&
@@ -67,6 +67,8 @@ service cloud.firestore {
         optionalString(data, "currentRoastDate") &&
         optionalNumberText(data, "tenBeanWeight") &&
         optionalImage(data) &&
+        optionalString(data, "imageUrl") &&
+        optionalString(data, "imagePath") &&
         (!("archived" in data) || data.archived is bool) &&
         validTags(data) &&
         validRating(data) &&
