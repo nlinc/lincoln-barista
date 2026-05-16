@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/751/751621.png">
 
     <!-- Design System & Libraries -->
-    <link rel="stylesheet" href="style.css?v=1.3.1">
+    <link rel="stylesheet" href="style.css?v=1.4.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -211,7 +211,7 @@
         </div>
         
         <div class="card">
-            <div class="field-kicker" style="margin-bottom:1rem; text-align:center;">Dial-In Efficiency</div>
+            <div class="field-kicker field-kicker-center">Dial-In Efficiency</div>
             <table class="summary-table">
                 <thead>
                     <tr>
@@ -225,8 +225,8 @@
             </table>
         </div>
 
-        <div class="section-stack" style="margin-top:3rem;">
-            <div class="field-kicker" style="margin-bottom:1rem;">Extraction Logs</div>
+        <div class="section-stack extraction-section">
+            <div class="field-kicker section-kicker">Extraction Logs</div>
             <div id="history-container"></div>
         </div>
     </div>
@@ -238,7 +238,7 @@
         <input type="hidden" id="input-log-shot-id">
         
         <div class="card">
-            <div class="batch-summary" style="text-align:center; margin-bottom:1.5rem;">
+            <div class="batch-summary">
                 <div class="field-kicker">Active Batch</div>
                 <div id="log-display-date" class="primary-value"></div>
             </div>
@@ -251,9 +251,9 @@
                 <div class="form-group">
                     <label class="split-label">
                         Time (s)
-                        <div class="mini-actions" style="float:right; display:flex; gap:4px;">
-                            <button id="btn-time-1" class="btn-secondary small-btn" style="padding:2px 8px; font-size:0.65rem;" type="button" data-profile="1">P1</button>
-                            <button id="btn-time-2" class="btn-secondary small-btn" style="padding:2px 8px; font-size:0.65rem;" type="button" data-profile="2">P2</button>
+                        <div class="mini-actions">
+                            <button id="btn-time-1" class="btn-secondary small-btn profile-time-btn" type="button" data-profile="1">P1</button>
+                            <button id="btn-time-2" class="btn-secondary small-btn profile-time-btn" type="button" data-profile="2">P2</button>
                         </div>
                     </label>
                     <input type="number" inputmode="decimal" id="input-shot-time" placeholder="30" class="shot-preview-input">
@@ -269,14 +269,14 @@
             </div>
         </div>
 
-        <div id="log-butler-preview" class="card hidden" style="border-left: 6px solid var(--roast-light); background: var(--warning-bg);">
+        <div id="log-butler-preview" class="card butler-preview-card hidden">
             <div class="field-kicker">🤵🏻‍♂️ Butler's Preview</div>
-            <div id="log-butler-preview-text" style="font-weight:600; font-size:0.9rem;">Input data to see extraction advice.</div>
+            <div id="log-butler-preview-text" class="preview-text">Input data to see extraction advice.</div>
         </div>
 
         <button class="btn" id="btn-save-shot" type="button">Log Extraction</button>
-        <button class="btn btn-secondary stack-action" id="btn-cancel-shot" type="button" style="margin-top:0.75rem;">Cancel</button>
-        <button class="btn btn-danger hidden" id="btn-delete-shot" type="button" style="margin-top:1.5rem;">Delete Log</button>
+        <button class="btn btn-secondary stack-action" id="btn-cancel-shot" type="button">Cancel</button>
+        <button class="btn btn-danger hidden delete-shot-action" id="btn-delete-shot" type="button">Delete Log</button>
     </div>
 
     <!-- VIEW: ANALYTICS -->
@@ -284,25 +284,30 @@
         <button class="btn-secondary back-btn" type="button" data-route="list">← Collection</button>
         <h2 class="view-heading">Visual Trends</h2>
 
+        <div class="analytics-scope" role="group" aria-label="Analytics scope">
+            <button class="btn-secondary small-btn scope-btn active" id="btn-analytics-current" type="button">Current Bean</button>
+            <button class="btn-secondary small-btn scope-btn" id="btn-analytics-all" type="button">All Beans</button>
+        </div>
+
         <div class="card">
-            <div class="field-kicker" style="margin-bottom:1rem;">Grind vs. Yield (Last 30 Days)</div>
-            <div class="chart-area" style="height:250px;">
+            <div class="field-kicker section-kicker">Grind vs. Yield (Last 30 Days)</div>
+            <div class="chart-area chart-area-tall">
                 <canvas id="trendChart"></canvas>
                 <div id="trend-empty-state" class="empty-state hidden">Log a few shots to see trends.</div>
             </div>
         </div>
 
         <div class="card">
-            <div class="field-kicker" style="margin-bottom:1rem;">Grind Frequency</div>
-            <div class="chart-area" style="height:200px;">
+            <div class="field-kicker section-kicker">Grind Frequency</div>
+            <div class="chart-area chart-area-short">
                 <canvas id="distChart"></canvas>
                 <div id="dist-empty-state" class="empty-state hidden">Log a few shots to see distribution.</div>
             </div>
         </div>
         
-        <div id="analytics-insights" class="card" style="background: var(--success-bg); border-color: rgba(74, 222, 128, 0.2);">
-            <div class="field-kicker" style="color: var(--success-text);">AI Insight</div>
-            <div id="analytics-insight-text" style="font-weight:600; color: var(--success-text);">Analyzing your data for patterns...</div>
+        <div id="analytics-insights" class="card analytics-insight-card">
+            <div class="field-kicker success-kicker">AI Insight</div>
+            <div id="analytics-insight-text" class="analytics-insight-text">Analyzing your data for patterns...</div>
         </div>
     </div>
 
@@ -362,19 +367,19 @@
         <div class="card">
             <div class="section-label">Intelligence</div>
             <div class="row-between">
-                <div style="font-weight:700; font-size:0.95rem;">Enable True AI (Gemini)</div>
+                <div class="setting-row-title">Enable True AI (Gemini)</div>
                 <label class="switch">
                     <input type="checkbox" id="profile-ai-enabled" checked>
                     <span class="slider"></span>
                 </label>
             </div>
-            <div class="subtle-note" style="margin-top:0.75rem;">Enable high-fidelity bean analysis & daily tips.</div>
+            <div class="subtle-note note-offset">Enable high-fidelity bean analysis & daily tips.</div>
         </div>
 
         <button class="btn" id="btn-save-profile" type="button">Update Profile</button>
         
         <div class="export-panel">
-            <button class="btn-secondary small-btn" id="btn-export-data" type="button" style="padding:0.7rem 1.2rem;">Export Data (CSV)</button>
+            <button class="btn-secondary small-btn export-btn" id="btn-export-data" type="button">Export Data (CSV)</button>
         </div>
     </div>
 
@@ -383,6 +388,6 @@
     <button class="fab hidden" id="fab-log-shot" type="button" aria-label="Log Shot">☕</button>
 
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.3.5"></script>
+    <script type="module" src="js/app.js?v=1.4.0"></script>
 </body>
 </html>

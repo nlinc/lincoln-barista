@@ -5,7 +5,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { getAIAdvice } from "./brew-advice.js";
@@ -37,6 +37,7 @@ let aiCache = {};
 let currentEditingTags = [];
 let currentEditingImage = null;
 let currentRecipeShot = null;
+let analyticsScope = 'all';
 
 // --- UTILS ---
 const haptic = (type = 'light') => {
@@ -101,6 +102,31 @@ const downloadCsv = (filename, rows) => {
     URL.revokeObjectURL(url);
 };
 
+const MAX_IMAGE_EDGE = 480;
+const MAX_IMAGE_BYTES = 750000;
+
+const canvasToJpeg = (canvas, minQuality = 0.55) => {
+    let quality = 0.78;
+    let dataUrl = canvas.toDataURL('image/jpeg', quality);
+    while (dataUrl.length > MAX_IMAGE_BYTES && quality > minQuality) {
+        quality -= 0.08;
+        dataUrl = canvas.toDataURL('image/jpeg', quality);
+    }
+    return dataUrl;
+};
+
+const showStatus = (text, tone = "info") => {
+    const status = document.getElementById("collection-status");
+    if (!status) return;
+    status.textContent = text;
+    status.className = "status-strip status-" + tone;
+};
+
+const hideStatus = () => {
+    const status = document.getElementById("collection-status");
+    if (status) status.classList.add("hidden");
+};
+
 const chooseCurrentRecipe = (logs, roastLevel) => {
     if (!logs.length) return null;
     const latestGood = logs.find(log => getAIAdvice(log, roastLevel).status === "good");
@@ -151,11 +177,16 @@ const app = {
         try {
             const q = query(collection(db, "beans"), where("uid", "==", currentUser.uid));
             const snapshot = await getDocs(q);
-            beans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            beans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(bean => bean.archived !== true);
+            hideStatus();
             app.renderBeanList();
             app.renderGlobalStats();
             app.renderDailyTip();
-        } catch(e) { console.error("Bean fetch error:", e); }
+        } catch(e) {
+            console.error("Bean fetch error:", e);
+            showStatus("Couldn't sync your collection. Check your connection and try again.", "error");
+            if (container) renderEmptyAction(container, "Sync unavailable", "Your saved beans could not be loaded right now.", "Retry", () => app.fetchBeans());
+        }
     },
 
     renderDailyTip: async () => {
@@ -256,7 +287,13 @@ const app = {
         } catch(e) { alert(e.message); btn.innerText = originalText; }
     },
 
-    deleteBean: async () => { if(confirm("Archive this bean?")) { await deleteDoc(doc(db, "beans", document.getElementById('input-bean-id').value)); await app.fetchBeans(); app.router('list'); } },
+    deleteBean: async () => {
+        if(confirm("Archive this bean? Its shot history will stay available for export and records.")) {
+            await updateDoc(doc(db, "beans", document.getElementById('input-bean-id').value), { archived: true, archivedAt: new Date(), updatedAt: new Date() });
+            await app.fetchBeans();
+            app.router('list');
+        }
+    },
 
     editActiveBean: () => {
         haptic('light');
@@ -452,7 +489,10 @@ const app = {
             const grindStat = el("div", "stat-item");
             grindStat.append(el("strong", "", top.map(t => t[0]).join(", ") || "None"), el("span", "", "Legacy Grinds"));
             statsContent.replaceChildren(totalStat, grindStat);
-        } catch(e) {}
+        } catch(e) {
+            console.error("Stats error:", e);
+            document.getElementById('global-stats-card').classList.add('hidden');
+        }
     },
 
     handleImageUpload: (event) => {
@@ -461,12 +501,22 @@ const app = {
         reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
-                const canvas = document.createElement('canvas'); const MAX_W = 600; const scale = MAX_W / img.width; canvas.width = MAX_W; canvas.height = img.height * scale;
+                const canvas = document.createElement('canvas');
+                const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(img.width, img.height));
+                canvas.width = Math.round(img.width * scale);
+                canvas.height = Math.round(img.height * scale);
                 const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                currentEditingImage = canvas.toDataURL('image/jpeg', 0.8);
+                const dataUrl = canvasToJpeg(canvas);
+                if (dataUrl.length > MAX_IMAGE_BYTES) {
+                    alert("That image is still too large after resizing. Please choose a smaller photo.");
+                    event.target.value = "";
+                    return;
+                }
+                currentEditingImage = dataUrl;
                 const preview = document.getElementById('edit-image-preview'); preview.src = currentEditingImage; preview.classList.remove('hidden');
                 document.getElementById('btn-remove-image').classList.remove('hidden');
             };
+            img.onerror = () => alert("That image could not be read. Please try another photo.");
             img.src = e.target.result;
         };
         reader.readAsDataURL(file);
@@ -601,28 +651,43 @@ const app = {
         await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
         app.router('list');
     },
-    openAnalytics: async () => {
+    openAnalytics: async (scope = analyticsScope) => {
+        analyticsScope = scope;
         app.router('analytics');
         try {
-            const q = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
+            const useCurrentBean = analyticsScope === "current" && currentActiveBean?.id;
+            const q = useCurrentBean
+                ? query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid), where("beanId", "==", currentActiveBean.id))
+                : query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
             const snap = await getDocs(q);
             const logs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
                 .sort((a,b) => (a.date?.seconds || 0) - (b.date?.seconds || 0));
             app.renderAnalytics(logs);
         } catch(e) {
+            console.error("Analytics error:", e);
             document.getElementById("analytics-insight-text").innerText = "Analytics are momentarily unavailable.";
         }
     },
     renderAnalytics: (logs) => {
         const trendEmpty = document.getElementById("trend-empty-state");
         const distEmpty = document.getElementById("dist-empty-state");
+        const currentBtn = document.getElementById("btn-analytics-current");
+        const allBtn = document.getElementById("btn-analytics-all");
+        const hasCurrentBean = Boolean(currentActiveBean?.id);
+        currentBtn.disabled = !hasCurrentBean;
+        currentBtn.classList.toggle("active", analyticsScope === "current" && hasCurrentBean);
+        allBtn.classList.toggle("active", analyticsScope !== "current" || !hasCurrentBean);
         const hasData = logs.length > 0 && window.Chart;
         trendEmpty.classList.toggle("hidden", hasData);
         distEmpty.classList.toggle("hidden", hasData);
         document.getElementById("analytics-insight-text").innerText = hasData
-            ? "Your latest logs are charted by grind and yield so drift is easier to spot."
-            : "Log a few shots to unlock visual trends.";
-        if (!hasData) return;
+            ? (analyticsScope === "current" && hasCurrentBean ? "This bean's shot history is charted by grind and yield." : "All logged shots are charted by grind and yield so drift is easier to spot.")
+            : (analyticsScope === "current" && hasCurrentBean ? "Log a few shots for this bean to unlock visual trends." : "Log a few shots to unlock visual trends.");
+        if (!hasData) {
+            if (chartTrend) { chartTrend.destroy(); chartTrend = null; }
+            if (chartDist) { chartDist.destroy(); chartDist = null; }
+            return;
+        }
 
         const trendPoints = logs.slice(-30).map(log => ({
             x: parseFloat(log.grind),
@@ -646,10 +711,14 @@ const app = {
     },
     exportData: async () => {
         const q = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
-        const snap = await getDocs(q);
+        const [snap, beanSnap] = await Promise.all([
+            getDocs(q),
+            getDocs(query(collection(db, "beans"), where("uid", "==", currentUser.uid)))
+        ]);
+        const beanLookup = new Map(beanSnap.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
         const rows = [["date", "bean", "roaster", "roast_date", "grind", "time", "dose", "yield"]];
         snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).forEach(log => {
-            const bean = beans.find(b => b.id === log.beanId) || {};
+            const bean = beanLookup.get(log.beanId) || beans.find(b => b.id === log.beanId) || {};
             rows.push([formatDate(log.date), bean.name || log.beanId, bean.roaster || "", log.roastDate || "", log.grind, log.time, log.dose, log.yield]);
         });
         downloadCsv("lincoln-barista-export.csv", rows);
@@ -673,9 +742,11 @@ document.querySelectorAll(".bean-star").forEach(s => s.onclick = () => app.setBe
 on("btn-save-bean", "click", () => app.saveBean()); on("btn-cancel-bean", "click", () => app.router("list")); on("btn-delete-bean", "click", () => app.deleteBean());
 on("btn-edit-active-bean", "click", () => app.editActiveBean()); on("btn-update-roast-date", "click", () => app.promptNewDate()); on("btn-repeat-recipe", "click", () => app.repeatCurrentRecipe());
 on("btn-adjust-recipe", "click", () => app.openLogShot());
-on("btn-open-detail-analytics", "click", () => app.openAnalytics());
+on("btn-open-detail-analytics", "click", () => app.openAnalytics("current"));
+on("btn-analytics-current", "click", () => app.openAnalytics("current"));
+on("btn-analytics-all", "click", () => app.openAnalytics("all"));
 document.querySelectorAll("[data-route]").forEach(b => b.onclick = () => app.router(b.dataset.route));
 on("btn-time-1", "click", () => app.setTimeFromProfile(1)); on("btn-time-2", "click", () => app.setTimeFromProfile(2));
 on("btn-save-shot", "click", () => app.saveShot()); on("btn-cancel-shot", "click", () => app.router("detail")); on("btn-delete-shot", "click", () => app.deleteShot());
-on("btn-save-profile", "click", () => app.saveProfile()); on("btn-export-data", "click", () => app.exportData());
+on("btn-save-profile", "click", () => app.saveProfile()); on("btn-export-data", "click", () => app.exportData()); on("btn-open-analytics", "click", () => app.openAnalytics("all"));
 window.addEventListener('popstate', (e) => { if (e.state?.view) app.router(e.state.view, false); });

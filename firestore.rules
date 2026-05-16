@@ -29,6 +29,10 @@ service cloud.firestore {
       return !(field in data) || data[field] is string || data[field] == null;
     }
 
+    function optionalImage(data) {
+      return !("image" in data) || data.image == null || (data.image is string && data.image.size() < 750000);
+    }
+
     function validRating(data) {
       return !(("rating" in data)) || (data.rating is int && data.rating >= 0 && data.rating <= 5);
     }
@@ -50,7 +54,7 @@ service cloud.firestore {
       return data.keys().hasOnly([
           "uid", "roaster", "roasterLocation", "name", "origin", "roastLevel",
           "tenBeanWeight", "tags", "rating", "image", "currentRoastDate",
-          "createdAt", "updatedAt"
+          "createdAt", "updatedAt", "archived", "archivedAt"
         ]) &&
         data.keys().hasAll(["uid", "name"]) &&
         data.uid is string &&
@@ -62,11 +66,13 @@ service cloud.firestore {
         optionalString(data, "roastLevel") &&
         optionalString(data, "currentRoastDate") &&
         optionalNumberText(data, "tenBeanWeight") &&
-        optionalString(data, "image") &&
+        optionalImage(data) &&
+        (!("archived" in data) || data.archived is bool) &&
         validTags(data) &&
         validRating(data) &&
         optionalTimestamp(data, "createdAt") &&
-        optionalTimestamp(data, "updatedAt");
+        optionalTimestamp(data, "updatedAt") &&
+        optionalTimestamp(data, "archivedAt");
     }
 
     function validBrewLog(data) {

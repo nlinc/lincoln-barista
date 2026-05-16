@@ -224,6 +224,8 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
 .fab:hover { transform: scale(1.1) rotate(5deg); box-shadow: 0 20px 48px rgba(0,0,0,0.8); }
 
 .field-kicker { color: var(--text-muted); font-size: 0.7rem; font-weight: 850; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 0.75rem; display: block; }
+.field-kicker-center { margin-bottom: 1rem; text-align: center; }
+.section-kicker { margin-bottom: 1rem; }
 .hidden { display: none !important; }
 
 /* --- LOGIN --- */
@@ -248,6 +250,7 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
     color: var(--text-secondary); border: 1px solid var(--panel-border);
     background: var(--panel-bg); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1rem;
 }
+.status-error { background: var(--error-bg); border-color: rgba(248, 113, 113, 0.3); color: var(--error-text); }
 .empty-panel { text-align: center; padding: 2rem 1.25rem; }
 .empty-panel-title { font-family: 'Outfit', sans-serif; font-size: 1.35rem; font-weight: 800; color: var(--text-main); }
 .empty-panel-copy { color: var(--text-muted); margin: 0.45rem 0 1.2rem; }
@@ -370,10 +373,18 @@ input.visually-hidden {
 }
 .batch-date, .primary-value { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 1.35rem; color: var(--text-main); }
 .section-stack { margin-bottom: 2rem; }
+.extraction-section { margin-top: 3rem; }
 .summary-empty { color: var(--text-muted); padding: 1.5rem !important; }
 
 /* --- ANALYTICS & SETTINGS --- */
 .chart-area { position: relative; min-height: 180px; }
+.chart-area-tall { height: 250px; }
+.chart-area-short { height: 200px; }
+.analytics-scope { display: flex; gap: 0.75rem; flex-wrap: wrap; margin: 0 0 1rem; }
+.scope-btn.active { background: var(--primary); border-color: transparent; color: white; }
+.analytics-insight-card { background: var(--success-bg); border-color: rgba(74, 222, 128, 0.2); }
+.success-kicker, .analytics-insight-text { color: var(--success-text); }
+.analytics-insight-text { font-weight: 600; }
 .chart-area .empty-state {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     margin: 0; text-align: center;
@@ -390,6 +401,14 @@ input.visually-hidden {
 }
 .switch input:checked + .slider { background: var(--primary); }
 .switch input:checked + .slider::before { transform: translateX(24px); }
+.batch-summary { text-align: center; margin-bottom: 1.5rem; }
+.profile-time-btn { padding: 2px 8px !important; font-size: 0.65rem !important; }
+.butler-preview-card { border-left: 6px solid var(--roast-light); background: var(--warning-bg); }
+.preview-text { font-weight: 600; font-size: 0.9rem; }
+.delete-shot-action { margin-top: 1.5rem; }
+.setting-row-title { font-weight: 700; font-size: 0.95rem; }
+.note-offset { margin-top: 0.75rem; }
+.export-btn { padding: 0.7rem 1.2rem; }
 
 @media (max-width: 500px) {
     #top-bar { padding: 0.85rem 1rem; }

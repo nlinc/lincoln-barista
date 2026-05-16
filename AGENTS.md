@@ -35,12 +35,13 @@ If you change Cloud Functions dependencies, also review `functions/package.json`
 - Keep mobile layout intact. The app is intended to work well on phones.
 - Avoid one-off inline styles in new markup; prefer `public/style.css`.
 - Do not use `innerHTML` for user-entered bean, tag, roaster, shot, or log data. Build DOM nodes and assign text with `textContent`.
+- Keep `test/ui-smoke.test.js` passing after UI changes. It guards against oversized bean images, visible file inputs, stale inline styles, and missing analytics controls.
 
 ## Data And Firebase Rules
 
 - Do not commit secrets. Firebase client config is public app configuration, but API secrets belong in Firebase/Google secret management.
 - Keep Firestore document ownership checks tied to `uid`.
-- Be careful with destructive operations such as deleting beans or logs. The current UI calls these "Archive" or "Delete" actions and confirms before proceeding.
+- Be careful with destructive operations. Beans should be archived with `archived: true` instead of deleted; shot logs can still be deleted after confirmation.
 - Cloud Functions use Firebase Functions v2 and Node 22.
 
 ## Existing Behavior To Preserve
