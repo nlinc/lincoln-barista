@@ -54,7 +54,8 @@ const el = (tag, className, text) => {
 };
 
 const renderTip = (target, text) => {
-    target.innerHTML = "💡 <b>Daily Tip:</b> " + text;
+    target.replaceChildren("💡 ");
+    target.append(el("b", "", "Daily Tip:"), " " + text);
 };
 
 const renderEmpty = (target, text) => {
@@ -78,6 +79,26 @@ const ratioFor = (shot) => {
     const yieldVal = parseFloat(shot?.yield);
     if (!dose || isNaN(dose) || isNaN(yieldVal)) return null;
     return yieldVal / dose;
+};
+
+const formatDate = (dateLike) => {
+    if (!dateLike) return "";
+    const date = dateLike.toDate ? dateLike.toDate() : new Date(dateLike.seconds ? dateLike.seconds * 1000 : dateLike);
+    return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString();
+};
+
+const downloadCsv = (filename, rows) => {
+    const csv = rows.map(row => row.map(value => {
+        const text = String(value ?? "");
+        return /[",\n]/.test(text) ? '"' + text.replaceAll('"', '""') + '"' : text;
+    }).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
 };
 
 const chooseCurrentRecipe = (logs, roastLevel) => {
@@ -183,10 +204,18 @@ const app = {
             card.style.setProperty('--roast-color', app.getRoastColor(b.roastLevel));
             card.style.setProperty('--roast-glow', app.getRoastGlow(b.roastLevel));
 
-            let thumbHtml = b.image ? '<div class="bean-card-thumb" style="background-image: url(\'' + b.image + '\')"></div>' : '<div class="bean-card-thumb thumb-placeholder">☕</div>';
-            const tagsHtml = (b.tags || []).slice(0, 2).map(t => '<span class="tag-pill">#' + t + '</span>').join('');
+            card.appendChild(el("div", "roast-bar"));
+            const thumb = el("div", b.image ? "bean-card-thumb" : "bean-card-thumb thumb-placeholder", b.image ? undefined : "☕");
+            if (b.image) thumb.style.backgroundImage = `url("${b.image}")`;
+            card.appendChild(thumb);
 
-            card.innerHTML = '<div class="roast-bar"></div>' + thumbHtml + '<div class="bean-card-body"><div class="roaster-name">' + (b.roaster || "Unknown") + (b.rating ? ' ★' + b.rating : '') + '</div><div class="bean-card-name">' + (b.name || "Untitled") + '</div><div class="bean-card-tags">' + tagsHtml + '</div></div>';
+            const body = el("div", "bean-card-body");
+            body.appendChild(el("div", "roaster-name", (b.roaster || "Unknown") + (b.rating ? " ★" + b.rating : "")));
+            body.appendChild(el("div", "bean-card-name", b.name || "Untitled"));
+            const tags = el("div", "bean-card-tags");
+            (b.tags || []).slice(0, 2).forEach(t => tags.appendChild(el("span", "tag-pill", "#" + t)));
+            body.appendChild(tags);
+            card.appendChild(body);
             card.onclick = () => app.loadBeanDetail(b.id);
             container.appendChild(card);
         });
@@ -348,12 +377,15 @@ const app = {
                 const advice = getAIAdvice(log, currentActiveBean?.roastLevel);
                 const ratio = (parseFloat(log.yield) / parseFloat(log.dose)).toFixed(1);
                 const row = el("div", "log-row ext-" + advice.status);
-                row.innerHTML = '<div class="log-row-metrics">' +
-                    '<div class="metric-col"><div class="metric-value">' + log.time + 's</div><div class="recipe-label">Time</div></div>' +
-                    '<div class="metric-col center"><div class="metric-value">' + log.grind + '</div><div class="recipe-label">Grind</div></div>' +
-                    '<div class="metric-col right"><div class="metric-value">1:' + ratio + '</div><div class="recipe-label">' + log.dose + 'g → ' + log.yield + 'g</div></div>' +
-                '</div>' +
-                '<div class="advice-text">' + advice.text + '</div>';
+                const metrics = el("div", "log-row-metrics");
+                const timeCol = el("div", "metric-col");
+                timeCol.append(el("div", "metric-value", log.time + "s"), el("div", "recipe-label", "Time"));
+                const grindCol = el("div", "metric-col center");
+                grindCol.append(el("div", "metric-value", log.grind), el("div", "recipe-label", "Grind"));
+                const ratioCol = el("div", "metric-col right");
+                ratioCol.append(el("div", "metric-value", "1:" + ratio), el("div", "recipe-label", log.dose + "g -> " + log.yield + "g"));
+                metrics.append(timeCol, grindCol, ratioCol);
+                row.append(metrics, el("div", "advice-text", advice.text));
                 row.onclick = () => app.openEditShot(log.id);
                 container.appendChild(row);
             });
@@ -386,14 +418,21 @@ const app = {
         }).sort((a,b) => Math.abs(a.avgRatio - 2.0) - Math.abs(b.avgRatio - 2.0));
 
         if(rows.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="summary-empty">Log some shots to see your dial-in metrics.</td></tr>';
+            const tr = document.createElement("tr");
+            const td = el("td", "summary-empty", "Log some shots to see your dial-in metrics.");
+            td.colSpan = 4;
+            tr.appendChild(td);
+            tbody.appendChild(tr);
             return;
         }
 
         rows.forEach((row, i) => {
             const tr = document.createElement('tr');
             if(i === 0) tr.className = "summary-best-row";
-            tr.innerHTML = '<td class="summary-primary">' + row.grind + '</td><td>1:' + row.avgRatio.toFixed(1) + '</td><td>' + row.avgTime + 's</td><td style="opacity:0.6">' + row.count + 'x</td>';
+            tr.append(el("td", "summary-primary", row.grind), el("td", "", "1:" + row.avgRatio.toFixed(1)), el("td", "", row.avgTime + "s"));
+            const countCell = el("td", "", row.count + "x");
+            countCell.style.opacity = "0.6";
+            tr.appendChild(countCell);
             tbody.appendChild(tr);
         });
     },
@@ -408,7 +447,11 @@ const app = {
             if(total === 0) { document.getElementById('global-stats-card').classList.add('hidden'); return; }
             document.getElementById('global-stats-card').classList.remove('hidden');
             const top = Object.entries(grinds).sort((a,b) => b[1]-a[1]).slice(0,2);
-            statsContent.innerHTML = '<div class="stat-item"><strong>' + total + '</strong><span>Total Logs</span></div><div class="stat-item"><strong>' + (top.map(t => t[0]).join(", ") || "None") + '</strong><span>Legacy Grinds</span></div>';
+            const totalStat = el("div", "stat-item");
+            totalStat.append(el("strong", "", total), el("span", "", "Total Logs"));
+            const grindStat = el("div", "stat-item");
+            grindStat.append(el("strong", "", top.map(t => t[0]).join(", ") || "None"), el("span", "", "Legacy Grinds"));
+            statsContent.replaceChildren(totalStat, grindStat);
         } catch(e) {}
     },
 
@@ -433,6 +476,9 @@ const app = {
         ['input-bean-id', 'input-roaster', 'input-roaster-location', 'input-name', 'input-origin', 'input-ten-bean-weight'].forEach(id => { document.getElementById(id).value = ''; });
         document.getElementById('input-roast-date').value = new Date().toISOString().split('T')[0];
         document.getElementById('input-roast-level').value = 'Medium';
+        document.getElementById('bean-form-header').innerText = "New Profile";
+        document.getElementById('btn-delete-bean').classList.add('hidden');
+        document.getElementById('btn-save-bean').innerText = "Save Profile";
         currentEditingTags = []; app.renderEditingTags(); app.removeImage(); app.setBeanRating(0);
     },
     setBeanRating: (n) => { haptic('light'); document.getElementById('input-bean-rating').value = n; document.querySelectorAll('.bean-star').forEach((el, i) => el.classList.toggle('selected', i < n)); },
@@ -467,6 +513,7 @@ const app = {
         document.getElementById('btn-time-1').innerText = "P1 (" + b1T + "s)";
         document.getElementById('btn-time-2').innerText = "P2 (" + b2T + "s)";
         document.getElementById('btn-save-shot').innerText = "Log Extraction";
+        document.getElementById('btn-delete-shot').classList.add('hidden');
         app.liveButlerPreview();
         app.router('log-shot');
     },
@@ -554,7 +601,59 @@ const app = {
         await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
         app.router('list');
     },
-    openAnalytics: async () => { app.router('analytics'); },
+    openAnalytics: async () => {
+        app.router('analytics');
+        try {
+            const q = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
+            const snap = await getDocs(q);
+            const logs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                .sort((a,b) => (a.date?.seconds || 0) - (b.date?.seconds || 0));
+            app.renderAnalytics(logs);
+        } catch(e) {
+            document.getElementById("analytics-insight-text").innerText = "Analytics are momentarily unavailable.";
+        }
+    },
+    renderAnalytics: (logs) => {
+        const trendEmpty = document.getElementById("trend-empty-state");
+        const distEmpty = document.getElementById("dist-empty-state");
+        const hasData = logs.length > 0 && window.Chart;
+        trendEmpty.classList.toggle("hidden", hasData);
+        distEmpty.classList.toggle("hidden", hasData);
+        document.getElementById("analytics-insight-text").innerText = hasData
+            ? "Your latest logs are charted by grind and yield so drift is easier to spot."
+            : "Log a few shots to unlock visual trends.";
+        if (!hasData) return;
+
+        const trendPoints = logs.slice(-30).map(log => ({
+            x: parseFloat(log.grind),
+            y: parseFloat(log.yield)
+        })).filter(point => !Number.isNaN(point.x) && !Number.isNaN(point.y));
+        const grindCounts = {};
+        logs.forEach(log => { if (log.grind) grindCounts[log.grind] = (grindCounts[log.grind] || 0) + 1; });
+
+        if (chartTrend) chartTrend.destroy();
+        if (chartDist) chartDist.destroy();
+        chartTrend = new Chart(document.getElementById("trendChart"), {
+            type: "scatter",
+            data: { datasets: [{ label: "Yield", data: trendPoints, backgroundColor: "#fbbf24" }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { title: { display: true, text: "Grind" } }, y: { title: { display: true, text: "Yield (g)" } } } }
+        });
+        chartDist = new Chart(document.getElementById("distChart"), {
+            type: "bar",
+            data: { labels: Object.keys(grindCounts), datasets: [{ label: "Logs", data: Object.values(grindCounts), backgroundColor: "#38bdf8" }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+    },
+    exportData: async () => {
+        const q = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
+        const snap = await getDocs(q);
+        const rows = [["date", "bean", "roaster", "roast_date", "grind", "time", "dose", "yield"]];
+        snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).forEach(log => {
+            const bean = beans.find(b => b.id === log.beanId) || {};
+            rows.push([formatDate(log.date), bean.name || log.beanId, bean.roaster || "", log.roastDate || "", log.grind, log.time, log.dose, log.yield]);
+        });
+        downloadCsv("lincoln-barista-export.csv", rows);
+    },
     repeatCurrentRecipe: async () => {
         if (!currentRecipeShot || !currentActiveBean) return app.openLogShot();
         if(confirm("Repeat recipe?")) {
