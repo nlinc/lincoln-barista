@@ -140,9 +140,11 @@
             <input type="hidden" id="input-bean-rating" value="0">
         </div>
 
-        <button class="btn" id="btn-save-bean" type="button">Save Profile</button>
-        <button class="btn btn-secondary stack-action" id="btn-cancel-bean" type="button">Cancel</button>
-        <button class="btn btn-danger hidden danger-action" id="btn-delete-bean" type="button">Archive Bean</button>
+        <div class="view-actions">
+            <button class="btn" id="btn-save-bean" type="button">Save Profile</button>
+            <button class="btn btn-secondary stack-action" id="btn-cancel-bean" type="button">Cancel</button>
+            <button class="btn btn-danger hidden danger-action" id="btn-delete-bean" type="button">Archive Bean</button>
+        </div>
     </div>
 
     <!-- VIEW: DETAIL -->
@@ -274,9 +276,11 @@
             <div id="log-butler-preview-text" class="preview-text">Input data to see extraction advice.</div>
         </div>
 
-        <button class="btn" id="btn-save-shot" type="button">Log Extraction</button>
-        <button class="btn btn-secondary stack-action" id="btn-cancel-shot" type="button">Cancel</button>
-        <button class="btn btn-danger hidden delete-shot-action" id="btn-delete-shot" type="button">Delete Log</button>
+        <div class="view-actions">
+            <button class="btn" id="btn-save-shot" type="button">Log Extraction</button>
+            <button class="btn btn-secondary stack-action" id="btn-cancel-shot" type="button">Cancel</button>
+            <button class="btn btn-danger hidden delete-shot-action" id="btn-delete-shot" type="button">Delete Log</button>
+        </div>
     </div>
 
     <!-- VIEW: ANALYTICS -->
@@ -376,10 +380,9 @@
             <div class="subtle-note note-offset">Enable high-fidelity bean analysis & daily tips.</div>
         </div>
 
-        <button class="btn" id="btn-save-profile" type="button">Update Profile</button>
-        
-        <div class="export-panel">
-            <button class="btn-secondary small-btn export-btn" id="btn-export-data" type="button">Export Data (CSV)</button>
+        <div class="view-actions">
+            <button class="btn" id="btn-save-profile" type="button">Update Profile</button>
+            <button class="btn btn-secondary" id="btn-export-data" type="button">Export Data (CSV)</button>
         </div>
     </div>
 

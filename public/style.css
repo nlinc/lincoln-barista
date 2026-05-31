@@ -352,7 +352,26 @@ input.visually-hidden {
 .btn-danger { background: #b91c1c; color: white; }
 .subtle-note { color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; }
 .profile-label { margin-top: 1.5rem; }
-.export-panel { display: flex; justify-content: center; margin: 1.5rem 0 3rem; }
+/* --- VIEW ACTIONS --- */
+.view-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.view-actions .btn,
+.view-actions .btn-secondary,
+.view-actions .btn-danger,
+.view-actions .danger-action,
+.view-actions .delete-shot-action {
+    width: 100%;
+    max-width: 260px;
+    margin-top: 0 !important;
+    margin-left: 0 !important;
+}
 
 /* --- TAGS, RATINGS & BATCHES --- */
 .tag-editor { display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 32px; }
@@ -429,4 +448,17 @@ input.visually-hidden {
     .log-row-metrics { flex-direction: column; align-items: center; gap: 1.5rem; text-align: center; }
     .metric-col.right { text-align: center; }
     #global-stats-content { grid-template-columns: 1fr; }
+    .view-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+    .view-actions .btn,
+    .view-actions .btn-secondary,
+    .view-actions .btn-danger,
+    .view-actions .danger-action,
+    .view-actions .delete-shot-action {
+        max-width: 100% !important;
+        width: 100% !important;
+    }
 }
