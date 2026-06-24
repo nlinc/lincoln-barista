@@ -6,20 +6,33 @@ on:
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
-      
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Install Functions Dependencies
-        run: npm --prefix functions install
+        run: npm --prefix functions ci
+
+      - name: Run checks
+        run: |
+          npm run check
+          npm test
 
       - name: Stamp build commit
         run: |
           SHORT_SHA="${GITHUB_SHA::7}"
           sed -i "s/__BUILD_COMMIT__/${SHORT_SHA}/g" public/index.html public/sw.js
-        
-      - name: Deploy to Firebase
-        uses: w9jds/firebase-action@master
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
         with:
-          args: deploy --only hosting,functions,firestore:rules --force
-        env:
-          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ESPRESSO_4298D }}
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ESPRESSO_4298D }}
+          project_id: espresso-4298d
+
+      - name: Deploy to Firebase
+        run: npx --yes firebase-tools@15.22.1 deploy --project espresso-4298d --only hosting,functions,firestore:rules,storage --force

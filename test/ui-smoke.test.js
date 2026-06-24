@@ -56,6 +56,13 @@ describe("UI smoke guardrails", () => {
         assert.match(mergeWorkflow, /Stamp build commit/);
         assert.match(previewWorkflow, /Stamp build commit/);
     });
+
+    it("uses explicit Google authentication for production deploys", () => {
+        assert.match(mergeWorkflow, /google-github-actions\/auth@v3/);
+        assert.match(mergeWorkflow, /credentials_json:\s*\$\{\{ secrets\.FIREBASE_SERVICE_ACCOUNT_ESPRESSO_4298D \}\}/);
+        assert.match(mergeWorkflow, /firebase-tools@15\.22\.1 deploy/);
+        assert.doesNotMatch(mergeWorkflow, /w9jds\/firebase-action/);
+    });
 });
 
 describe("Data safety guardrails", () => {
