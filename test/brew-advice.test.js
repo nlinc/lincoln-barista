@@ -31,4 +31,11 @@ describe("getAIAdvice", () => {
             { text: "Golden Range Identified", status: "good" }
         );
     });
+
+    it("does not call incomplete data a golden shot", () => {
+        assert.deepEqual(
+            getAIAdvice({ dose: "", yield: "36", time: "30" }, "Medium"),
+            { text: "Complete dose, yield, and time to analyze", status: "incomplete" }
+        );
+    });
 });

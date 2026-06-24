@@ -1,6 +1,12 @@
 export const getAIAdvice = (shot, roastLevel = "Medium") => {
-    const ratio = parseFloat(shot.yield) / parseFloat(shot.dose);
+    const dose = parseFloat(shot.dose);
+    const yieldValue = parseFloat(shot.yield);
     const time = parseFloat(shot.time);
+    if (!Number.isFinite(dose) || dose <= 0 || !Number.isFinite(yieldValue) || yieldValue <= 0 || !Number.isFinite(time) || time <= 0) {
+        return { text: "Complete dose, yield, and time to analyze", status: "incomplete" };
+    }
+
+    const ratio = yieldValue / dose;
     const roast = (roastLevel || "Medium").toLowerCase();
 
     const targets = {
@@ -11,7 +17,7 @@ export const getAIAdvice = (shot, roastLevel = "Medium") => {
     };
 
     const targetBase = targets[roast] || targets.medium;
-    const flowRate = parseFloat(shot.yield) / time;
+    const flowRate = yieldValue / time;
     let advice = [];
     let status = "good";
 

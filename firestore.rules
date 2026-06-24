@@ -42,8 +42,9 @@ service cloud.firestore {
     }
 
     function validProfile(data) {
-      return data.keys().hasOnly(["machineName", "aiEnabled", "defaultDose", "b1", "b2"]) &&
+      return data.keys().hasOnly(["machineName", "aiEnabled", "defaultDose", "finerDirection", "b1", "b2"]) &&
         optionalString(data, "machineName") &&
+        (!("finerDirection" in data) || data.finerDirection == "lower" || data.finerDirection == "higher") &&
         (!("aiEnabled" in data) || data.aiEnabled is bool) &&
         (!("defaultDose" in data) || data.defaultDose is int || data.defaultDose is float) &&
         (!("b1" in data) || data.b1 is map) &&

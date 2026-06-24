@@ -11,10 +11,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/751/751621.png">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icon.svg">
 
     <!-- Design System & Libraries -->
-    <link rel="stylesheet" href="style.css?v=1.5.0">
+    <link rel="stylesheet" href="style.css?v=1.6.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -66,7 +67,7 @@
         <input type="hidden" id="input-bean-id">
         
         <div class="card center-card">
-            <label>Bag Imagery</label>
+            <div class="form-label">Bag Imagery</div>
             <img id="edit-image-preview" class="image-preview hidden" alt="Selected coffee bag preview">
             <label class="btn btn-secondary file-picker">
                 📷 Select Photo
@@ -78,33 +79,33 @@
         <div class="card">
             <div class="form-grid two-col">
                 <div class="form-group">
-                    <label>Roastery</label>
+                    <label for="input-roaster">Roastery</label>
                     <input type="text" id="input-roaster" placeholder="Onyx, Square Mile...">
                 </div>
                 <div class="form-group">
-                    <label>Region</label>
+                    <label for="input-roaster-location">Region</label>
                     <input type="text" id="input-roaster-location" placeholder="Arkansas, London...">
                 </div>
             </div>
 
             <div class="form-group">
-                <label>Bean / Blend Name</label>
+                <label for="input-name">Bean / Blend Name</label>
                 <input type="text" id="input-name" placeholder="Geometry, Sweet Shop...">
             </div>
             
             <div class="form-grid two-col">
                 <div class="form-group">
-                    <label>Origin</label>
+                    <label for="input-origin">Origin</label>
                     <input type="text" id="input-origin" placeholder="Ethiopia, Colombia...">
                 </div>
                 <div class="form-group">
-                    <label>Current Roast Date</label>
+                    <label for="input-roast-date">Current Roast Date</label>
                     <input type="date" id="input-roast-date">
                 </div>
             </div>
 
             <div class="form-group">
-                <label>Roast Level</label>
+                <label for="input-roast-level">Roast Level</label>
                 <select id="input-roast-level">
                     <option value="Light">Light</option>
                     <option value="Medium">Medium</option>
@@ -114,12 +115,12 @@
             </div>
 
             <div class="form-group">
-                <label>Density Check (10-Bean Weight)</label>
+                <label for="input-ten-bean-weight">Density Check (10-Bean Weight)</label>
                 <input type="number" inputmode="decimal" step="0.01" id="input-ten-bean-weight" placeholder="1.70g">
             </div>
 
             <div class="form-group">
-                <label>Tasting Profiles</label>
+                <label for="input-new-tag">Tasting Profiles</label>
                 <div class="inline-field">
                     <input type="text" id="input-new-tag" placeholder="Blueberry, Floral...">
                     <button class="btn btn-secondary inline-action" id="btn-add-tag" type="button">Add</button>
@@ -129,7 +130,7 @@
         </div>
 
         <div class="card center-card">
-            <label>Overall Impression</label>
+            <div class="form-label">Overall Impression</div>
             <div class="rating-wrap">
                 <button class="star bean-star" type="button" data-rating="1" aria-label="Rate 1 star">★</button>
                 <button class="star bean-star" type="button" data-rating="2" aria-label="Rate 2 stars">★</button>
@@ -247,25 +248,25 @@
             
             <div class="form-grid two-col">
                 <div class="form-group">
-                    <label>Grind Setting</label>
+                    <label for="input-shot-grind">Grind Setting</label>
                     <input type="number" inputmode="decimal" step="0.1" id="input-shot-grind" placeholder="14.0" class="shot-preview-input">
                 </div>
                 <div class="form-group">
-                    <label class="split-label">
+                    <div class="form-label split-label">
                         Time (s)
                         <div class="mini-actions">
                             <button id="btn-time-1" class="btn-secondary small-btn profile-time-btn" type="button" data-profile="1">P1</button>
                             <button id="btn-time-2" class="btn-secondary small-btn profile-time-btn" type="button" data-profile="2">P2</button>
                         </div>
-                    </label>
+                    </div>
                     <input type="number" inputmode="decimal" id="input-shot-time" placeholder="30" class="shot-preview-input">
                 </div>
                 <div class="form-group">
-                    <label>Dose In (g)</label>
+                    <label for="input-shot-dose">Dose In (g)</label>
                     <input type="number" inputmode="decimal" step="0.1" id="input-shot-dose" placeholder="18.0" class="shot-preview-input">
                 </div>
                 <div class="form-group">
-                    <label>Yield Out (g)</label>
+                    <label for="input-shot-yield">Yield Out (g)</label>
                     <input type="number" inputmode="decimal" step="0.1" id="input-shot-yield" placeholder="36.0" class="shot-preview-input">
                 </div>
             </div>
@@ -293,8 +294,19 @@
             <button class="btn-secondary small-btn scope-btn" id="btn-analytics-all" type="button">All Beans</button>
         </div>
 
+        <div id="analytics-metrics" class="analytics-metrics" aria-label="Shot summary"></div>
+
         <div class="card">
-            <div class="field-kicker section-kicker">Grind vs. Yield (Last 30 Days)</div>
+            <div class="field-kicker section-kicker">Bean Age vs. Grind Setting</div>
+            <div id="age-chart-note" class="chart-note">Current bean settings are shown directly. All-bean trends are normalized from each bean's first shot.</div>
+            <div class="chart-area chart-area-tall">
+                <canvas id="ageChart"></canvas>
+                <div id="age-empty-state" class="empty-state hidden">Log complete shots across several roast ages to see drift.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="field-kicker section-kicker">Grind vs. Yield (Recent 30 Shots)</div>
             <div class="chart-area chart-area-tall">
                 <canvas id="trendChart"></canvas>
                 <div id="trend-empty-state" class="empty-state hidden">Log a few shots to see trends.</div>
@@ -310,8 +322,9 @@
         </div>
         
         <div id="analytics-insights" class="card analytics-insight-card">
-            <div class="field-kicker success-kicker">AI Insight</div>
-            <div id="analytics-insight-text" class="analytics-insight-text">Analyzing your data for patterns...</div>
+            <div class="field-kicker success-kicker">Pattern Readout</div>
+            <div id="analytics-insight-text" class="analytics-insight-text">Analyzing your shot history for patterns...</div>
+            <div id="analytics-pattern-list" class="pattern-list"></div>
         </div>
     </div>
 
@@ -324,27 +337,27 @@
             <div class="section-label">Machine Profile</div>
             
             <div class="form-group">
-                <label>Machine Name</label>
+                <label for="profile-machine-name">Machine Name</label>
                 <input type="text" id="profile-machine-name" placeholder="Lelit Elizabeth">
             </div>
 
             <div class="form-group">
-                <label>Default Dose (g)</label>
+                <label for="profile-default-dose">Default Dose (g)</label>
                 <input type="number" id="profile-default-dose" step="0.1" placeholder="18.0">
             </div>
 
             <div class="section-label profile-label">Button 1 Profile</div>
             <div class="form-grid three-col">
                 <div class="form-group">
-                    <label>Pre (s)</label>
+                    <label for="profile-b1-infusion">Pre (s)</label>
                     <input type="number" id="profile-b1-infusion" placeholder="3">
                 </div>
                 <div class="form-group">
-                    <label>Bloom (s)</label>
+                    <label for="profile-b1-bloom">Bloom (s)</label>
                     <input type="number" id="profile-b1-bloom" placeholder="7">
                 </div>
                 <div class="form-group">
-                    <label>Brew (s)</label>
+                    <label for="profile-b1-brew">Brew (s)</label>
                     <input type="number" id="profile-b1-brew" placeholder="20">
                 </div>
             </div>
@@ -352,20 +365,28 @@
             <div class="section-label profile-label">Button 2 Profile</div>
             <div class="form-grid three-col">
                 <div class="form-group">
-                    <label>Pre (s)</label>
+                    <label for="profile-b2-infusion">Pre (s)</label>
                     <input type="number" id="profile-b2-infusion" placeholder="0">
                 </div>
                 <div class="form-group">
-                    <label>Bloom (s)</label>
+                    <label for="profile-b2-bloom">Bloom (s)</label>
                     <input type="number" id="profile-b2-bloom" placeholder="0">
                 </div>
                 <div class="form-group">
-                    <label>Brew (s)</label>
+                    <label for="profile-b2-brew">Brew (s)</label>
                     <input type="number" id="profile-b2-brew" placeholder="30">
                 </div>
             </div>
             
             <div class="subtle-note">Button 1 Total: <span id="profile-b1-total-display">30</span>s • Button 2 Total: <span id="profile-b2-total-display">30</span>s</div>
+
+            <div class="form-group grinder-direction-field">
+                <label for="profile-finer-direction">On your grinder, finer means</label>
+                <select id="profile-finer-direction">
+                    <option value="lower">A lower number</option>
+                    <option value="higher">A higher number</option>
+                </select>
+            </div>
         </div>
 
         <div class="card">
@@ -373,7 +394,7 @@
             <div class="row-between">
                 <div class="setting-row-title">Enable True AI (Gemini)</div>
                 <label class="switch">
-                    <input type="checkbox" id="profile-ai-enabled" checked>
+                    <input type="checkbox" id="profile-ai-enabled" aria-label="Enable Gemini analysis" checked>
                     <span class="slider"></span>
                 </label>
             </div>
@@ -391,6 +412,6 @@
     <button class="fab hidden" id="fab-log-shot" type="button" aria-label="Log Shot">☕</button>
 
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.5.0"></script>
+    <script type="module" src="js/app.js?v=1.6.0"></script>
 </body>
 </html>

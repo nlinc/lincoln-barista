@@ -10,6 +10,7 @@ import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/
 import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { getAIAdvice } from "./brew-advice.js";
+import { summarizeShotPatterns, validateShot } from "./shot-analytics.js";
 
 // Initialize Firebase
 const appInstance = initializeApp(firebaseConfig);
@@ -28,10 +29,12 @@ let currentActiveBean = null;
 let logsCache = [];
 let chartTrend = null;
 let chartDist = null;
+let chartAge = null;
 let userProfile = {
     machineName: 'Lelit Elizabeth',
     aiEnabled: true,
     defaultDose: 18,
+    finerDirection: 'lower',
     b1: { infusion: 3, bloom: 7, brew: 20 },
     b2: { infusion: 0, bloom: 0, brew: 30 }
 };
@@ -239,6 +242,9 @@ const app = {
         visibleBeans.forEach((b, idx) => {
             const card = document.createElement('div');
             card.className = 'bean-card';
+            card.tabIndex = 0;
+            card.setAttribute("role", "button");
+            card.setAttribute("aria-label", `Open ${b.name || "untitled bean"} from ${b.roaster || "unknown roaster"}`);
             card.style.setProperty('--roast-color', app.getRoastColor(b.roastLevel));
             card.style.setProperty('--roast-glow', app.getRoastGlow(b.roastLevel));
 
@@ -256,6 +262,12 @@ const app = {
             body.appendChild(tags);
             card.appendChild(body);
             card.onclick = () => app.loadBeanDetail(b.id);
+            card.onkeydown = (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    app.loadBeanDetail(b.id);
+                }
+            };
             container.appendChild(card);
         });
     },
@@ -362,7 +374,17 @@ const app = {
                 const days = Math.floor((new Date() - new Date(roastDate)) / (86400000));
                 const msg = (days >= 7 && days <= 21) ? "✨ Peak Flavor Window" : (days < 7 ? "⏳ Resting..." : "🫘 Aging");
                 document.getElementById('detail-age').innerText = days + " days since roast • " + msg;
-            } else document.getElementById('detail-age').innerText = "";
+                const staleWarning = document.getElementById("stale-warning-container");
+                if (days > 30) {
+                    staleWarning.textContent = "This batch is over 30 days off roast. Expect faster flow and be ready to adjust.";
+                    staleWarning.className = "status-strip batch-warning";
+                } else {
+                    staleWarning.classList.add("hidden");
+                }
+            } else {
+                document.getElementById('detail-age').innerText = "";
+                document.getElementById("stale-warning-container").classList.add("hidden");
+            }
 
             app.renderHistory();
             app.renderDialInSummary();
@@ -425,9 +447,16 @@ const app = {
         Object.keys(groups).sort().reverse().forEach(batch => {
             container.appendChild(el("div", "field-kicker", "Batch: " + batch));
             groups[batch].forEach(log => {
-                const advice = getAIAdvice(log, currentActiveBean?.roastLevel);
-                const ratio = (parseFloat(log.yield) / parseFloat(log.dose)).toFixed(1);
+                const validation = validateShot(log);
+                const advice = validation.valid
+                    ? getAIAdvice(log, currentActiveBean?.roastLevel)
+                    : { status: "slow", text: "Incomplete legacy shot data" };
+                const ratioValue = ratioFor(log);
+                const ratio = ratioValue ? ratioValue.toFixed(1) : "—";
                 const row = el("div", "log-row ext-" + advice.status);
+                row.tabIndex = 0;
+                row.setAttribute("role", "button");
+                row.setAttribute("aria-label", `Edit shot at grind ${log.grind}, ${log.time} seconds`);
                 const metrics = el("div", "log-row-metrics");
                 const timeCol = el("div", "metric-col");
                 timeCol.append(el("div", "metric-value", log.time + "s"), el("div", "recipe-label", "Time"));
@@ -438,6 +467,12 @@ const app = {
                 metrics.append(timeCol, grindCol, ratioCol);
                 row.append(metrics, el("div", "advice-text", advice.text));
                 row.onclick = () => app.openEditShot(log.id);
+                row.onkeydown = (event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        app.openEditShot(log.id);
+                    }
+                };
                 container.appendChild(row);
             });
         });
@@ -450,20 +485,21 @@ const app = {
 
         const grouped = {};
         logsCache.forEach(l => {
-            if (!l.grind) return;
+            if (!validateShot(l).valid) return;
             const g = l.grind;
-            if(!grouped[g]) grouped[g] = { ratioSum: 0, timeSum: 0, count: 0 };
+            if(!grouped[g]) grouped[g] = { ratioSum: 0, timeSum: 0, ratioCount: 0, timeCount: 0, count: 0 };
             const r = parseFloat(l.yield) / parseFloat(l.dose);
-            if(!isNaN(r)) { grouped[g].ratioSum += r; grouped[g].count++; }
-            if(!isNaN(parseFloat(l.time))) grouped[g].timeSum += parseFloat(l.time);
+            if(Number.isFinite(r)) { grouped[g].ratioSum += r; grouped[g].ratioCount++; }
+            if(Number.isFinite(parseFloat(l.time))) { grouped[g].timeSum += parseFloat(l.time); grouped[g].timeCount++; }
+            grouped[g].count++;
         });
 
         const rows = Object.keys(grouped).map(g => {
             const data = grouped[g];
             return {
                 grind: g,
-                avgRatio: data.count > 0 ? data.ratioSum / data.count : 0,
-                avgTime: data.count > 0 ? Math.round(data.timeSum / data.count) : 0,
+                avgRatio: data.ratioCount > 0 ? data.ratioSum / data.ratioCount : 0,
+                avgTime: data.timeCount > 0 ? Math.round(data.timeSum / data.timeCount) : 0,
                 count: data.count
             };
         }).sort((a,b) => Math.abs(a.avgRatio - 2.0) - Math.abs(b.avgRatio - 2.0));
@@ -651,7 +687,8 @@ const app = {
                 yield: document.getElementById('input-shot-yield').value.trim(),
                 date: new Date()
             };
-            if(!data.grind) throw new Error("Grind is required.");
+            const validation = validateShot(data);
+            if (!validation.valid) throw new Error(validation.errors[0]);
             if(sId) await updateDoc(doc(db, "brew_logs", sId), data);
             else { data.roastDate = currentActiveBean?.currentRoastDate || "Unknown"; await addDoc(collection(db, "brew_logs"), data); }
             await app.loadBeanDetail(bId);
@@ -669,6 +706,7 @@ const app = {
         document.getElementById('input-shot-yield').value = log.yield;
         document.getElementById('btn-save-shot').innerText = "Update Log";
         document.getElementById('btn-delete-shot').classList.remove('hidden');
+        app.liveButlerPreview();
         app.router('log-shot');
     },
     deleteShot: async () => { if(confirm("Delete log?")) { const sId = document.getElementById('input-log-shot-id').value; const bId = document.getElementById('input-log-bean-id').value; await deleteDoc(doc(db, "brew_logs", sId)); await app.loadBeanDetail(bId); } },
@@ -677,7 +715,7 @@ const app = {
             const snap = await getDoc(doc(db, "user_profiles", currentUser.uid));
             if (snap.exists()) {
                 const d = snap.data();
-                userProfile = { machineName: d.machineName || 'Lelit Elizabeth', aiEnabled: d.aiEnabled !== false, defaultDose: parseFloat(d.defaultDose) || 18, b1: d.b1 || { infusion: d.infusion || 3, bloom: d.bloom || 7, brew: 20 }, b2: d.b2 || { infusion: 0, bloom: 0, brew: 30 } };
+                userProfile = { machineName: d.machineName || 'Lelit Elizabeth', aiEnabled: d.aiEnabled !== false, defaultDose: parseFloat(d.defaultDose) || 18, finerDirection: d.finerDirection === "higher" ? "higher" : "lower", b1: d.b1 || { infusion: d.infusion || 3, bloom: d.bloom || 7, brew: 20 }, b2: d.b2 || { infusion: 0, bloom: 0, brew: 30 } };
             } else await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
         } catch(e) {}
     },
@@ -691,6 +729,7 @@ const app = {
         document.getElementById('profile-machine-name').value = userProfile.machineName;
         document.getElementById('profile-ai-enabled').checked = userProfile.aiEnabled;
         document.getElementById('profile-default-dose').value = userProfile.defaultDose;
+        document.getElementById('profile-finer-direction').value = userProfile.finerDirection || "lower";
         if(userProfile.b1) { document.getElementById('profile-b1-infusion').value = userProfile.b1.infusion; document.getElementById('profile-b1-bloom').value = userProfile.b1.bloom; document.getElementById('profile-b1-brew').value = userProfile.b1.brew; }
         if(userProfile.b2) { document.getElementById('profile-b2-infusion').value = userProfile.b2.infusion; document.getElementById('profile-b2-bloom').value = userProfile.b2.bloom; document.getElementById('profile-b2-brew').value = userProfile.b2.brew; }
         app.updateSettingsDisplay();
@@ -699,7 +738,7 @@ const app = {
     saveProfile: async () => {
         const b1 = { infusion: parseInt(document.getElementById('profile-b1-infusion').value) || 0, bloom: parseInt(document.getElementById('profile-b1-bloom').value) || 0, brew: parseInt(document.getElementById('profile-b1-brew').value) || 0 };
         const b2 = { infusion: parseInt(document.getElementById('profile-b2-infusion').value) || 0, bloom: parseInt(document.getElementById('profile-b2-bloom').value) || 0, brew: parseInt(document.getElementById('profile-b2-brew').value) || 0 };
-        userProfile = { machineName: document.getElementById('profile-machine-name').value, aiEnabled: document.getElementById('profile-ai-enabled').checked, defaultDose: parseFloat(document.getElementById('profile-default-dose').value) || 18, b1, b2 };
+        userProfile = { machineName: document.getElementById('profile-machine-name').value, aiEnabled: document.getElementById('profile-ai-enabled').checked, defaultDose: parseFloat(document.getElementById('profile-default-dose').value) || 18, finerDirection: document.getElementById('profile-finer-direction').value, b1, b2 };
         await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
         app.router('list');
     },
@@ -721,6 +760,9 @@ const app = {
         }
     },
     renderAnalytics: (logs) => {
+        const summary = summarizeShotPatterns(logs, beans, { finerDirection: userProfile.finerDirection });
+        const usableLogs = summary.usable;
+        const ageEmpty = document.getElementById("age-empty-state");
         const trendEmpty = document.getElementById("trend-empty-state");
         const distEmpty = document.getElementById("dist-empty-state");
         const currentBtn = document.getElementById("btn-analytics-current");
@@ -729,37 +771,86 @@ const app = {
         currentBtn.disabled = !hasCurrentBean;
         currentBtn.classList.toggle("active", analyticsScope === "current" && hasCurrentBean);
         allBtn.classList.toggle("active", analyticsScope !== "current" || !hasCurrentBean);
-        const hasData = logs.length > 0 && window.Chart;
-        trendEmpty.classList.toggle("hidden", hasData);
-        distEmpty.classList.toggle("hidden", hasData);
+        const hasChartLibrary = Boolean(window.Chart);
+        const hasData = usableLogs.length > 0;
+        const canChart = hasData && hasChartLibrary;
+        const hasAgeData = summary.agePoints.length >= 2 && hasChartLibrary;
+        ageEmpty.textContent = hasChartLibrary ? "Log complete shots across several roast ages to see drift." : "Charts could not be loaded. Pattern cards are still available.";
+        ageEmpty.classList.toggle("hidden", hasAgeData);
+        trendEmpty.textContent = hasChartLibrary ? "Log a few shots to see trends." : "Charts could not be loaded. Pattern cards are still available.";
+        distEmpty.textContent = hasChartLibrary ? "Log a few shots to see distribution." : "Charts could not be loaded. Pattern cards are still available.";
+        trendEmpty.classList.toggle("hidden", canChart);
+        distEmpty.classList.toggle("hidden", canChart);
+        document.getElementById("age-chart-note").textContent = summary.isSingleBean
+            ? "Each point is a complete shot plotted by days off roast and grinder setting."
+            : "Each bean is normalized from its first complete shot, so this shows setting drift rather than absolute grinder numbers.";
         document.getElementById("analytics-insight-text").innerText = hasData
-            ? (analyticsScope === "current" && hasCurrentBean ? "This bean's shot history is charted by grind and yield." : "All logged shots are charted by grind and yield so drift is easier to spot.")
-            : (analyticsScope === "current" && hasCurrentBean ? "Log a few shots for this bean to unlock visual trends." : "Log a few shots to unlock visual trends.");
-        if (!hasData) {
+            ? `Readout based on ${summary.metrics.shots} complete shot${summary.metrics.shots === 1 ? "" : "s"}. Patterns describe correlation, not causation.`
+            : "Complete grind, dose, yield, and time values will unlock pattern analysis.";
+        app.renderAnalyticsMetrics(summary.metrics);
+        app.renderPatternList(summary.insights);
+        if (!canChart) {
+            if (chartAge) { chartAge.destroy(); chartAge = null; }
             if (chartTrend) { chartTrend.destroy(); chartTrend = null; }
             if (chartDist) { chartDist.destroy(); chartDist = null; }
             return;
         }
 
-        const trendPoints = logs.slice(-30).map(log => ({
-            x: parseFloat(log.grind),
-            y: parseFloat(log.yield)
-        })).filter(point => !Number.isNaN(point.x) && !Number.isNaN(point.y));
+        const trendPoints = usableLogs.slice(-30).map(log => ({ x: log.grind, y: log.yield }));
         const grindCounts = {};
-        logs.forEach(log => { if (log.grind) grindCounts[log.grind] = (grindCounts[log.grind] || 0) + 1; });
+        usableLogs.forEach(log => { grindCounts[log.grind] = (grindCounts[log.grind] || 0) + 1; });
 
+        if (chartAge) chartAge.destroy();
         if (chartTrend) chartTrend.destroy();
         if (chartDist) chartDist.destroy();
+        if (hasAgeData) {
+            chartAge = new Chart(document.getElementById("ageChart"), {
+                type: "scatter",
+                data: { datasets: [{ label: summary.isSingleBean ? "Grind setting" : "Setting change", data: summary.agePoints, backgroundColor: "#fbbf24" }] },
+                options: app.chartOptions("Days off roast", summary.isSingleBean ? "Grind setting" : "Change from first shot")
+            });
+        } else chartAge = null;
         chartTrend = new Chart(document.getElementById("trendChart"), {
             type: "scatter",
             data: { datasets: [{ label: "Yield", data: trendPoints, backgroundColor: "#fbbf24" }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { title: { display: true, text: "Grind" } }, y: { title: { display: true, text: "Yield (g)" } } } }
+            options: app.chartOptions("Grind", "Yield (g)")
         });
         chartDist = new Chart(document.getElementById("distChart"), {
             type: "bar",
             data: { labels: Object.keys(grindCounts), datasets: [{ label: "Logs", data: Object.values(grindCounts), backgroundColor: "#38bdf8" }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            options: app.chartOptions("Grind", "Shot count")
         });
+    },
+    chartOptions: (xTitle, yTitle) => ({
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { title: { display: true, text: xTitle, color: "#94a3b8" }, ticks: { color: "#94a3b8" }, grid: { color: "rgba(255,255,255,0.06)" } },
+            y: { title: { display: true, text: yTitle, color: "#94a3b8" }, ticks: { color: "#94a3b8" }, grid: { color: "rgba(255,255,255,0.06)" } }
+        }
+    }),
+    renderAnalyticsMetrics: (metrics) => {
+        const target = document.getElementById("analytics-metrics");
+        const items = [
+            [metrics.shots, "Complete shots"],
+            [metrics.dialedPercent + "%", "In target"],
+            [metrics.medianRatio ? "1:" + metrics.medianRatio.toFixed(2) : "—", "Median ratio"],
+            [metrics.ageSpan ? metrics.ageSpan + "d" : "—", "Age range"]
+        ];
+        target.replaceChildren(...items.map(([value, label]) => {
+            const card = el("div", "analytics-metric");
+            card.append(el("span", "analytics-metric-value", value), el("span", "analytics-metric-label", label));
+            return card;
+        }));
+    },
+    renderPatternList: (insights) => {
+        const target = document.getElementById("analytics-pattern-list");
+        target.replaceChildren(...insights.map(insight => {
+            const item = el("div", "pattern-item tone-" + insight.tone);
+            item.append(el("div", "pattern-title", insight.title), el("div", "pattern-copy", insight.text));
+            return item;
+        }));
     },
     exportData: async () => {
         const q = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
@@ -786,10 +877,14 @@ const app = {
 };
 
 window.app = app;
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+}
 onAuthStateChanged(auth, u => { if(u) { currentUser = u; app.fetchProfile().then(() => { app.fetchBeans(); app.router(window.location.hash.substring(1) || 'list'); }); } else app.router('login'); });
 on("btn-login", "click", () => app.login()); on("btn-open-settings", "click", () => app.openSettings()); on("btn-logout", "click", () => app.logout());
 on("input-sort-beans", "change", (e) => app.setSort(e.target.value)); on("fab-add-bean", "click", () => { app.resetBeanForm(); app.router("edit-bean"); }); on("fab-log-shot", "click", () => app.openLogShot());
 on("input-bean-image", "change", (e) => app.handleImageUpload(e)); on("btn-remove-image", "click", () => app.removeImage()); on("btn-add-tag", "click", () => app.addTag());
+on("input-new-tag", "keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); app.addTag(); } });
 document.querySelectorAll(".bean-star").forEach(s => s.onclick = () => app.setBeanRating(parseInt(s.dataset.rating)));
 on("btn-save-bean", "click", () => app.saveBean()); on("btn-cancel-bean", "click", () => app.router("list")); on("btn-delete-bean", "click", () => app.deleteBean());
 on("btn-edit-active-bean", "click", () => app.editActiveBean()); on("btn-update-roast-date", "click", () => app.promptNewDate()); on("btn-repeat-recipe", "click", () => app.repeatCurrentRecipe());
@@ -799,6 +894,8 @@ on("btn-analytics-current", "click", () => app.openAnalytics("current"));
 on("btn-analytics-all", "click", () => app.openAnalytics("all"));
 document.querySelectorAll("[data-route]").forEach(b => b.onclick = () => app.router(b.dataset.route));
 on("btn-time-1", "click", () => app.setTimeFromProfile(1)); on("btn-time-2", "click", () => app.setTimeFromProfile(2));
+document.querySelectorAll(".shot-preview-input").forEach(input => input.addEventListener("input", () => app.liveButlerPreview()));
+document.querySelectorAll("#view-settings input[type='number']").forEach(input => input.addEventListener("input", () => app.updateSettingsDisplay()));
 on("btn-save-shot", "click", () => app.saveShot()); on("btn-cancel-shot", "click", () => app.router("detail")); on("btn-delete-shot", "click", () => app.deleteShot());
 on("btn-save-profile", "click", () => app.saveProfile()); on("btn-export-data", "click", () => app.exportData()); on("btn-open-analytics", "click", () => app.openAnalytics("all"));
 window.addEventListener('popstate', (e) => { if (e.state?.view) app.router(e.state.view, false); });

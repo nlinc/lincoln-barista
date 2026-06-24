@@ -7,6 +7,7 @@ const css = readFileSync(new URL("../public/style.css", import.meta.url), "utf8"
 const appJs = readFileSync(new URL("../public/js/app.js", import.meta.url), "utf8");
 const rules = readFileSync(new URL("../firestore.rules", import.meta.url), "utf8");
 const storageRules = readFileSync(new URL("../storage.rules", import.meta.url), "utf8");
+const manifest = readFileSync(new URL("../public/manifest.json", import.meta.url), "utf8");
 
 describe("UI smoke guardrails", () => {
     it("does not ship inline style attributes in the app shell", () => {
@@ -14,8 +15,8 @@ describe("UI smoke guardrails", () => {
     });
 
     it("keeps cache-busted app assets on the current release", () => {
-        assert.match(html, /style\.css\?v=1\.5\.0/);
-        assert.match(html, /js\/app\.js\?v=1\.5\.0/);
+        assert.match(html, /style\.css\?v=1\.6\.0/);
+        assert.match(html, /js\/app\.js\?v=1\.6\.0/);
     });
 
     it("caps detail bean images and hides the native file input", () => {
@@ -27,8 +28,22 @@ describe("UI smoke guardrails", () => {
         assert.match(html, /id="btn-open-detail-analytics"/);
         assert.match(html, /id="btn-analytics-current"/);
         assert.match(html, /id="btn-analytics-all"/);
+        assert.match(html, /id="ageChart"/);
+        assert.match(html, /id="analytics-pattern-list"/);
         assert.match(appJs, /openAnalytics\("current"\)/);
         assert.match(appJs, /openAnalytics\("all"\)/);
+    });
+
+    it("captures the user's grinder direction for honest trend language", () => {
+        assert.match(html, /id="profile-finer-direction"/);
+        assert.match(appJs, /finerDirection/);
+        assert.match(rules, /"finerDirection"/);
+    });
+
+    it("uses local install assets and registers an offline shell", () => {
+        assert.match(html, /href="icon\.svg"/);
+        assert.match(manifest, /"src": "icon\.svg"/);
+        assert.match(appJs, /serviceWorker\.register\("\/sw\.js"\)/);
     });
 });
 

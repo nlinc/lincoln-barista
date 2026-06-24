@@ -12,6 +12,7 @@ A personal espresso tracking Progressive Web App (PWA) designed to help dial in 
     * 🟠 **Low Yield:** < 1:1.75 (Grind Coarser)
 * **History Grouping:** Logs are grouped by the specific "Roast Batch" date to account for bean aging.
 * **Smart Sorting:** Filter beans by Newest, Rating, or Name.
+* **Age Trends:** Compare days off roast with grind movement, flow drift, consistency, and target-shot rate.
 * **Mobile First:** Designed as a PWA to look and feel like a native app on iOS/Android.
 
 ## 🛠️ Tech Stack
@@ -30,9 +31,16 @@ This project is configured for a specific personal Firebase project. If you fork
     * **Authentication:** Enable "Google Sign-In".
     * **Firestore Database:** Create a database in production mode.
 3.  **Update Config:**
-    * Open `public/index.html`.
-    * Locate the `firebaseConfig` object at the bottom of the script.
+   * Open `public/js/firebase-config.js`.
+   * Replace the exported `firebaseConfig` values.
     * Replace the values with your own project keys.
 4.  **Deploy:**
     * Install the Firebase CLI: `npm install -g firebase-tools`
     * Run `firebase login` and `firebase init hosting`.
+
+## Local checks
+
+```sh
+npm run check
+npm test
+```
