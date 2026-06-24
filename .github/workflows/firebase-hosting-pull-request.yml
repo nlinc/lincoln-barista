@@ -13,6 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Stamp build commit
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          sed -i "s/__BUILD_COMMIT__/${SHORT_SHA}/g" public/index.html public/sw.js
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}

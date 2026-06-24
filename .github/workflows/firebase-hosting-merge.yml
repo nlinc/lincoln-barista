@@ -11,6 +11,11 @@ jobs:
       
       - name: Install Functions Dependencies
         run: npm --prefix functions install
+
+      - name: Stamp build commit
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          sed -i "s/__BUILD_COMMIT__/${SHORT_SHA}/g" public/index.html public/sw.js
         
       - name: Deploy to Firebase
         uses: w9jds/firebase-action@master

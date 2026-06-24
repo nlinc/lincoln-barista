@@ -877,6 +877,8 @@ const app = {
 };
 
 window.app = app;
+const buildCommit = document.getElementById("build-commit");
+if (buildCommit?.textContent.includes("__BUILD_COMMIT__")) buildCommit.textContent = "development";
 if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
 }

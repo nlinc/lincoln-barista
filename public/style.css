@@ -465,6 +465,13 @@ input.visually-hidden {
 .setting-row-title { font-weight: 700; font-size: 0.95rem; }
 .note-offset { margin-top: 0.75rem; }
 .export-btn { padding: 0.7rem 1.2rem; }
+.build-info {
+    color: var(--text-muted); font-size: 0.72rem; text-align: center;
+    margin: -1rem 0 2.5rem; letter-spacing: 0.03em;
+}
+.build-info code {
+    color: var(--text-secondary); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
 
 @media (max-width: 500px) {
     #top-bar { padding: 0.85rem 1rem; }

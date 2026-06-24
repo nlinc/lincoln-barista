@@ -8,6 +8,9 @@ const appJs = readFileSync(new URL("../public/js/app.js", import.meta.url), "utf
 const rules = readFileSync(new URL("../firestore.rules", import.meta.url), "utf8");
 const storageRules = readFileSync(new URL("../storage.rules", import.meta.url), "utf8");
 const manifest = readFileSync(new URL("../public/manifest.json", import.meta.url), "utf8");
+const serviceWorker = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
+const mergeWorkflow = readFileSync(new URL("../.github/workflows/firebase-hosting-merge.yml", import.meta.url), "utf8");
+const previewWorkflow = readFileSync(new URL("../.github/workflows/firebase-hosting-pull-request.yml", import.meta.url), "utf8");
 
 describe("UI smoke guardrails", () => {
     it("does not ship inline style attributes in the app shell", () => {
@@ -44,6 +47,14 @@ describe("UI smoke guardrails", () => {
         assert.match(html, /href="icon\.svg"/);
         assert.match(manifest, /"src": "icon\.svg"/);
         assert.match(appJs, /serviceWorker\.register\("\/sw\.js"\)/);
+    });
+
+    it("shows and deploy-stamps the running commit", () => {
+        assert.match(html, /id="build-commit">__BUILD_COMMIT__</);
+        assert.match(appJs, /buildCommit\.textContent = "development"/);
+        assert.match(serviceWorker, /lincoln-barista-__BUILD_COMMIT__/);
+        assert.match(mergeWorkflow, /Stamp build commit/);
+        assert.match(previewWorkflow, /Stamp build commit/);
     });
 });
 

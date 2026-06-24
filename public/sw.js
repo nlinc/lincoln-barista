@@ -1,4 +1,4 @@
-const CACHE_NAME = "lincoln-barista-v1.6.0";
+const CACHE_NAME = "lincoln-barista-__BUILD_COMMIT__";
 const APP_SHELL = [
     "/",
     "/index.html",
