@@ -1,5 +1,7 @@
 # AI Agent Instructions
 
+> ⚙️ **Self-maintenance rule — do this automatically, every time.** If a change you make alters this repo's **shape** (files, entry points, structure), its **stack/dependencies**, the **build/test loop**, or a **guardrail**, you MUST update the matching section of THIS file in the *same commit* — before the task counts as done. This is not optional cleanup or a follow-up task.
+
 This repo is a small Firebase/static PWA for tracking espresso beans, brew logs, recipes, and barista advice. Keep changes conservative and preserve the existing app structure.
 
 ## Project Shape
