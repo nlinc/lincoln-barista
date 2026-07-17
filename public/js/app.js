@@ -27,9 +27,13 @@ let activeFilters = new Set();
 let currentSort = 'newest';
 let currentActiveBean = null;
 let logsCache = [];
+let allLogsCache = [];
+let logsLoadPromise = null;
+let allLogsLoaded = false;
 let chartTrend = null;
 let chartDist = null;
 let chartAge = null;
+let chartLoadPromise = null;
 let userProfile = {
     machineName: 'Lelit Elizabeth',
     aiEnabled: true,
@@ -44,6 +48,7 @@ let currentEditingImage = null;
 let currentEditingImagePath = null;
 let currentRecipeShot = null;
 let analyticsScope = 'all';
+let legacyMigrationStarted = false;
 
 // --- UTILS ---
 const haptic = (type = 'light') => {
@@ -125,6 +130,47 @@ const isDataUrl = (value) => typeof value === "string" && value.startsWith("data
 
 const beanImageSource = (bean) => bean?.imageUrl || bean?.image || null;
 
+const logTime = (log) => log?.date?.seconds || (log?.date instanceof Date ? log.date.getTime() / 1000 : 0);
+
+const newestFirst = (logs) => [...logs].sort((a, b) => logTime(b) - logTime(a));
+
+const readLocalJson = (key, fallback = {}) => {
+    try { return JSON.parse(localStorage.getItem(key)) || fallback; }
+    catch { return fallback; }
+};
+
+const writeLocalJson = (key, value) => {
+    try { localStorage.setItem(key, JSON.stringify(value)); }
+    catch { /* Storage may be unavailable in private browsing. */ }
+};
+
+const aiStorageKey = () => `lincoln-barista-ai-${currentUser?.uid || "guest"}`;
+
+const persistAiCache = () => {
+    const recent = Object.fromEntries(Object.entries(aiCache).slice(-50));
+    aiCache = recent;
+    writeLocalJson(aiStorageKey(), recent);
+};
+
+const loadChartLibrary = () => {
+    if (window.Chart) return Promise.resolve(window.Chart);
+    if (chartLoadPromise) return chartLoadPromise;
+    chartLoadPromise = new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js";
+        script.async = true;
+        script.onload = () => resolve(window.Chart);
+        script.onerror = () => { chartLoadPromise = null; reject(new Error("Charts could not be loaded.")); };
+        document.head.appendChild(script);
+    });
+    return chartLoadPromise;
+};
+
+const runWhenIdle = (callback) => {
+    if ("requestIdleCallback" in window) window.requestIdleCallback(callback, { timeout: 3000 });
+    else window.setTimeout(callback, 500);
+};
+
 const showStatus = (text, tone = "info") => {
     const status = document.getElementById("collection-status");
     if (!status) return;
@@ -182,6 +228,29 @@ const app = {
     logout: () => { if(confirm("Logout?")) { haptic('heavy'); signOut(auth).then(() => location.reload()); } },
 
     // --- BEAN MANAGEMENT ---
+    fetchAllLogs: (force = false) => {
+        if (allLogsLoaded && !force) return Promise.resolve(allLogsCache);
+        if (logsLoadPromise && !force) return logsLoadPromise;
+        const q = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
+        logsLoadPromise = getDocs(q).then(snapshot => {
+            allLogsCache = newestFirst(snapshot.docs.map(logDoc => ({ id: logDoc.id, ...logDoc.data() })));
+            allLogsLoaded = true;
+            return allLogsCache;
+        }).finally(() => { logsLoadPromise = null; });
+        return logsLoadPromise;
+    },
+    logsForBean: (beanId) => newestFirst(allLogsCache.filter(log => log.beanId === beanId)),
+    upsertCachedLog: (log) => {
+        const index = allLogsCache.findIndex(item => item.id === log.id);
+        if (index >= 0) allLogsCache[index] = log;
+        else allLogsCache.unshift(log);
+        allLogsCache = newestFirst(allLogsCache);
+        if (currentActiveBean?.id === log.beanId) logsCache = app.logsForBean(log.beanId);
+    },
+    removeCachedLog: (logId) => {
+        allLogsCache = allLogsCache.filter(log => log.id !== logId);
+        logsCache = logsCache.filter(log => log.id !== logId);
+    },
     fetchBeans: async () => {
         const container = document.getElementById('bean-list-container');
         if (container) renderEmpty(container, "Syncing collection...");
@@ -193,6 +262,10 @@ const app = {
             app.renderBeanList();
             app.renderGlobalStats();
             app.renderDailyTip();
+            if (!legacyMigrationStarted && beans.some(bean => isDataUrl(bean.image) && !bean.imageUrl)) {
+                legacyMigrationStarted = true;
+                runWhenIdle(() => app.migrateLegacyImages());
+            }
         } catch(e) {
             console.error("Bean fetch error:", e);
             showStatus("Couldn't sync your collection. Check your connection and try again.", "error");
@@ -203,10 +276,16 @@ const app = {
     renderDailyTip: async () => {
         const tipEl = document.getElementById('daily-tip-text');
         if(!tipEl || !userProfile.aiEnabled) return;
+        const day = new Date().toISOString().slice(0, 10);
+        const cacheKey = `lincoln-barista-tip-${currentUser.uid}`;
+        const cached = readLocalJson(cacheKey, null);
+        if (cached?.day === day && cached.text) { renderTip(tipEl, cached.text); return; }
         try {
             const getTipFn = httpsCallable(functions, 'getDailyTip');
             const result = await getTipFn({});
-            renderTip(tipEl, result.data.text || "Grind finer for light roasts!");
+            const text = result.data.text || "Grind finer for light roasts!";
+            writeLocalJson(cacheKey, { day, text });
+            renderTip(tipEl, text);
         } catch(e) { renderTip(tipEl, "Keep your coffee station clean!"); }
     },
 
@@ -251,8 +330,13 @@ const app = {
 
             card.appendChild(el("div", "roast-bar"));
             const imageSrc = beanImageSource(b);
-            const thumb = el("div", imageSrc ? "bean-card-thumb" : "bean-card-thumb thumb-placeholder", imageSrc ? undefined : "☕");
-            if (imageSrc) thumb.style.backgroundImage = `url("${imageSrc}")`;
+            const thumb = imageSrc ? el("img", "bean-card-thumb") : el("div", "bean-card-thumb thumb-placeholder", "☕");
+            if (imageSrc) {
+                thumb.src = imageSrc;
+                thumb.alt = "";
+                thumb.loading = "lazy";
+                thumb.decoding = "async";
+            }
             card.appendChild(thumb);
 
             const body = el("div", "bean-card-body");
@@ -365,11 +449,19 @@ const app = {
             const roastDate = currentActiveBean.currentRoastDate || "Unknown";
             document.getElementById('detail-date').innerText = roastDate;
 
-            // Fetch Logs
-            const q = query(collection(db, "brew_logs"), where("beanId", "==", id), where("uid", "==", currentUser.uid));
-            const snapshot = await getDocs(q);
-            logsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            logsCache.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
+            logsCache = [];
+            currentRecipeShot = null;
+            document.getElementById("dial-in-console").classList.add("hidden");
+            document.getElementById("memory-block").classList.add("hidden");
+            document.getElementById("detail-age").textContent = "";
+            document.getElementById("stale-warning-container").classList.add("hidden");
+            renderEmpty(document.getElementById("history-container"), "Loading shot history...");
+            document.getElementById("dial-in-table-body").replaceChildren();
+            app.router('detail');
+
+            await app.fetchAllLogs();
+            if (currentActiveBean?.id !== id) return;
+            logsCache = app.logsForBean(id);
 
             if(roastDate !== "Unknown") {
                 const days = Math.floor((new Date() - new Date(roastDate)) / (86400000));
@@ -402,8 +494,10 @@ const app = {
                 memoryBlock.classList.add('hidden');
             }
 
-            app.router('detail');
-        } catch(e) { console.error("Detail error:", e); app.router('list'); }
+        } catch(e) {
+            console.error("Detail error:", e);
+            if (currentActiveBean?.id === id) renderEmptyAction(document.getElementById("history-container"), "History unavailable", "Your saved recipe could not be loaded right now.", "Retry", () => app.loadBeanDetail(id));
+        }
     },
 
     getGeminiAnalysis: async (shot, bean) => {
@@ -413,6 +507,7 @@ const app = {
         if(aiCache[cacheKey]) { butlerText.textContent = '"' + aiCache[cacheKey] + '"'; return; }
 
         butlerText.textContent = "\"Summarizing where this bean left off...\"";
+        const requestedBeanId = bean.id;
         try {
             const analyzeFn = httpsCallable(functions, 'analyzeShot');
             const result = await analyzeFn({ 
@@ -420,8 +515,11 @@ const app = {
                 machine: { name: userProfile.machineName, infusion: userProfile.b1?.infusion || 3, bloom: userProfile.b1?.bloom || 7 }
             });
             aiCache[cacheKey] = result.data.text.trim().replace(/^"|"$/g, '');
-            butlerText.textContent = '"' + aiCache[cacheKey] + '"';
-        } catch(e) { butlerText.textContent = "\"Shot memory is momentarily unavailable.\""; }
+            persistAiCache();
+            if (currentActiveBean?.id === requestedBeanId) butlerText.textContent = '"' + aiCache[cacheKey] + '"';
+        } catch(e) {
+            if (currentActiveBean?.id === requestedBeanId) butlerText.textContent = "\"Shot memory is momentarily unavailable.\"";
+        }
     },
 
     renderCurrentRecipe: () => {
@@ -528,10 +626,9 @@ const app = {
     renderGlobalStats: async () => {
         const statsContent = document.getElementById('global-stats-content');
         try {
-            const q = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
-            const snap = await getDocs(q);
+            const logs = await app.fetchAllLogs();
             let total = 0; const grinds = {};
-            snap.forEach(d => { total++; const g = d.data().grind; if(g) grinds[g] = (grinds[g] || 0) + 1; });
+            logs.forEach(log => { total++; const g = log.grind; if(g) grinds[g] = (grinds[g] || 0) + 1; });
             if(total === 0) { document.getElementById('global-stats-card').classList.add('hidden'); return; }
             document.getElementById('global-stats-card').classList.remove('hidden');
             const top = Object.entries(grinds).sort((a,b) => b[1]-a[1]).slice(0,2);
@@ -610,6 +707,18 @@ const app = {
             imagePath: currentEditingImagePath || existingBean?.imagePath || null
         };
     },
+    migrateLegacyImages: async () => {
+        const legacyBeans = beans.filter(bean => isDataUrl(bean.image) && !bean.imageUrl);
+        for (const bean of legacyBeans) {
+            try {
+                const uploaded = await app.uploadBeanImage(bean.id, bean.image);
+                await updateDoc(doc(db, "beans", bean.id), { ...uploaded, updatedAt: new Date() });
+                Object.assign(bean, uploaded);
+            } catch (error) {
+                console.warn("Legacy image optimization skipped:", error);
+            }
+        }
+    },
     removeImage: () => { currentEditingImage = null; currentEditingImagePath = null; document.getElementById('edit-image-preview').classList.add('hidden'); document.getElementById('btn-remove-image').classList.add('hidden'); },
     resetBeanForm: () => {
         ['input-bean-id', 'input-roaster', 'input-roaster-location', 'input-name', 'input-origin', 'input-ten-bean-weight'].forEach(id => { document.getElementById(id).value = ''; });
@@ -678,6 +787,10 @@ const app = {
     },
     saveShot: async () => {
         haptic('medium');
+        const saveButton = document.getElementById("btn-save-shot");
+        const saveLabel = saveButton.textContent;
+        saveButton.disabled = true;
+        saveButton.textContent = "Saving...";
         try {
             const bId = document.getElementById('input-log-bean-id').value;
             const sId = document.getElementById('input-log-shot-id').value;
@@ -691,10 +804,17 @@ const app = {
             };
             const validation = validateShot(data);
             if (!validation.valid) throw new Error(validation.errors[0]);
-            if(sId) await updateDoc(doc(db, "brew_logs", sId), data);
-            else { data.roastDate = currentActiveBean?.currentRoastDate || "Unknown"; await addDoc(collection(db, "brew_logs"), data); }
+            if(sId) {
+                await updateDoc(doc(db, "brew_logs", sId), data);
+                app.upsertCachedLog({ id: sId, ...data });
+            } else {
+                data.roastDate = currentActiveBean?.currentRoastDate || "Unknown";
+                const created = await addDoc(collection(db, "brew_logs"), data);
+                app.upsertCachedLog({ id: created.id, ...data });
+            }
             await app.loadBeanDetail(bId);
         } catch(e) { alert(e.message); }
+        finally { saveButton.disabled = false; saveButton.textContent = saveLabel; }
     },
     openEditShot: (sId) => {
         const log = logsCache.find(l => l.id === sId); if(!log) return;
@@ -712,7 +832,7 @@ const app = {
         app.liveButlerPreview();
         app.router('log-shot');
     },
-    deleteShot: async () => { if(confirm("Delete log?")) { const sId = document.getElementById('input-log-shot-id').value; const bId = document.getElementById('input-log-bean-id').value; await deleteDoc(doc(db, "brew_logs", sId)); await app.loadBeanDetail(bId); } },
+    deleteShot: async () => { if(confirm("Delete log?")) { const sId = document.getElementById('input-log-shot-id').value; const bId = document.getElementById('input-log-bean-id').value; await deleteDoc(doc(db, "brew_logs", sId)); app.removeCachedLog(sId); await app.loadBeanDetail(bId); } },
     fetchProfile: async () => {
         try {
             const snap = await getDoc(doc(db, "user_profiles", currentUser.uid));
@@ -748,14 +868,14 @@ const app = {
     openAnalytics: async (scope = analyticsScope) => {
         analyticsScope = scope;
         app.router('analytics');
+        document.getElementById("analytics-insight-text").innerText = "Loading shot patterns...";
         try {
             const useCurrentBean = analyticsScope === "current" && currentActiveBean?.id;
-            const q = useCurrentBean
-                ? query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid), where("beanId", "==", currentActiveBean.id))
-                : query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
-            const snap = await getDocs(q);
-            const logs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-                .sort((a,b) => (a.date?.seconds || 0) - (b.date?.seconds || 0));
+            const loadedLogs = await app.fetchAllLogs();
+            const logs = (useCurrentBean ? loadedLogs.filter(log => log.beanId === currentActiveBean.id) : loadedLogs)
+                .slice().sort((a, b) => logTime(a) - logTime(b));
+            try { await loadChartLibrary(); }
+            catch (error) { console.warn("Chart loading skipped:", error); }
             app.renderAnalytics(logs);
         } catch(e) {
             console.error("Analytics error:", e);
@@ -807,18 +927,18 @@ const app = {
         if (chartTrend) chartTrend.destroy();
         if (chartDist) chartDist.destroy();
         if (hasAgeData) {
-            chartAge = new Chart(document.getElementById("ageChart"), {
+            chartAge = new window.Chart(document.getElementById("ageChart"), {
                 type: "scatter",
                 data: { datasets: [{ label: summary.isSingleBean ? "Grind setting" : "Setting change", data: summary.agePoints, backgroundColor: "#fbbf24" }] },
                 options: app.chartOptions("Days off roast", summary.isSingleBean ? "Grind setting" : "Change from first shot")
             });
         } else chartAge = null;
-        chartTrend = new Chart(document.getElementById("trendChart"), {
+        chartTrend = new window.Chart(document.getElementById("trendChart"), {
             type: "scatter",
             data: { datasets: [{ label: "Yield", data: trendPoints, backgroundColor: "#fbbf24" }] },
             options: app.chartOptions("Grind", "Yield (g)")
         });
-        chartDist = new Chart(document.getElementById("distChart"), {
+        chartDist = new window.Chart(document.getElementById("distChart"), {
             type: "bar",
             data: { labels: Object.keys(grindCounts), datasets: [{ label: "Logs", data: Object.values(grindCounts), backgroundColor: "#38bdf8" }] },
             options: app.chartOptions("Grind", "Shot count")
@@ -856,14 +976,13 @@ const app = {
         }));
     },
     exportData: async () => {
-        const q = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
-        const [snap, beanSnap] = await Promise.all([
-            getDocs(q),
+        const [logs, beanSnap] = await Promise.all([
+            app.fetchAllLogs(),
             getDocs(query(collection(db, "beans"), where("uid", "==", currentUser.uid)))
         ]);
         const beanLookup = new Map(beanSnap.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
         const rows = [["date", "bean", "roaster", "roast_date", "grind", "time", "dose", "yield"]];
-        snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).forEach(log => {
+        logs.forEach(log => {
             const bean = beanLookup.get(log.beanId) || beans.find(b => b.id === log.beanId) || {};
             rows.push([formatDate(log.date), bean.name || log.beanId, bean.roaster || "", log.roastDate || "", log.grind, log.time, log.dose, log.yield]);
         });
@@ -872,7 +991,9 @@ const app = {
     repeatCurrentRecipe: async () => {
         if (!currentRecipeShot || !currentActiveBean) return app.openLogShot();
         if(confirm("Repeat recipe?")) {
-            await addDoc(collection(db, "brew_logs"), { beanId: currentActiveBean.id, uid: currentUser.uid, grind: currentRecipeShot.grind, time: currentRecipeShot.time, dose: currentRecipeShot.dose, yield: currentRecipeShot.yield, roastDate: currentActiveBean.currentRoastDate || "Unknown", date: new Date() });
+            const data = { beanId: currentActiveBean.id, uid: currentUser.uid, grind: currentRecipeShot.grind, time: currentRecipeShot.time, dose: currentRecipeShot.dose, yield: currentRecipeShot.yield, roastDate: currentActiveBean.currentRoastDate || "Unknown", date: new Date() };
+            const created = await addDoc(collection(db, "brew_logs"), data);
+            app.upsertCachedLog({ id: created.id, ...data });
             await app.loadBeanDetail(currentActiveBean.id);
         }
     },
@@ -885,7 +1006,18 @@ if (buildCommit?.textContent.includes("__BUILD_COMMIT__")) buildCommit.textConte
 if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
 }
-onAuthStateChanged(auth, u => { if(u) { currentUser = u; app.fetchProfile().then(() => { app.fetchBeans(); app.router(window.location.hash.substring(1) || 'list'); }); } else app.router('login'); });
+onAuthStateChanged(auth, u => {
+    if (!u) { app.router('login'); return; }
+    currentUser = u;
+    allLogsCache = [];
+    allLogsLoaded = false;
+    logsLoadPromise = null;
+    aiCache = readLocalJson(aiStorageKey(), {});
+    app.router(window.location.hash.substring(1) || 'list');
+    app.fetchProfile();
+    app.fetchAllLogs().then(() => app.renderGlobalStats()).catch(console.error);
+    app.fetchBeans();
+});
 on("btn-login", "click", () => app.login()); on("btn-open-settings", "click", () => app.openSettings()); on("btn-logout", "click", () => app.logout()); on("btn-logout-settings", "click", () => app.logout());
 on("input-sort-beans", "change", (e) => app.setSort(e.target.value)); on("fab-add-bean", "click", () => { app.resetBeanForm(); app.router("edit-bean"); }); on("fab-log-shot", "click", () => app.openLogShot());
 on("input-bean-image", "change", (e) => app.handleImageUpload(e)); on("btn-remove-image", "click", () => app.removeImage()); on("btn-add-tag", "click", () => app.addTag());

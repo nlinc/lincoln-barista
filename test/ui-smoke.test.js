@@ -37,6 +37,13 @@ describe("UI smoke guardrails", () => {
         assert.match(appJs, /openAnalytics\("all"\)/);
     });
 
+    it("keeps analytics code off the critical rendering path", () => {
+        assert.doesNotMatch(html, /<script[^>]+chart\.js/i);
+        assert.match(appJs, /loadChartLibrary/);
+        assert.match(appJs, /chart\.js@4\.5\.1\/dist\/chart\.umd\.min\.js/);
+        assert.match(html, /fonts\.googleapis\.com[^>]+media="print"/);
+    });
+
     it("captures the user's grinder direction for honest trend language", () => {
         assert.match(html, /id="profile-finer-direction"/);
         assert.match(appJs, /finerDirection/);
@@ -57,6 +64,29 @@ describe("UI smoke guardrails", () => {
         assert.match(html, /href="icon\.svg"/);
         assert.match(manifest, /"src": "icon\.svg"/);
         assert.match(appJs, /serviceWorker\.register\("\/sw\.js"\)/);
+    });
+
+    it("reuses shot history instead of refetching it for every screen", () => {
+        assert.match(appJs, /fetchAllLogs/);
+        assert.match(appJs, /logsLoadPromise/);
+        assert.match(appJs, /logsForBean/);
+        assert.match(appJs, /upsertCachedLog/);
+        assert.match(appJs, /await app\.fetchAllLogs\(\)/);
+        assert.doesNotMatch(appJs, /where\("beanId",\s*"=="/);
+    });
+
+    it("lazy-loads photos and migrates legacy image payloads in the background", () => {
+        assert.match(html, /id="detail-image"[^>]+loading="lazy"[^>]+decoding="async"/);
+        assert.match(appJs, /thumb\.loading = "lazy"/);
+        assert.match(appJs, /runWhenIdle\(\(\) => app\.migrateLegacyImages\(\)\)/);
+        assert.match(appJs, /updateDoc\(doc\(db, "beans", bean\.id\), \{ \.\.\.uploaded/);
+    });
+
+    it("persists AI responses and serves the app shell stale-while-revalidate", () => {
+        assert.match(appJs, /persistAiCache/);
+        assert.match(appJs, /lincoln-barista-tip-/);
+        assert.match(serviceWorker, /caches\.match\(event\.request\)/);
+        assert.match(serviceWorker, /event\.waitUntil\(update\.catch/);
     });
 
     it("shows and deploy-stamps the running commit", () => {

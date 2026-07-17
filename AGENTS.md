@@ -38,7 +38,7 @@ If you change Cloud Functions dependencies, also review `functions/package.json`
 - Keep mobile layout intact. The app is intended to work well on phones.
 - Avoid one-off inline styles in new markup; prefer `public/style.css`.
 - Do not use `innerHTML` for user-entered bean, tag, roaster, shot, or log data. Build DOM nodes and assign text with `textContent`.
-- Keep `test/ui-smoke.test.js` passing after UI changes. It guards against oversized bean images, visible file inputs, stale inline styles, and missing analytics controls.
+- Keep `test/ui-smoke.test.js` passing after UI changes. It guards against oversized bean images, visible file inputs, stale inline styles, missing analytics controls, render-blocking chart loading, repeated shot-history reads, eager image loading, and regressions in offline caching.
 
 ## Data And Firebase Rules
 

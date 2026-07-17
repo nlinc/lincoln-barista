@@ -28,13 +28,17 @@ self.addEventListener("fetch", event => {
     const requestUrl = new URL(event.request.url);
     if (event.request.method !== "GET" || requestUrl.origin !== self.location.origin) return;
 
+    const network = fetch(event.request);
+    const update = network.then(response => {
+        if (!response.ok) return;
+        const copy = response.clone();
+        return caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+    });
+
     event.respondWith(
-        fetch(event.request)
-            .then(response => {
-                const copy = response.clone();
-                caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
-                return response;
-            })
-            .catch(() => caches.match(event.request).then(cached => cached || caches.match("/index.html")))
+        caches.match(event.request).then(cached => {
+            return cached || network.catch(() => caches.match("/index.html"));
+        })
     );
+    event.waitUntil(update.catch(() => {}));
 });

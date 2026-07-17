@@ -3,8 +3,6 @@
     Version: 1.3.6 - Definitive Image Scaling & UI Fix
 */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap');
-
 :root {
     --page-bg: #0c0a09;
     --panel-bg: rgba(255, 255, 255, 0.08);
@@ -118,7 +116,8 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
     outline-offset: 3px;
 }
 
-.bean-card-thumb { height: 160px; background: #1c1917; background-size: cover; background-position: center; position: relative; border-bottom: 1px solid var(--panel-border); }
+.bean-card-thumb { display: block; width: 100%; height: 160px; object-fit: cover; background: #1c1917; position: relative; border-bottom: 1px solid var(--panel-border); }
+.thumb-placeholder { display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
 .bean-card-body { padding: 14px; display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
 .roaster-name { font-size: 0.65rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
 .bean-card-name { font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 800; line-height: 1.15; color: var(--text-main); }
@@ -488,6 +487,9 @@ input.visually-hidden {
     #top-bar {
         padding: max(0.65rem, env(safe-area-inset-top)) 0.85rem 0.65rem;
         min-height: 58px;
+        background: rgba(28, 25, 23, 0.98);
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
     }
     .app-logo { font-size: 1.1rem; }
     .app-logo small, .app-logo > span > small { display: none; }
@@ -496,6 +498,11 @@ input.visually-hidden {
     .logout-btn { display: none; }
     .settings-signout { display: inline-flex; }
     .view { padding: 1rem 1rem calc(1.5rem + env(safe-area-inset-bottom)); }
+    .card {
+        box-shadow: 0 6px 18px rgba(0,0,0,0.36);
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
     .login-title { font-size: 2.35rem; }
     .section-title, .view-heading, .large-heading { font-size: 1.7rem; }
     .two-col, .three-col { grid-template-columns: 1fr; }
@@ -561,7 +568,7 @@ input.visually-hidden {
         display: grid; grid-template-columns: minmax(0, 1fr) auto;
         margin: 0; padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
         background: rgba(12,10,9,0.94); border-top: 1px solid var(--panel-border);
-        -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: none; backdrop-filter: none;
     }
     #view-log-shot .shot-actions #btn-save-shot { max-width: none !important; min-height: 52px; }
     #view-log-shot .shot-actions #btn-cancel-shot { width: auto !important; min-height: 52px; }

@@ -14,9 +14,12 @@
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="icon.svg">
 
-    <!-- Design System & Libraries -->
+    <!-- Design System -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"></noscript>
     <link rel="stylesheet" href="style.css?v=1.6.0">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -153,7 +156,7 @@
         <button class="btn-secondary back-btn" type="button" data-route="list">← Collection</button>
         
         <div class="detail-hero">
-            <img id="detail-image" src="" class="detail-image hidden" alt="">
+            <img id="detail-image" src="" class="detail-image hidden" alt="" loading="lazy" decoding="async">
             <div id="detail-roaster" class="detail-roaster"></div>
             <h1 id="detail-name" class="detail-name"></h1>
             <div id="detail-rating" class="detail-rating"></div>
