@@ -154,6 +154,7 @@ const on = (id, eventName, handler) => {
 const app = {
     // --- ROUTING ---
     router: (viewName, addToHistory = true) => {
+        document.body.dataset.view = viewName;
         document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
         const targetView = document.getElementById('view-' + viewName);
         if (targetView) targetView.classList.add('active');
@@ -638,6 +639,7 @@ const app = {
     openLogShot: () => {
         haptic('light');
         document.getElementById('log-shot-title').innerText = currentRecipeShot ? "Repeat Recipe" : "Log Extraction";
+        document.getElementById('log-bean-name').innerText = [currentActiveBean?.roaster, currentActiveBean?.name].filter(Boolean).join(" · ");
         document.getElementById('input-log-bean-id').value = currentActiveBean?.id || '';
         document.getElementById('input-log-shot-id').value = '';
         document.getElementById('log-display-date').innerText = currentActiveBean?.currentRoastDate || "N/A";
@@ -650,7 +652,7 @@ const app = {
         const b2T = userProfile.b2 ? (parseInt(userProfile.b2.infusion)||0) + (parseInt(userProfile.b2.bloom)||0) + (parseInt(userProfile.b2.brew)||0) : 30;
         document.getElementById('btn-time-1').innerText = "P1 (" + b1T + "s)";
         document.getElementById('btn-time-2').innerText = "P2 (" + b2T + "s)";
-        document.getElementById('btn-save-shot').innerText = "Log Extraction";
+        document.getElementById('btn-save-shot').innerText = "Save Shot";
         document.getElementById('btn-delete-shot').classList.add('hidden');
         app.liveButlerPreview();
         app.router('log-shot');
@@ -697,6 +699,7 @@ const app = {
     openEditShot: (sId) => {
         const log = logsCache.find(l => l.id === sId); if(!log) return;
         document.getElementById('log-shot-title').innerText = "Edit Log";
+        document.getElementById('log-bean-name').innerText = [currentActiveBean?.roaster, currentActiveBean?.name].filter(Boolean).join(" · ");
         document.getElementById('input-log-bean-id').value = currentActiveBean?.id || log.beanId;
         document.getElementById('input-log-shot-id').value = sId;
         document.getElementById('log-display-date').innerText = log.roastDate;
@@ -883,7 +886,7 @@ if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
 }
 onAuthStateChanged(auth, u => { if(u) { currentUser = u; app.fetchProfile().then(() => { app.fetchBeans(); app.router(window.location.hash.substring(1) || 'list'); }); } else app.router('login'); });
-on("btn-login", "click", () => app.login()); on("btn-open-settings", "click", () => app.openSettings()); on("btn-logout", "click", () => app.logout());
+on("btn-login", "click", () => app.login()); on("btn-open-settings", "click", () => app.openSettings()); on("btn-logout", "click", () => app.logout()); on("btn-logout-settings", "click", () => app.logout());
 on("input-sort-beans", "change", (e) => app.setSort(e.target.value)); on("fab-add-bean", "click", () => { app.resetBeanForm(); app.router("edit-bean"); }); on("fab-log-shot", "click", () => app.openLogShot());
 on("input-bean-image", "change", (e) => app.handleImageUpload(e)); on("btn-remove-image", "click", () => app.removeImage()); on("btn-add-tag", "click", () => app.addTag());
 on("input-new-tag", "keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); app.addTag(); } });
@@ -898,6 +901,6 @@ document.querySelectorAll("[data-route]").forEach(b => b.onclick = () => app.rou
 on("btn-time-1", "click", () => app.setTimeFromProfile(1)); on("btn-time-2", "click", () => app.setTimeFromProfile(2));
 document.querySelectorAll(".shot-preview-input").forEach(input => input.addEventListener("input", () => app.liveButlerPreview()));
 document.querySelectorAll("#view-settings input[type='number']").forEach(input => input.addEventListener("input", () => app.updateSettingsDisplay()));
-on("btn-save-shot", "click", () => app.saveShot()); on("btn-cancel-shot", "click", () => app.router("detail")); on("btn-delete-shot", "click", () => app.deleteShot());
+on("btn-save-shot", "click", () => app.saveShot()); on("btn-cancel-shot", "click", () => app.router("detail")); on("btn-cancel-shot-top", "click", () => app.router("detail")); on("btn-delete-shot", "click", () => app.deleteShot());
 on("btn-save-profile", "click", () => app.saveProfile()); on("btn-export-data", "click", () => app.exportData()); on("btn-open-analytics", "click", () => app.openAnalytics("all"));
 window.addEventListener('popstate', (e) => { if (e.state?.view) app.router(e.state.view, false); });

@@ -236,24 +236,31 @@
 
     <!-- VIEW: LOG SHOT -->
     <div id="view-log-shot" class="view">
-        <h2 id="log-shot-title" class="large-heading">Log Extraction</h2>
+        <div class="mobile-view-header">
+            <button class="btn-secondary mobile-back-btn" id="btn-cancel-shot-top" type="button" aria-label="Back to bean">←</button>
+            <div>
+                <div class="field-kicker mobile-header-kicker">New shot</div>
+                <h2 id="log-shot-title" class="large-heading">Log Extraction</h2>
+                <div id="log-bean-name" class="mobile-header-context"></div>
+            </div>
+        </div>
         <input type="hidden" id="input-log-bean-id">
         <input type="hidden" id="input-log-shot-id">
         
-        <div class="card">
+        <div class="card shot-entry-card">
             <div class="batch-summary">
-                <div class="field-kicker">Active Batch</div>
+                <div class="field-kicker">Roasted</div>
                 <div id="log-display-date" class="primary-value"></div>
             </div>
             
-            <div class="form-grid two-col">
+            <div class="form-grid shot-grid">
                 <div class="form-group">
-                    <label for="input-shot-grind">Grind Setting</label>
+                    <label for="input-shot-grind">Grind</label>
                     <input type="number" inputmode="decimal" step="0.1" id="input-shot-grind" placeholder="14.0" class="shot-preview-input">
                 </div>
                 <div class="form-group">
                     <div class="form-label split-label">
-                        Time (s)
+                        Time
                         <div class="mini-actions">
                             <button id="btn-time-1" class="btn-secondary small-btn profile-time-btn" type="button" data-profile="1">P1</button>
                             <button id="btn-time-2" class="btn-secondary small-btn profile-time-btn" type="button" data-profile="2">P2</button>
@@ -262,11 +269,11 @@
                     <input type="number" inputmode="decimal" id="input-shot-time" placeholder="30" class="shot-preview-input">
                 </div>
                 <div class="form-group">
-                    <label for="input-shot-dose">Dose In (g)</label>
+                    <label for="input-shot-dose">Dose in</label>
                     <input type="number" inputmode="decimal" step="0.1" id="input-shot-dose" placeholder="18.0" class="shot-preview-input">
                 </div>
                 <div class="form-group">
-                    <label for="input-shot-yield">Yield Out (g)</label>
+                    <label for="input-shot-yield">Yield out</label>
                     <input type="number" inputmode="decimal" step="0.1" id="input-shot-yield" placeholder="36.0" class="shot-preview-input">
                 </div>
             </div>
@@ -277,8 +284,8 @@
             <div id="log-butler-preview-text" class="preview-text">Input data to see extraction advice.</div>
         </div>
 
-        <div class="view-actions">
-            <button class="btn" id="btn-save-shot" type="button">Log Extraction</button>
+        <div class="view-actions shot-actions">
+            <button class="btn" id="btn-save-shot" type="button">Save Shot</button>
             <button class="btn btn-secondary stack-action" id="btn-cancel-shot" type="button">Cancel</button>
             <button class="btn btn-danger hidden delete-shot-action" id="btn-delete-shot" type="button">Delete Log</button>
         </div>
@@ -404,6 +411,7 @@
         <div class="view-actions">
             <button class="btn" id="btn-save-profile" type="button">Update Profile</button>
             <button class="btn btn-secondary" id="btn-export-data" type="button">Export Data (CSV)</button>
+            <button class="btn btn-secondary settings-signout" id="btn-logout-settings" type="button">Sign Out</button>
         </div>
 
         <div class="build-info">

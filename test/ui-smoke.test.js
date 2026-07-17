@@ -43,6 +43,16 @@ describe("UI smoke guardrails", () => {
         assert.match(rules, /"finerDirection"/);
     });
 
+    it("keeps the phone shot form compact with an always-reachable save action", () => {
+        assert.match(html, /class="form-grid shot-grid"/);
+        assert.match(html, /id="btn-cancel-shot-top"/);
+        assert.match(css, /\.shot-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s);
+        assert.match(css, /#view-log-shot \.shot-actions\s*\{[^}]*position:\s*fixed;/s);
+        assert.match(css, /body\[data-view="log-shot"\] #top-bar/);
+        assert.match(appJs, /document\.body\.dataset\.view = viewName/);
+        assert.match(html, /id="btn-logout-settings"/);
+    });
+
     it("uses local install assets and registers an offline shell", () => {
         assert.match(html, /href="icon\.svg"/);
         assert.match(manifest, /"src": "icon\.svg"/);
