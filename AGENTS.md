@@ -56,7 +56,8 @@ If you change Cloud Functions dependencies, also review `functions/package.json`
 - The floating add/log buttons are route-aware.
 - The app uses Google sign-in and routes by hash/history state.
 - CSV export should work from Settings without requiring extra dependencies.
-- Machine care records show only the latest reminder for each service type as active; older reminders remain visible as history.
+- Machine care is one-tap for common Elizabeth tasks: after-use steam wand and filterholder cleaning, weekly machine cleaning, monthly backflushing, and resin-filter changes. Custom logs stay secondary.
+- Machine care records show only the latest reminder for each service type as active; older reminders remain visible as history. Manual-based weekly/monthly tasks calculate their next due date automatically.
 
 ## Style Of Changes
 

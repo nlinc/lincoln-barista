@@ -110,6 +110,28 @@ const localDateKey = (date = new Date()) => [
 
 const maintenanceTime = (record) => parseDateKey(record?.completedDate)?.getTime() || 0;
 
+const maintenancePresets = [
+    { type: "Steam wand clean", icon: "💨", title: "Steam wand", action: "Wand cleaned", cadence: "After every use", detail: "Wipe with a damp cloth and purge briefly." },
+    { type: "Filterholder clean", icon: "☕", title: "Filterholder", action: "Filterholder cleaned", cadence: "After every use", detail: "Remove oily coffee residue after brewing." },
+    { type: "Machine clean", icon: "✨", title: "Machine wipe-down", action: "Machine cleaned", cadence: "Weekly", detail: "Soft cloth and plain water.", daysUntilDue: 7 },
+    { type: "Backflush", icon: "💧", title: "Backflush", action: "Backflush done", cadence: "Monthly", detail: "Blind filter and 3–5 g detergent.", monthsUntilDue: 1 },
+    { type: "Water filter", icon: "🚰", title: "Resin filter", action: "Filter changed", cadence: "By water usage", detail: "Follow the liter capacity on the filter pack." }
+];
+
+const presetDueDate = (preset, completedDate) => {
+    const date = parseDateKey(completedDate);
+    if (!date) return "";
+    if (preset.daysUntilDue) date.setDate(date.getDate() + preset.daysUntilDue);
+    else if (preset.monthsUntilDue) {
+        const day = date.getDate();
+        date.setDate(1);
+        date.setMonth(date.getMonth() + preset.monthsUntilDue);
+        const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+        date.setDate(Math.min(day, lastDay));
+    } else return "";
+    return localDateKey(date);
+};
+
 const maintenanceDueState = (dueDate) => {
     const due = parseDateKey(dueDate);
     if (!due || Number.isNaN(due.getTime())) return { tone: "none", label: "No reminder" };
@@ -916,6 +938,7 @@ const app = {
     renderMaintenance: () => {
         const list = document.getElementById('maintenance-list');
         const summary = document.getElementById('maintenance-summary');
+        const quickActions = document.getElementById('maintenance-quick-actions');
         const latestByType = new Map();
         maintenanceRecords.forEach(record => {
             if (!latestByType.has(record.type)) latestByType.set(record.type, record);
@@ -936,8 +959,34 @@ const app = {
             return card;
         }));
 
+        const today = localDateKey();
+        quickActions.replaceChildren(...maintenancePresets.map(preset => {
+            const latest = latestByType.get(preset.type);
+            const completedToday = latest?.completedDate === today;
+            const card = el("article", "maintenance-quick-card");
+            const icon = el("div", "maintenance-quick-icon", preset.icon);
+            icon.setAttribute("aria-hidden", "true");
+            const copy = el("div", "maintenance-quick-copy");
+            copy.append(
+                el("div", "maintenance-quick-title", preset.title),
+                el("div", "maintenance-quick-cadence", preset.cadence),
+                el("div", "maintenance-quick-detail", preset.detail)
+            );
+            if (latest) {
+                const lastDone = completedToday ? "Done today" : `Last ${parseDateKey(latest.completedDate).toLocaleDateString()}`;
+                const due = latest.nextDueDate ? ` • ${maintenanceDueState(latest.nextDueDate).label}` : "";
+                copy.appendChild(el("div", "maintenance-quick-last", lastDone + due));
+            }
+            const button = el("button", `btn maintenance-quick-button${completedToday ? " is-done" : ""}`, completedToday ? "Done today ✓" : preset.action);
+            button.type = "button";
+            button.disabled = completedToday;
+            button.addEventListener("click", () => app.saveMaintenancePreset(preset, button));
+            card.append(icon, copy, button);
+            return card;
+        }));
+
         if (!maintenanceRecords.length) {
-            renderEmpty(list, "No maintenance logged yet. Add your first completed service above.");
+            renderEmpty(list, "Nothing logged yet. Tap a button above when you finish a task.");
             return;
         }
         list.replaceChildren(...maintenanceRecords.map(record => {
@@ -957,6 +1006,30 @@ const app = {
             row.appendChild(remove);
             return row;
         }));
+    },
+    saveMaintenancePreset: async (preset, button) => {
+        const completedDate = localDateKey();
+        const data = {
+            uid: currentUser.uid,
+            type: preset.type,
+            completedDate,
+            nextDueDate: presetDueDate(preset, completedDate),
+            notes: "",
+            createdAt: new Date()
+        };
+        button.disabled = true;
+        button.textContent = "Logging...";
+        try {
+            const created = await addDoc(collection(db, "maintenance_records"), data);
+            maintenanceRecords.push({ id: created.id, ...data });
+            maintenanceRecords.sort((a, b) => maintenanceTime(b) - maintenanceTime(a));
+            app.renderMaintenance();
+            haptic('medium');
+        } catch (error) {
+            button.disabled = false;
+            button.textContent = preset.action;
+            alert(error.message);
+        }
     },
     saveMaintenance: async () => {
         const button = document.getElementById('btn-save-maintenance');

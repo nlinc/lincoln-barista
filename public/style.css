@@ -506,6 +506,19 @@ input.visually-hidden {
 }
 .maintenance-metric-value { color: var(--roast-light); font-family: 'Outfit', sans-serif; font-size: 1.45rem; font-weight: 800; }
 .maintenance-metric-label { color: var(--text-muted); font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; }
+.maintenance-primary { margin-bottom: 2rem; }
+.maintenance-quick-actions { display: grid; gap: 0.75rem; }
+.maintenance-quick-card {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 1rem;
+    background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: var(--radius-md); padding: 1rem;
+}
+.maintenance-quick-icon { display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 12px; background: rgba(255,255,255,0.08); font-size: 1.3rem; }
+.maintenance-quick-title { font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 800; }
+.maintenance-quick-cadence { color: var(--roast-light); font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.15rem; }
+.maintenance-quick-detail, .maintenance-quick-last { color: var(--text-muted); font-size: 0.76rem; line-height: 1.4; margin-top: 0.2rem; }
+.maintenance-quick-last { color: var(--text-secondary); font-weight: 700; }
+.maintenance-quick-button { width: 170px; min-height: 48px; padding: 0.75rem 1rem; box-shadow: none; }
+.maintenance-quick-button.is-done { background: var(--success-bg); color: var(--success-text); border: 1px solid rgba(74,222,128,0.35); opacity: 1; }
 .maintenance-row {
     position: relative; background: var(--panel-bg); border: 1px solid var(--panel-border);
     border-left: 5px solid var(--text-muted); border-radius: var(--radius-md); padding: 1.15rem; margin-bottom: 0.85rem;
@@ -523,6 +536,15 @@ input.visually-hidden {
 .maintenance-badge-scheduled { color: var(--success-text); background: var(--success-bg); }
 .maintenance-badge-none { color: var(--text-muted); background: rgba(255,255,255,0.07); }
 .maintenance-delete { position: absolute; right: 1rem; bottom: 1rem; }
+.maintenance-disclosure { padding: 0; overflow: hidden; }
+.maintenance-disclosure summary { cursor: pointer; padding: 1.15rem 1.35rem; font-weight: 800; list-style-position: inside; }
+.maintenance-disclosure[open] summary { border-bottom: 1px solid var(--panel-border); }
+.manual-guidance, .maintenance-custom-form { padding: 1.25rem 1.35rem; }
+.manual-guidance p { color: var(--text-secondary); font-size: 0.85rem; line-height: 1.55; margin: 0 0 0.85rem; }
+.manual-guidance p:last-of-type { margin-bottom: 0; }
+.manual-guidance strong { color: var(--text-main); }
+.manual-guidance .manual-warning { color: var(--warning-text); background: var(--warning-bg); border-radius: var(--radius-sm); padding: 0.85rem; }
+.manual-source { color: var(--text-muted); font-size: 0.68rem; margin-top: 0.85rem; }
 
 @media (max-width: 500px) {
     #top-bar {
@@ -571,6 +593,8 @@ input.visually-hidden {
     .maintenance-heading { align-items: flex-start; }
     .machine-name-chip { max-width: 45%; text-align: right; }
     .maintenance-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .maintenance-quick-card { grid-template-columns: auto minmax(0, 1fr); gap: 0.8rem; }
+    .maintenance-quick-button { grid-column: 1 / -1; width: 100%; }
     .maintenance-row-heading { align-items: flex-start; padding-right: 0; }
     .maintenance-notes { padding-right: 0; padding-bottom: 2.6rem; }
     .view-actions {

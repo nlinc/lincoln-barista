@@ -18,8 +18,8 @@ describe("UI smoke guardrails", () => {
     });
 
     it("keeps cache-busted app assets on the current release", () => {
-        assert.match(html, /style\.css\?v=1\.7\.0/);
-        assert.match(html, /js\/app\.js\?v=1\.7\.0/);
+        assert.match(html, /style\.css\?v=1\.7\.1/);
+        assert.match(html, /js\/app\.js\?v=1\.7\.1/);
     });
 
     it("caps detail bean images and hides the native file input", () => {
@@ -68,13 +68,24 @@ describe("UI smoke guardrails", () => {
 
     it("tracks owned maintenance records without injecting user notes as HTML", () => {
         assert.match(html, /id="view-maintenance"/);
+        assert.match(html, /id="maintenance-quick-actions"/);
         assert.match(html, /id="maintenance-next-date"/);
         assert.match(appJs, /collection\(db, "maintenance_records"\)/);
+        assert.match(appJs, /saveMaintenancePreset/);
+        assert.match(appJs, /monthsUntilDue:\s*1/);
+        assert.match(appJs, /daysUntilDue:\s*7/);
         assert.match(appJs, /maintenance-notes/);
         assert.match(appJs, /textContent/);
         assert.doesNotMatch(appJs, /maintenance[^\n]*innerHTML/i);
         assert.match(rules, /match \/maintenance_records\/\{docId\}/);
         assert.match(rules, /validMaintenanceRecord/);
+    });
+
+    it("keeps Lelit manual guidance beside one-tap care actions", () => {
+        assert.match(html, /After every use:<\/strong> Wipe the steam wand/);
+        assert.match(html, /Monthly:<\/strong> Backflush/);
+        assert.match(html, /Never put descaling products in the water tank/);
+        assert.match(html, /Lelit Elizabeth PL92T manual, pages 23–25/);
     });
 
     it("reuses shot history instead of refetching it for every screen", () => {

@@ -13,7 +13,7 @@ A personal espresso tracking Progressive Web App (PWA) designed to help dial in 
 * **History Grouping:** Logs are grouped by the specific "Roast Batch" date to account for bean aging.
 * **Smart Sorting:** Filter beans by Newest, Rating, or Name.
 * **Age Trends:** Compare days off roast with grind movement, flow drift, consistency, and target-shot rate.
-* **Machine Maintenance:** Log completed service, set optional next-due dates, and spot upcoming or overdue care.
+* **Machine Maintenance:** Log common Elizabeth cleaning tasks with one tap, calculate scheduled care automatically, and spot upcoming or overdue work.
 * **Mobile First:** Designed as a PWA to look and feel like a native app on iOS/Android.
 
 ## 🛠️ Tech Stack
