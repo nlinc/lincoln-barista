@@ -94,6 +94,20 @@ service cloud.firestore {
         data.date is timestamp;
     }
 
+    function validMaintenanceRecord(data) {
+      return data.keys().hasOnly([
+          "uid", "type", "completedDate", "nextDueDate", "notes", "createdAt"
+        ]) &&
+        data.keys().hasAll(["uid", "type", "completedDate", "createdAt"]) &&
+        data.uid is string &&
+        data.type is string && data.type.size() > 0 && data.type.size() <= 80 &&
+        data.completedDate is string && data.completedDate.size() == 10 &&
+        optionalString(data, "nextDueDate") &&
+        optionalString(data, "notes") &&
+        (!("notes" in data) || data.notes == null || data.notes.size() <= 500) &&
+        data.createdAt is timestamp;
+    }
+
     match /user_profiles/{userId} {
       allow read: if signedIn() && request.auth.uid == userId;
       allow create, update: if signedIn() && request.auth.uid == userId && validProfile(request.resource.data);
@@ -110,6 +124,12 @@ service cloud.firestore {
       allow read, delete: if ownsExistingDoc();
       allow create: if ownsNewDoc() && validBrewLog(request.resource.data);
       allow update: if keepsOwner() && validBrewLog(request.resource.data);
+    }
+
+    match /maintenance_records/{docId} {
+      allow read, delete: if ownsExistingDoc();
+      allow create: if ownsNewDoc() && validMaintenanceRecord(request.resource.data);
+      allow update: if keepsOwner() && validMaintenanceRecord(request.resource.data);
     }
   }
 }

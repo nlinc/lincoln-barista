@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"></noscript>
-    <link rel="stylesheet" href="style.css?v=1.6.0">
+    <link rel="stylesheet" href="style.css?v=1.7.0">
 </head>
 <body>
 
@@ -27,6 +27,7 @@
         <div class="app-logo">Lincoln <span>Barista <small>Platinum</small></span></div>
         <div class="top-actions">
             <button class="icon-btn" id="btn-open-analytics" type="button" aria-label="Open analytics" title="Analytics">📊</button>
+            <button class="icon-btn" id="btn-open-maintenance" type="button" aria-label="Open machine care" title="Machine care">🔧</button>
             <button class="icon-btn" id="btn-open-settings" type="button" aria-label="Open settings" title="Settings">⚙️</button>
             <button class="logout-btn" id="btn-logout" type="button">Logout</button>
         </div>
@@ -338,6 +339,58 @@
         </div>
     </div>
 
+    <!-- VIEW: MAINTENANCE -->
+    <div id="view-maintenance" class="view">
+        <button class="btn-secondary back-btn" type="button" data-route="list">← Collection</button>
+        <div class="maintenance-heading">
+            <div>
+                <div class="field-kicker">Machine care</div>
+                <h2 class="large-heading">Maintenance</h2>
+            </div>
+            <div id="maintenance-machine-name" class="machine-name-chip"></div>
+        </div>
+
+        <div id="maintenance-summary" class="maintenance-summary" aria-label="Maintenance summary"></div>
+
+        <div class="card">
+            <div class="section-label">Log completed service</div>
+            <div class="form-grid two-col">
+                <div class="form-group">
+                    <label for="maintenance-type">Service</label>
+                    <select id="maintenance-type">
+                        <option value="Backflush">Backflush</option>
+                        <option value="Group head clean">Group head clean</option>
+                        <option value="Descale">Descale</option>
+                        <option value="Water filter">Water filter</option>
+                        <option value="Steam wand clean">Steam wand clean</option>
+                        <option value="Grinder clean">Grinder clean</option>
+                        <option value="Gasket replacement">Gasket replacement</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="maintenance-completed-date">Completed</label>
+                    <input type="date" id="maintenance-completed-date">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="maintenance-next-date">Next due (optional)</label>
+                <input type="date" id="maintenance-next-date">
+            </div>
+            <div class="form-group">
+                <label for="maintenance-notes">Notes (optional)</label>
+                <textarea id="maintenance-notes" maxlength="500" rows="3" placeholder="Cleaner used, parts replaced, observations…"></textarea>
+            </div>
+            <button class="btn" id="btn-save-maintenance" type="button">Save Service</button>
+        </div>
+
+        <div class="section-stack">
+            <div class="field-kicker section-kicker">Service history</div>
+            <div id="maintenance-status" class="status-strip hidden"></div>
+            <div id="maintenance-list"></div>
+        </div>
+    </div>
+
     <!-- VIEW: SETTINGS -->
     <div id="view-settings" class="view">
         <button class="btn-secondary back-btn" type="button" data-route="list">← Back</button>
@@ -418,7 +471,7 @@
         </div>
 
         <div class="build-info">
-            Lincoln Barista 1.6.0 • Build <code id="build-commit">__BUILD_COMMIT__</code>
+            Lincoln Barista 1.7.0 • Build <code id="build-commit">__BUILD_COMMIT__</code>
         </div>
     </div>
 
@@ -427,6 +480,6 @@
     <button class="fab hidden" id="fab-log-shot" type="button" aria-label="Log Shot">☕</button>
 
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.6.0"></script>
+    <script type="module" src="js/app.js?v=1.7.0"></script>
 </body>
 </html>

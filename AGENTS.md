@@ -44,6 +44,7 @@ If you change Cloud Functions dependencies, also review `functions/package.json`
 
 - Do not commit secrets. Firebase client config is public app configuration, but API secrets belong in Firebase/Google secret management.
 - Keep Firestore document ownership checks tied to `uid`.
+- Store machine service history in `maintenance_records`; records must remain scoped to the signed-in user's `uid`.
 - Store new bean photos in Firebase Storage under `users/{uid}/beans/{beanId}/...`; keep legacy Firestore `image` data readable but do not create new base64 image fields.
 - Be careful with destructive operations. Beans should be archived with `archived: true` instead of deleted; shot logs can still be deleted after confirmation.
 - Cloud Functions use Firebase Functions v2 and Node 22.
@@ -55,6 +56,7 @@ If you change Cloud Functions dependencies, also review `functions/package.json`
 - The floating add/log buttons are route-aware.
 - The app uses Google sign-in and routes by hash/history state.
 - CSV export should work from Settings without requiring extra dependencies.
+- Machine care records show only the latest reminder for each service type as active; older reminders remain visible as history.
 
 ## Style Of Changes
 

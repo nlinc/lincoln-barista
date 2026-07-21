@@ -49,6 +49,7 @@ let currentEditingImagePath = null;
 let currentRecipeShot = null;
 let analyticsScope = 'all';
 let legacyMigrationStarted = false;
+let maintenanceRecords = [];
 
 // --- UTILS ---
 const haptic = (type = 'light') => {
@@ -97,6 +98,28 @@ const formatDate = (dateLike) => {
     if (!dateLike) return "";
     const date = dateLike.toDate ? dateLike.toDate() : new Date(dateLike.seconds ? dateLike.seconds * 1000 : dateLike);
     return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString();
+};
+
+const parseDateKey = (value) => value ? new Date(`${value}T00:00:00`) : null;
+
+const localDateKey = (date = new Date()) => [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0")
+].join("-");
+
+const maintenanceTime = (record) => parseDateKey(record?.completedDate)?.getTime() || 0;
+
+const maintenanceDueState = (dueDate) => {
+    const due = parseDateKey(dueDate);
+    if (!due || Number.isNaN(due.getTime())) return { tone: "none", label: "No reminder" };
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const days = Math.round((due.getTime() - today.getTime()) / 86400000);
+    if (days < 0) return { tone: "overdue", label: `${Math.abs(days)}d overdue` };
+    if (days === 0) return { tone: "due", label: "Due today" };
+    if (days <= 30) return { tone: "due", label: `Due in ${days}d` };
+    return { tone: "scheduled", label: `Due ${due.toLocaleDateString()}` };
 };
 
 const downloadCsv = (filename, rows) => {
@@ -250,6 +273,14 @@ const app = {
     removeCachedLog: (logId) => {
         allLogsCache = allLogsCache.filter(log => log.id !== logId);
         logsCache = logsCache.filter(log => log.id !== logId);
+    },
+    fetchMaintenance: async () => {
+        const q = query(collection(db, "maintenance_records"), where("uid", "==", currentUser.uid));
+        const snapshot = await getDocs(q);
+        maintenanceRecords = snapshot.docs
+            .map(recordDoc => ({ id: recordDoc.id, ...recordDoc.data() }))
+            .sort((a, b) => maintenanceTime(b) - maintenanceTime(a));
+        return maintenanceRecords;
     },
     fetchBeans: async () => {
         const container = document.getElementById('bean-list-container');
@@ -865,6 +896,109 @@ const app = {
         await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
         app.router('list');
     },
+    openMaintenance: async () => {
+        app.router('maintenance');
+        document.getElementById('maintenance-machine-name').textContent = userProfile.machineName || "Espresso machine";
+        document.getElementById('maintenance-completed-date').value = localDateKey();
+        const status = document.getElementById('maintenance-status');
+        status.textContent = "Syncing service history...";
+        status.className = "status-strip";
+        try {
+            await app.fetchMaintenance();
+            status.classList.add('hidden');
+            app.renderMaintenance();
+        } catch (error) {
+            console.error("Maintenance fetch error:", error);
+            status.textContent = "Couldn't sync maintenance history. Check your connection and try again.";
+            status.className = "status-strip status-error";
+        }
+    },
+    renderMaintenance: () => {
+        const list = document.getElementById('maintenance-list');
+        const summary = document.getElementById('maintenance-summary');
+        const latestByType = new Map();
+        maintenanceRecords.forEach(record => {
+            if (!latestByType.has(record.type)) latestByType.set(record.type, record);
+        });
+        const activeReminders = [...latestByType.values()].filter(record => record.nextDueDate);
+        const overdue = activeReminders.filter(record => maintenanceDueState(record.nextDueDate).tone === "overdue").length;
+        const dueSoon = activeReminders.filter(record => maintenanceDueState(record.nextDueDate).tone === "due").length;
+        const newest = maintenanceRecords[0];
+        const summaryItems = [
+            [maintenanceRecords.length, "Services logged"],
+            [overdue, "Overdue"],
+            [dueSoon, "Due in 30 days"],
+            [newest ? parseDateKey(newest.completedDate).toLocaleDateString() : "—", "Last service"]
+        ];
+        summary.replaceChildren(...summaryItems.map(([value, label]) => {
+            const card = el("div", "maintenance-metric");
+            card.append(el("span", "maintenance-metric-value", value), el("span", "maintenance-metric-label", label));
+            return card;
+        }));
+
+        if (!maintenanceRecords.length) {
+            renderEmpty(list, "No maintenance logged yet. Add your first completed service above.");
+            return;
+        }
+        list.replaceChildren(...maintenanceRecords.map(record => {
+            const isLatest = latestByType.get(record.type)?.id === record.id;
+            const state = isLatest ? maintenanceDueState(record.nextDueDate) : { tone: "none", label: "Past record" };
+            const row = el("article", `maintenance-row maintenance-${state.tone}`);
+            const heading = el("div", "maintenance-row-heading");
+            const title = el("div", "maintenance-row-title", record.type);
+            const badge = el("span", `maintenance-badge maintenance-badge-${state.tone}`, state.label);
+            heading.append(title, badge);
+            row.append(heading, el("div", "maintenance-date", `Completed ${parseDateKey(record.completedDate).toLocaleDateString()}`));
+            if (record.notes) row.appendChild(el("div", "maintenance-notes", record.notes));
+            const remove = el("button", "btn-secondary small-btn maintenance-delete", "Delete");
+            remove.type = "button";
+            remove.setAttribute("aria-label", `Delete ${record.type} record from ${record.completedDate}`);
+            remove.addEventListener("click", () => app.deleteMaintenance(record.id));
+            row.appendChild(remove);
+            return row;
+        }));
+    },
+    saveMaintenance: async () => {
+        const button = document.getElementById('btn-save-maintenance');
+        const completedDate = document.getElementById('maintenance-completed-date').value;
+        const nextDueDate = document.getElementById('maintenance-next-date').value;
+        if (!completedDate) return alert("Choose the date this service was completed.");
+        if (nextDueDate && nextDueDate < completedDate) return alert("Next due date must be after the completed date.");
+        const data = {
+            uid: currentUser.uid,
+            type: document.getElementById('maintenance-type').value,
+            completedDate,
+            nextDueDate,
+            notes: document.getElementById('maintenance-notes').value.trim(),
+            createdAt: new Date()
+        };
+        button.disabled = true;
+        button.textContent = "Saving...";
+        try {
+            const created = await addDoc(collection(db, "maintenance_records"), data);
+            maintenanceRecords.push({ id: created.id, ...data });
+            maintenanceRecords.sort((a, b) => maintenanceTime(b) - maintenanceTime(a));
+            document.getElementById('maintenance-next-date').value = '';
+            document.getElementById('maintenance-notes').value = '';
+            app.renderMaintenance();
+            haptic('medium');
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            button.disabled = false;
+            button.textContent = "Save Service";
+        }
+    },
+    deleteMaintenance: async (recordId) => {
+        if (!confirm("Delete this maintenance record?")) return;
+        try {
+            await deleteDoc(doc(db, "maintenance_records", recordId));
+            maintenanceRecords = maintenanceRecords.filter(record => record.id !== recordId);
+            app.renderMaintenance();
+        } catch (error) {
+            alert(error.message);
+        }
+    },
     openAnalytics: async (scope = analyticsScope) => {
         analyticsScope = scope;
         app.router('analytics');
@@ -976,9 +1110,10 @@ const app = {
         }));
     },
     exportData: async () => {
-        const [logs, beanSnap] = await Promise.all([
+        const [logs, beanSnap, maintenance] = await Promise.all([
             app.fetchAllLogs(),
-            getDocs(query(collection(db, "beans"), where("uid", "==", currentUser.uid)))
+            getDocs(query(collection(db, "beans"), where("uid", "==", currentUser.uid))),
+            app.fetchMaintenance()
         ]);
         const beanLookup = new Map(beanSnap.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
         const rows = [["date", "bean", "roaster", "roast_date", "grind", "time", "dose", "yield"]];
@@ -987,6 +1122,9 @@ const app = {
             rows.push([formatDate(log.date), bean.name || log.beanId, bean.roaster || "", log.roastDate || "", log.grind, log.time, log.dose, log.yield]);
         });
         downloadCsv("lincoln-barista-export.csv", rows);
+        const maintenanceRows = [["completed_date", "service", "next_due_date", "notes"]];
+        maintenance.forEach(record => maintenanceRows.push([record.completedDate, record.type, record.nextDueDate, record.notes]));
+        downloadCsv("lincoln-barista-maintenance.csv", maintenanceRows);
     },
     repeatCurrentRecipe: async () => {
         if (!currentRecipeShot || !currentActiveBean) return app.openLogShot();
@@ -1019,6 +1157,7 @@ onAuthStateChanged(auth, u => {
     app.fetchBeans();
 });
 on("btn-login", "click", () => app.login()); on("btn-open-settings", "click", () => app.openSettings()); on("btn-logout", "click", () => app.logout()); on("btn-logout-settings", "click", () => app.logout());
+on("btn-open-maintenance", "click", () => app.openMaintenance()); on("btn-save-maintenance", "click", () => app.saveMaintenance());
 on("input-sort-beans", "change", (e) => app.setSort(e.target.value)); on("fab-add-bean", "click", () => { app.resetBeanForm(); app.router("edit-bean"); }); on("fab-log-shot", "click", () => app.openLogShot());
 on("input-bean-image", "change", (e) => app.handleImageUpload(e)); on("btn-remove-image", "click", () => app.removeImage()); on("btn-add-tag", "click", () => app.addTag());
 on("input-new-tag", "keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); app.addTag(); } });

@@ -294,6 +294,7 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
 #view-edit-bean label,
 #view-log-shot label,
 #view-settings label,
+#view-maintenance label,
 .form-label,
 .section-label {
     display: block; color: var(--text-muted); font-size: 0.72rem; font-weight: 850;
@@ -304,6 +305,9 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
 #view-log-shot input:not([type="hidden"]),
 #view-settings input:not([type="checkbox"]),
 #view-settings select,
+#view-maintenance input,
+#view-maintenance select,
+#view-maintenance textarea,
 .sort-select {
     display: block; width: 100%; min-height: 48px; border: 1px solid var(--panel-border); border-radius: var(--radius-sm);
     background: rgba(0,0,0,0.28); color: var(--text-main); padding: 0 0.9rem; font: inherit;
@@ -314,7 +318,11 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
 #view-log-shot input:focus,
 #view-settings input:focus,
 #view-settings select:focus,
+#view-maintenance input:focus,
+#view-maintenance select:focus,
+#view-maintenance textarea:focus,
 .sort-select:focus { border-color: var(--roast-light); box-shadow: 0 0 0 3px rgba(245,158,11,0.14); }
+#view-maintenance textarea { padding: 0.8rem 0.9rem; resize: vertical; line-height: 1.5; }
 select { cursor: pointer; }
 .sort-select {
     width: auto; min-width: 132px; color: var(--text-main);
@@ -340,6 +348,7 @@ input.visually-hidden {
 #view-edit-bean .card,
 #view-log-shot .card,
 #view-settings .card { padding: 1.35rem; }
+#view-maintenance .card { padding: 1.35rem; }
 #view-edit-bean .form-group:last-child,
 #view-log-shot .form-group:last-child,
 #view-settings .form-group:last-child { margin-bottom: 0; }
@@ -483,6 +492,38 @@ input.visually-hidden {
     color: var(--text-secondary); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/* --- MAINTENANCE --- */
+.maintenance-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.maintenance-heading .large-heading { margin-bottom: 1.25rem; }
+.machine-name-chip {
+    color: var(--text-secondary); background: var(--panel-bg); border: 1px solid var(--panel-border);
+    border-radius: 999px; padding: 0.55rem 0.85rem; font-size: 0.75rem; font-weight: 700;
+}
+.maintenance-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; margin-bottom: 1.25rem; }
+.maintenance-metric {
+    display: flex; flex-direction: column; gap: 0.35rem; min-width: 0;
+    background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: var(--radius-sm); padding: 1rem;
+}
+.maintenance-metric-value { color: var(--roast-light); font-family: 'Outfit', sans-serif; font-size: 1.45rem; font-weight: 800; }
+.maintenance-metric-label { color: var(--text-muted); font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; }
+.maintenance-row {
+    position: relative; background: var(--panel-bg); border: 1px solid var(--panel-border);
+    border-left: 5px solid var(--text-muted); border-radius: var(--radius-md); padding: 1.15rem; margin-bottom: 0.85rem;
+}
+.maintenance-row.maintenance-overdue { border-left-color: var(--error-text); }
+.maintenance-row.maintenance-due { border-left-color: var(--warning-text); }
+.maintenance-row.maintenance-scheduled { border-left-color: var(--success-text); }
+.maintenance-row-heading { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding-right: 4.5rem; }
+.maintenance-row-title { font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 800; }
+.maintenance-date, .maintenance-notes { color: var(--text-muted); font-size: 0.8rem; line-height: 1.45; margin-top: 0.35rem; }
+.maintenance-notes { color: var(--text-secondary); white-space: pre-wrap; padding-right: 4.5rem; }
+.maintenance-badge { border-radius: 999px; padding: 0.3rem 0.55rem; font-size: 0.62rem; font-weight: 800; white-space: nowrap; }
+.maintenance-badge-overdue { color: var(--error-text); background: var(--error-bg); }
+.maintenance-badge-due { color: var(--warning-text); background: var(--warning-bg); }
+.maintenance-badge-scheduled { color: var(--success-text); background: var(--success-bg); }
+.maintenance-badge-none { color: var(--text-muted); background: rgba(255,255,255,0.07); }
+.maintenance-delete { position: absolute; right: 1rem; bottom: 1rem; }
+
 @media (max-width: 500px) {
     #top-bar {
         padding: max(0.65rem, env(safe-area-inset-top)) 0.85rem 0.65rem;
@@ -527,6 +568,11 @@ input.visually-hidden {
     #global-stats-content { grid-template-columns: 1fr; }
     .analytics-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .pattern-list { grid-template-columns: 1fr; }
+    .maintenance-heading { align-items: flex-start; }
+    .machine-name-chip { max-width: 45%; text-align: right; }
+    .maintenance-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .maintenance-row-heading { align-items: flex-start; padding-right: 0; }
+    .maintenance-notes { padding-right: 0; padding-bottom: 2.6rem; }
     .view-actions {
         flex-direction: column;
         align-items: stretch;
