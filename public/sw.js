@@ -2,11 +2,11 @@ const CACHE_NAME = "lincoln-barista-__BUILD_COMMIT__";
 const APP_SHELL = [
     "/",
     "/index.html",
-    "/style.css?v=1.7.1",
-    "/js/app.js?v=1.7.1",
-    "/js/brew-advice.js",
-    "/js/shot-analytics.js",
-    "/js/firebase-config.js",
+    "/style.css?v=1.7.2",
+    "/js/app.js?v=1.7.2",
+    "/js/brew-advice.js?v=1.7.2",
+    "/js/shot-analytics.js?v=1.7.2",
+    "/js/firebase-config.js?v=1.7.2",
     "/manifest.json",
     "/icon.svg"
 ];
@@ -34,6 +34,12 @@ self.addEventListener("fetch", event => {
         const copy = response.clone();
         return caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
     });
+
+    if (event.request.mode === "navigate") {
+        event.respondWith(network.catch(() => caches.match("/index.html")));
+        event.waitUntil(update.catch(() => {}));
+        return;
+    }
 
     event.respondWith(
         caches.match(event.request).then(cached => {

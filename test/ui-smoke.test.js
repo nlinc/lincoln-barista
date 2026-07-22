@@ -10,6 +10,7 @@ const storageRules = readFileSync(new URL("../storage.rules", import.meta.url), 
 const manifest = readFileSync(new URL("../public/manifest.json", import.meta.url), "utf8");
 const serviceWorker = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
 const firebaseConfig = readFileSync(new URL("../firebase.json", import.meta.url), "utf8");
+const analyticsJs = readFileSync(new URL("../public/js/shot-analytics.js", import.meta.url), "utf8");
 const mergeWorkflow = readFileSync(new URL("../.github/workflows/firebase-hosting-merge.yml", import.meta.url), "utf8");
 const previewWorkflow = readFileSync(new URL("../.github/workflows/firebase-hosting-pull-request.yml", import.meta.url), "utf8");
 
@@ -18,9 +19,20 @@ describe("UI smoke guardrails", () => {
         assert.doesNotMatch(html, /\sstyle="/);
     });
 
+    it("keeps client DOM references aligned with the app shell", () => {
+        const referencedIds = [...appJs.matchAll(/getElementById\(["']([^"']+)["']\)/g)].map(match => match[1]);
+        for (const id of new Set(referencedIds)) assert.match(html, new RegExp(`id="${id}"`));
+    });
+
     it("keeps cache-busted app assets on the current release", () => {
-        assert.match(html, /style\.css\?v=1\.7\.1/);
-        assert.match(html, /js\/app\.js\?v=1\.7\.1/);
+        assert.match(html, /style\.css\?v=1\.7\.2/);
+        assert.match(html, /js\/app\.js\?v=1\.7\.2/);
+        assert.match(appJs, /firebase-config\.js\?v=1\.7\.2/);
+        assert.match(appJs, /brew-advice\.js\?v=1\.7\.2/);
+        assert.match(appJs, /shot-analytics\.js\?v=1\.7\.2/);
+        assert.match(analyticsJs, /brew-advice\.js\?v=1\.7\.2/);
+        assert.match(serviceWorker, /js\/app\.js\?v=1\.7\.2/);
+        assert.match(serviceWorker, /js\/brew-advice\.js\?v=1\.7\.2/);
     });
 
     it("caps detail bean images and hides the native file input", () => {
@@ -109,6 +121,8 @@ describe("UI smoke guardrails", () => {
         assert.doesNotMatch(html, /Gemini|True AI|daily-tip-text/i);
         assert.doesNotMatch(appJs, /httpsCallable|getFunctions|Gemini|aiEnabled|aiCache|getAIAdvice|Butler/);
         assert.doesNotMatch(firebaseConfig, /"functions"/);
+        assert.match(serviceWorker, /request\.mode === "navigate"/);
+        assert.match(serviceWorker, /respondWith\(network\.catch/);
         assert.match(serviceWorker, /caches\.match\(event\.request\)/);
         assert.match(serviceWorker, /event\.waitUntil\(update\.catch/);
     });

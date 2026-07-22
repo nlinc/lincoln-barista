@@ -7,9 +7,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { firebaseConfig } from "./firebase-config.js";
-import { getBrewAdvice } from "./brew-advice.js";
-import { summarizeShotPatterns, validateShot } from "./shot-analytics.js";
+import { firebaseConfig } from "./firebase-config.js?v=1.7.2";
+import { getBrewAdvice } from "./brew-advice.js?v=1.7.2";
+import { summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.7.2";
 
 // Initialize Firebase
 const appInstance = initializeApp(firebaseConfig);
