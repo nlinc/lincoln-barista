@@ -31,6 +31,7 @@ npm test
 - Preserve the current static HTML/CSS/ES module architecture.
 - Keep Firebase browser imports as CDN ES module imports unless the project is intentionally migrated to a bundler.
 - Keep the release query string synchronized across `index.html`, every local ES-module import, and the service-worker app shell so an update cannot mix incompatible cached modules. Keep document navigations network-first while caching static assets stale-while-revalidate.
+- Keep the current release and deploy-stamped commit visible in the app header, and preserve the service-worker update banner with its explicit refresh action.
 - Do not remove CSS sections just because a class appears unused. Many classes are toggled dynamically from `public/js/app.js`.
 - Check the key screens visually after UI changes: login, collection list, bean form, bean detail, shot log, analytics, and settings.
 - Keep mobile layout intact. The app is intended to work well on phones.

@@ -2,11 +2,11 @@ const CACHE_NAME = "lincoln-barista-__BUILD_COMMIT__";
 const APP_SHELL = [
     "/",
     "/index.html",
-    "/style.css?v=1.7.2",
-    "/js/app.js?v=1.7.2",
-    "/js/brew-advice.js?v=1.7.2",
-    "/js/shot-analytics.js?v=1.7.2",
-    "/js/firebase-config.js?v=1.7.2",
+    "/style.css?v=1.7.3",
+    "/js/app.js?v=1.7.3",
+    "/js/brew-advice.js?v=1.7.3",
+    "/js/shot-analytics.js?v=1.7.3",
+    "/js/firebase-config.js?v=1.7.3",
     "/manifest.json",
     "/icon.svg"
 ];
@@ -21,6 +21,11 @@ self.addEventListener("activate", event => {
         caches.keys()
             .then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))))
             .then(() => self.clients.claim())
+            .then(() => self.clients.matchAll({ type: "window" }))
+            .then(clients => Promise.all(clients.map(client => {
+                client.postMessage({ type: "APP_UPDATE_READY", build: "__BUILD_COMMIT__" });
+                return client.navigate(client.url);
+            })))
     );
 });
 

@@ -25,14 +25,14 @@ describe("UI smoke guardrails", () => {
     });
 
     it("keeps cache-busted app assets on the current release", () => {
-        assert.match(html, /style\.css\?v=1\.7\.2/);
-        assert.match(html, /js\/app\.js\?v=1\.7\.2/);
-        assert.match(appJs, /firebase-config\.js\?v=1\.7\.2/);
-        assert.match(appJs, /brew-advice\.js\?v=1\.7\.2/);
-        assert.match(appJs, /shot-analytics\.js\?v=1\.7\.2/);
-        assert.match(analyticsJs, /brew-advice\.js\?v=1\.7\.2/);
-        assert.match(serviceWorker, /js\/app\.js\?v=1\.7\.2/);
-        assert.match(serviceWorker, /js\/brew-advice\.js\?v=1\.7\.2/);
+        assert.match(html, /style\.css\?v=1\.7\.3/);
+        assert.match(html, /js\/app\.js\?v=1\.7\.3/);
+        assert.match(appJs, /firebase-config\.js\?v=1\.7\.3/);
+        assert.match(appJs, /brew-advice\.js\?v=1\.7\.3/);
+        assert.match(appJs, /shot-analytics\.js\?v=1\.7\.3/);
+        assert.match(analyticsJs, /brew-advice\.js\?v=1\.7\.3/);
+        assert.match(serviceWorker, /js\/app\.js\?v=1\.7\.3/);
+        assert.match(serviceWorker, /js\/brew-advice\.js\?v=1\.7\.3/);
     });
 
     it("caps detail bean images and hides the native file input", () => {
@@ -71,6 +71,11 @@ describe("UI smoke guardrails", () => {
         assert.match(css, /body\[data-view="log-shot"\] #top-bar/);
         assert.match(appJs, /document\.body\.dataset\.view = viewName/);
         assert.match(html, /id="btn-logout-settings"/);
+    });
+
+    it("keeps mobile extraction history compact", () => {
+        assert.match(css, /\.log-row\s*\{[^}]*padding:\s*0\.85rem 1rem;[^}]*margin-bottom:\s*0\.65rem;/s);
+        assert.match(css, /\.log-row-metrics\s*\{[^}]*grid-template-columns:\s*repeat\(3,/s);
     });
 
     it("uses local install assets and registers an offline shell", () => {
@@ -128,11 +133,27 @@ describe("UI smoke guardrails", () => {
     });
 
     it("shows and deploy-stamps the running commit", () => {
-        assert.match(html, /id="build-commit">__BUILD_COMMIT__</);
-        assert.match(appJs, /buildCommit\.textContent = "development"/);
+        assert.match(html, /class="build-chip">v1\.7\.3 · <code data-build-commit>__BUILD_COMMIT__</);
+        assert.match(appJs, /querySelectorAll\("\[data-build-commit\]"\)/);
         assert.match(serviceWorker, /lincoln-barista-__BUILD_COMMIT__/);
         assert.match(mergeWorkflow, /Stamp build commit/);
         assert.match(previewWorkflow, /Stamp build commit/);
+    });
+
+    it("offers an explicit refresh when a deploy is ready", () => {
+        assert.match(html, /id="update-banner"/);
+        assert.match(html, /id="btn-refresh-app"[^>]*>Refresh now</);
+        assert.match(appJs, /updatefound/);
+        assert.match(appJs, /controllerchange/);
+        assert.match(appJs, /APP_UPDATE_READY/);
+        assert.match(appJs, /btn-refresh-app/);
+        assert.match(serviceWorker, /APP_UPDATE_READY/);
+        assert.match(serviceWorker, /client\.navigate\(client\.url\)/);
+    });
+
+    it("keeps the settings route wired to the header action", () => {
+        assert.match(appJs, /on\("btn-open-settings", "click", \(\) => app\.openSettings\(\)\)/);
+        assert.match(appJs, /openSettings:\s*\(\) =>/);
     });
 
     it("uses explicit Google authentication for production deploys", () => {

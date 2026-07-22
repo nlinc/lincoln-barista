@@ -7,9 +7,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { firebaseConfig } from "./firebase-config.js?v=1.7.2";
-import { getBrewAdvice } from "./brew-advice.js?v=1.7.2";
-import { summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.7.2";
+import { firebaseConfig } from "./firebase-config.js?v=1.7.3";
+import { getBrewAdvice } from "./brew-advice.js?v=1.7.3";
+import { summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.7.3";
 
 // Initialize Firebase
 const appInstance = initializeApp(firebaseConfig);
@@ -1136,10 +1136,35 @@ const app = {
 };
 
 window.app = app;
-const buildCommit = document.getElementById("build-commit");
-if (buildCommit?.textContent.includes("__BUILD_COMMIT__")) buildCommit.textContent = "development";
+document.querySelectorAll("[data-build-commit]").forEach(buildCommit => {
+    if (buildCommit.textContent.includes("__BUILD_COMMIT__")) buildCommit.textContent = "development";
+});
+const showAppUpdate = (build) => {
+    const banner = document.getElementById("update-banner");
+    const label = document.getElementById("update-build-label");
+    if (build && build !== "__BUILD_COMMIT__") label.textContent = `Build ${build} is ready. Refresh to update.`;
+    banner.classList.remove("hidden");
+};
 if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+    window.addEventListener("load", async () => {
+        const hadController = Boolean(navigator.serviceWorker.controller);
+        navigator.serviceWorker.addEventListener("message", event => {
+            if (hadController && event.data?.type === "APP_UPDATE_READY") showAppUpdate(event.data.build);
+        });
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+            if (hadController) showAppUpdate();
+        });
+        try {
+            const registration = await navigator.serviceWorker.register("/sw.js");
+            if (registration.waiting && hadController) showAppUpdate();
+            registration.addEventListener("updatefound", () => {
+                const worker = registration.installing;
+                worker?.addEventListener("statechange", () => {
+                    if (worker.state === "installed" && navigator.serviceWorker.controller) showAppUpdate();
+                });
+            });
+        } catch { /* The app still works online without installation support. */ }
+    });
 }
 onAuthStateChanged(auth, u => {
     if (!u) { app.router('login'); return; }
@@ -1170,4 +1195,5 @@ document.querySelectorAll(".shot-preview-input").forEach(input => input.addEvent
 document.querySelectorAll("#view-settings input[type='number']").forEach(input => input.addEventListener("input", () => app.updateSettingsDisplay()));
 on("btn-save-shot", "click", () => app.saveShot()); on("btn-cancel-shot", "click", () => app.router("detail")); on("btn-cancel-shot-top", "click", () => app.router("detail")); on("btn-delete-shot", "click", () => app.deleteShot());
 on("btn-save-profile", "click", () => app.saveProfile()); on("btn-export-data", "click", () => app.exportData()); on("btn-open-analytics", "click", () => app.openAnalytics("all"));
+on("btn-refresh-app", "click", () => window.location.reload());
 window.addEventListener('popstate', (e) => { if (e.state?.view) app.router(e.state.view, false); });

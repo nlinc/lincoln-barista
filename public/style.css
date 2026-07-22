@@ -69,6 +69,19 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
 .app-logo { font-size: 1.4rem; letter-spacing: -0.03em; font-weight: 800; }
 .app-logo span { color: var(--roast-light); }
 .app-logo small { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.6; margin-left: 4px; }
+.app-brand { display: flex; flex-direction: column; gap: 0.15rem; }
+.build-chip { color: var(--text-muted); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em; }
+.build-chip code { color: var(--text-secondary); }
+
+.update-banner {
+    position: fixed; z-index: 1200; top: 5.25rem; left: 50%; transform: translateX(-50%);
+    width: min(620px, calc(100% - 2rem)); display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding: 0.85rem 1rem; border: 1px solid var(--roast-light); border-radius: var(--radius-sm);
+    background: #292016; color: var(--text-main); box-shadow: 0 16px 40px rgba(0,0,0,0.55);
+}
+.update-banner strong, .update-banner span { display: block; }
+.update-banner span { color: var(--text-secondary); font-size: 0.78rem; margin-top: 0.2rem; }
+.update-refresh-btn { width: auto; flex: 0 0 auto; padding: 0.7rem 1rem; }
 
 .top-actions { display: flex; gap: 0.65rem; }
 .icon-btn, .logout-btn {
@@ -545,6 +558,9 @@ input.visually-hidden {
     }
     .app-logo { font-size: 1.1rem; }
     .app-logo small, .app-logo > span > small { display: none; }
+    .build-chip { font-size: 0.54rem; }
+    .update-banner { top: 4.25rem; align-items: stretch; flex-direction: column; }
+    .update-refresh-btn { width: 100%; }
     .top-actions { gap: 0.4rem; }
     .icon-btn, .logout-btn { min-width: 44px; min-height: 44px; }
     .logout-btn { display: none; }
@@ -574,8 +590,13 @@ input.visually-hidden {
     .console-header { margin-bottom: 0.75rem; }
     .recipe-grid { grid-template-columns: repeat(2, 2fr); gap: 0.75rem; padding: 1rem; }
     .recipe-actions, .inline-field { flex-direction: column; }
-    .log-row-metrics { flex-direction: column; align-items: center; gap: 1.5rem; text-align: center; }
-    .metric-col.right { text-align: center; }
+    .log-row { padding: 0.85rem 1rem; margin-bottom: 0.65rem; border-radius: var(--radius-sm); }
+    .log-row-metrics {
+        display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;
+    }
+    .metric-value { font-size: 1.05rem; }
+    .advice-text { padding-top: 0.5rem; font-size: 0.76rem; line-height: 1.25; }
     #global-stats-content { grid-template-columns: 1fr; }
     .analytics-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .pattern-list { grid-template-columns: 1fr; }
