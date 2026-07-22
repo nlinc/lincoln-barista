@@ -56,10 +56,6 @@
             </select>
         </div>
 
-        <div id="daily-tip-text" class="daily-tip">
-            💡 <b>Daily Tip:</b> Analyzing your beans for insights...
-        </div>
-
         <div id="collection-status" class="status-strip hidden"></div>
         <div id="filter-bar" class="filter-bar"></div>
         <div id="bean-list-container"></div>
@@ -194,13 +190,7 @@
                 </div>
             </div>
 
-            <div class="memory-block" id="memory-block">
-                <div class="memory-icon">🤵🏻‍♂️</div>
-                <div>
-                    <div id="butler-detail-text" class="memory-text">"Syncing memory..."</div>
-                    <div id="machine-badge" class="machine-badge">LELIT ELIZABETH • 3/7/20 PROFILING</div>
-                </div>
-            </div>
+            <div id="machine-badge" class="machine-badge">LELIT ELIZABETH • 3/7/20 PROFILING</div>
 
             <div class="recipe-actions">
                 <button class="btn" id="btn-repeat-recipe" type="button">Log Same Shot</button>
@@ -283,9 +273,9 @@
             </div>
         </div>
 
-        <div id="log-butler-preview" class="card butler-preview-card hidden">
-            <div class="field-kicker">🤵🏻‍♂️ Butler's Preview</div>
-            <div id="log-butler-preview-text" class="preview-text">Input data to see extraction advice.</div>
+        <div id="extraction-preview" class="card extraction-preview-card hidden">
+            <div class="field-kicker">Extraction Preview</div>
+            <div id="extraction-preview-text" class="preview-text">Input data to see extraction advice.</div>
         </div>
 
         <div class="view-actions shot-actions">
@@ -465,18 +455,6 @@
                     <option value="higher">A higher number</option>
                 </select>
             </div>
-        </div>
-
-        <div class="card">
-            <div class="section-label">Intelligence</div>
-            <div class="row-between">
-                <div class="setting-row-title">Enable True AI (Gemini)</div>
-                <label class="switch">
-                    <input type="checkbox" id="profile-ai-enabled" aria-label="Enable Gemini analysis" checked>
-                    <span class="slider"></span>
-                </label>
-            </div>
-            <div class="subtle-note note-offset">Enable high-fidelity bean analysis & daily tips.</div>
         </div>
 
         <div class="view-actions">

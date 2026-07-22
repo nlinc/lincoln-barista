@@ -1,4 +1,4 @@
-import { getAIAdvice } from "./brew-advice.js";
+import { getBrewAdvice } from "./brew-advice.js";
 
 const DAY_MS = 86400000;
 
@@ -113,7 +113,7 @@ export const summarizeShotPatterns = (logs, beans = [], options = {}) => {
             age: age !== null && age >= 0 ? age : null,
             ratio: values.yield / values.dose,
             flow: values.yield / values.time,
-            status: getAIAdvice(values, bean.roastLevel).status
+            status: getBrewAdvice(values, bean.roastLevel).status
         };
     }).filter(Boolean).sort((a, b) => a.shotDate - b.shotDate);
 

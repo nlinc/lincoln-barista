@@ -6,17 +6,15 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { firebaseConfig } from "./firebase-config.js";
-import { getAIAdvice } from "./brew-advice.js";
+import { getBrewAdvice } from "./brew-advice.js";
 import { summarizeShotPatterns, validateShot } from "./shot-analytics.js";
 
 // Initialize Firebase
 const appInstance = initializeApp(firebaseConfig);
 const auth = getAuth(appInstance);
 const db = getFirestore(appInstance);
-const functions = getFunctions(appInstance, 'us-central1');
 const storage = getStorage(appInstance, 'gs://espresso-4298d.firebasestorage.app');
 const provider = new GoogleAuthProvider();
 
@@ -36,13 +34,11 @@ let chartAge = null;
 let chartLoadPromise = null;
 let userProfile = {
     machineName: 'Lelit Elizabeth',
-    aiEnabled: true,
     defaultDose: 18,
     finerDirection: 'lower',
     b1: { infusion: 3, bloom: 7, brew: 20 },
     b2: { infusion: 0, bloom: 0, brew: 30 }
 };
-let aiCache = {};
 let currentEditingTags = [];
 let currentEditingImage = null;
 let currentEditingImagePath = null;
@@ -64,11 +60,6 @@ const el = (tag, className, text) => {
     if (className) node.className = className;
     if (text !== undefined) node.textContent = text;
     return node;
-};
-
-const renderTip = (target, text) => {
-    target.replaceChildren("💡 ");
-    target.append(el("b", "", "Daily Tip:"), " " + text);
 };
 
 const renderEmpty = (target, text) => {
@@ -179,24 +170,6 @@ const logTime = (log) => log?.date?.seconds || (log?.date instanceof Date ? log.
 
 const newestFirst = (logs) => [...logs].sort((a, b) => logTime(b) - logTime(a));
 
-const readLocalJson = (key, fallback = {}) => {
-    try { return JSON.parse(localStorage.getItem(key)) || fallback; }
-    catch { return fallback; }
-};
-
-const writeLocalJson = (key, value) => {
-    try { localStorage.setItem(key, JSON.stringify(value)); }
-    catch { /* Storage may be unavailable in private browsing. */ }
-};
-
-const aiStorageKey = () => `lincoln-barista-ai-${currentUser?.uid || "guest"}`;
-
-const persistAiCache = () => {
-    const recent = Object.fromEntries(Object.entries(aiCache).slice(-50));
-    aiCache = recent;
-    writeLocalJson(aiStorageKey(), recent);
-};
-
 const loadChartLibrary = () => {
     if (window.Chart) return Promise.resolve(window.Chart);
     if (chartLoadPromise) return chartLoadPromise;
@@ -230,7 +203,7 @@ const hideStatus = () => {
 
 const chooseCurrentRecipe = (logs, roastLevel) => {
     if (!logs.length) return null;
-    const latestGood = logs.find(log => getAIAdvice(log, roastLevel).status === "good");
+    const latestGood = logs.find(log => getBrewAdvice(log, roastLevel).status === "good");
     return {
         shot: latestGood || logs[0],
         status: latestGood ? "Dialed" : "Resume"
@@ -314,7 +287,6 @@ const app = {
             hideStatus();
             app.renderBeanList();
             app.renderGlobalStats();
-            app.renderDailyTip();
             if (!legacyMigrationStarted && beans.some(bean => isDataUrl(bean.image) && !bean.imageUrl)) {
                 legacyMigrationStarted = true;
                 runWhenIdle(() => app.migrateLegacyImages());
@@ -324,22 +296,6 @@ const app = {
             showStatus("Couldn't sync your collection. Check your connection and try again.", "error");
             if (container) renderEmptyAction(container, "Sync unavailable", "Your saved beans could not be loaded right now.", "Retry", () => app.fetchBeans());
         }
-    },
-
-    renderDailyTip: async () => {
-        const tipEl = document.getElementById('daily-tip-text');
-        if(!tipEl || !userProfile.aiEnabled) return;
-        const day = new Date().toISOString().slice(0, 10);
-        const cacheKey = `lincoln-barista-tip-${currentUser.uid}`;
-        const cached = readLocalJson(cacheKey, null);
-        if (cached?.day === day && cached.text) { renderTip(tipEl, cached.text); return; }
-        try {
-            const getTipFn = httpsCallable(functions, 'getDailyTip');
-            const result = await getTipFn({});
-            const text = result.data.text || "Grind finer for light roasts!";
-            writeLocalJson(cacheKey, { day, text });
-            renderTip(tipEl, text);
-        } catch(e) { renderTip(tipEl, "Keep your coffee station clean!"); }
     },
 
     getRoastColor: (level = 'Medium') => {
@@ -505,7 +461,6 @@ const app = {
             logsCache = [];
             currentRecipeShot = null;
             document.getElementById("dial-in-console").classList.add("hidden");
-            document.getElementById("memory-block").classList.add("hidden");
             document.getElementById("detail-age").textContent = "";
             document.getElementById("stale-warning-container").classList.add("hidden");
             renderEmpty(document.getElementById("history-container"), "Loading shot history...");
@@ -539,39 +494,9 @@ const app = {
             const b1Offset = (parseInt(userProfile.b1?.infusion)||0) + (parseInt(userProfile.b1?.bloom)||0);
             document.getElementById('machine-badge').innerText = (userProfile.machineName || 'Generic') + " • " + b1Offset + "s Offset (P1)";
 
-            const memoryBlock = document.getElementById('memory-block');
-            if(logsCache.length > 0 && userProfile.aiEnabled) {
-                app.getGeminiAnalysis(logsCache[0], currentActiveBean).catch(console.error);
-                memoryBlock.classList.remove('hidden');
-            } else {
-                memoryBlock.classList.add('hidden');
-            }
-
         } catch(e) {
             console.error("Detail error:", e);
             if (currentActiveBean?.id === id) renderEmptyAction(document.getElementById("history-container"), "History unavailable", "Your saved recipe could not be loaded right now.", "Retry", () => app.loadBeanDetail(id));
-        }
-    },
-
-    getGeminiAnalysis: async (shot, bean) => {
-        const butlerText = document.getElementById('butler-detail-text');
-        if (!butlerText) return;
-        const cacheKey = shot.id + "_" + shot.yield;
-        if(aiCache[cacheKey]) { butlerText.textContent = '"' + aiCache[cacheKey] + '"'; return; }
-
-        butlerText.textContent = "\"Summarizing where this bean left off...\"";
-        const requestedBeanId = bean.id;
-        try {
-            const analyzeFn = httpsCallable(functions, 'analyzeShot');
-            const result = await analyzeFn({ 
-                shot, bean: { name: bean.name, roastLevel: bean.roastLevel, origin: bean.origin },
-                machine: { name: userProfile.machineName, infusion: userProfile.b1?.infusion || 3, bloom: userProfile.b1?.bloom || 7 }
-            });
-            aiCache[cacheKey] = result.data.text.trim().replace(/^"|"$/g, '');
-            persistAiCache();
-            if (currentActiveBean?.id === requestedBeanId) butlerText.textContent = '"' + aiCache[cacheKey] + '"';
-        } catch(e) {
-            if (currentActiveBean?.id === requestedBeanId) butlerText.textContent = "\"Shot memory is momentarily unavailable.\"";
         }
     },
 
@@ -601,7 +526,7 @@ const app = {
             groups[batch].forEach(log => {
                 const validation = validateShot(log);
                 const advice = validation.valid
-                    ? getAIAdvice(log, currentActiveBean?.roastLevel)
+                    ? getBrewAdvice(log, currentActiveBean?.roastLevel)
                     : { status: "slow", text: "Incomplete legacy shot data" };
                 const ratioValue = ratioFor(log);
                 const ratio = ratioValue ? ratioValue.toFixed(1) : "—";
@@ -816,7 +741,7 @@ const app = {
         document.getElementById('btn-time-2').innerText = "P2 (" + b2T + "s)";
         document.getElementById('btn-save-shot').innerText = "Save Shot";
         document.getElementById('btn-delete-shot').classList.add('hidden');
-        app.liveButlerPreview();
+        app.renderExtractionPreview();
         app.router('log-shot');
     },
     setTimeFromProfile: (n) => {
@@ -824,19 +749,19 @@ const app = {
         if(n === 1 && userProfile.b1) t = (parseInt(userProfile.b1.infusion)||0) + (parseInt(userProfile.b1.bloom)||0) + (parseInt(userProfile.b1.brew)||0);
         else if(n === 2 && userProfile.b2) t = (parseInt(userProfile.b2.infusion)||0) + (parseInt(userProfile.b2.bloom)||0) + (parseInt(userProfile.b2.brew)||0);
         document.getElementById('input-shot-time').value = t;
-        app.liveButlerPreview();
+        app.renderExtractionPreview();
     },
-    liveButlerPreview: () => {
+    renderExtractionPreview: () => {
         const t = document.getElementById('input-shot-time').value;
         const d = document.getElementById('input-shot-dose').value;
         const y = document.getElementById('input-shot-yield').value;
         if(t && d && y) {
             const mock = { time: t, dose: d, yield: y };
-            const adv = getAIAdvice(mock, currentActiveBean?.roastLevel);
+            const adv = getBrewAdvice(mock, currentActiveBean?.roastLevel);
             const r = ratioFor(mock);
-            document.getElementById('log-butler-preview-text').innerText = "1:" + (r ? r.toFixed(1) : '?') + ". " + adv.text;
-            document.getElementById('log-butler-preview').classList.remove('hidden');
-        } else document.getElementById('log-butler-preview').classList.add('hidden');
+            document.getElementById('extraction-preview-text').innerText = "1:" + (r ? r.toFixed(1) : '?') + ". " + adv.text;
+            document.getElementById('extraction-preview').classList.remove('hidden');
+        } else document.getElementById('extraction-preview').classList.add('hidden');
     },
     saveShot: async () => {
         haptic('medium');
@@ -882,7 +807,7 @@ const app = {
         document.getElementById('input-shot-yield').value = log.yield;
         document.getElementById('btn-save-shot').innerText = "Update Log";
         document.getElementById('btn-delete-shot').classList.remove('hidden');
-        app.liveButlerPreview();
+        app.renderExtractionPreview();
         app.router('log-shot');
     },
     deleteShot: async () => { if(confirm("Delete log?")) { const sId = document.getElementById('input-log-shot-id').value; const bId = document.getElementById('input-log-bean-id').value; await deleteDoc(doc(db, "brew_logs", sId)); app.removeCachedLog(sId); await app.loadBeanDetail(bId); } },
@@ -891,7 +816,7 @@ const app = {
             const snap = await getDoc(doc(db, "user_profiles", currentUser.uid));
             if (snap.exists()) {
                 const d = snap.data();
-                userProfile = { machineName: d.machineName || 'Lelit Elizabeth', aiEnabled: d.aiEnabled !== false, defaultDose: parseFloat(d.defaultDose) || 18, finerDirection: d.finerDirection === "higher" ? "higher" : "lower", b1: d.b1 || { infusion: d.infusion || 3, bloom: d.bloom || 7, brew: 20 }, b2: d.b2 || { infusion: 0, bloom: 0, brew: 30 } };
+                userProfile = { machineName: d.machineName || 'Lelit Elizabeth', defaultDose: parseFloat(d.defaultDose) || 18, finerDirection: d.finerDirection === "higher" ? "higher" : "lower", b1: d.b1 || { infusion: d.infusion || 3, bloom: d.bloom || 7, brew: 20 }, b2: d.b2 || { infusion: 0, bloom: 0, brew: 30 } };
             } else await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
         } catch(e) {}
     },
@@ -903,7 +828,6 @@ const app = {
     },
     openSettings: () => {
         document.getElementById('profile-machine-name').value = userProfile.machineName;
-        document.getElementById('profile-ai-enabled').checked = userProfile.aiEnabled;
         document.getElementById('profile-default-dose').value = userProfile.defaultDose;
         document.getElementById('profile-finer-direction').value = userProfile.finerDirection || "lower";
         if(userProfile.b1) { document.getElementById('profile-b1-infusion').value = userProfile.b1.infusion; document.getElementById('profile-b1-bloom').value = userProfile.b1.bloom; document.getElementById('profile-b1-brew').value = userProfile.b1.brew; }
@@ -914,7 +838,7 @@ const app = {
     saveProfile: async () => {
         const b1 = { infusion: parseInt(document.getElementById('profile-b1-infusion').value) || 0, bloom: parseInt(document.getElementById('profile-b1-bloom').value) || 0, brew: parseInt(document.getElementById('profile-b1-brew').value) || 0 };
         const b2 = { infusion: parseInt(document.getElementById('profile-b2-infusion').value) || 0, bloom: parseInt(document.getElementById('profile-b2-bloom').value) || 0, brew: parseInt(document.getElementById('profile-b2-brew').value) || 0 };
-        userProfile = { machineName: document.getElementById('profile-machine-name').value, aiEnabled: document.getElementById('profile-ai-enabled').checked, defaultDose: parseFloat(document.getElementById('profile-default-dose').value) || 18, finerDirection: document.getElementById('profile-finer-direction').value, b1, b2 };
+        userProfile = { machineName: document.getElementById('profile-machine-name').value, defaultDose: parseFloat(document.getElementById('profile-default-dose').value) || 18, finerDirection: document.getElementById('profile-finer-direction').value, b1, b2 };
         await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
         app.router('list');
     },
@@ -1223,7 +1147,6 @@ onAuthStateChanged(auth, u => {
     allLogsCache = [];
     allLogsLoaded = false;
     logsLoadPromise = null;
-    aiCache = readLocalJson(aiStorageKey(), {});
     app.router(window.location.hash.substring(1) || 'list');
     app.fetchProfile();
     app.fetchAllLogs().then(() => app.renderGlobalStats()).catch(console.error);
@@ -1243,7 +1166,7 @@ on("btn-analytics-current", "click", () => app.openAnalytics("current"));
 on("btn-analytics-all", "click", () => app.openAnalytics("all"));
 document.querySelectorAll("[data-route]").forEach(b => b.onclick = () => app.router(b.dataset.route));
 on("btn-time-1", "click", () => app.setTimeFromProfile(1)); on("btn-time-2", "click", () => app.setTimeFromProfile(2));
-document.querySelectorAll(".shot-preview-input").forEach(input => input.addEventListener("input", () => app.liveButlerPreview()));
+document.querySelectorAll(".shot-preview-input").forEach(input => input.addEventListener("input", () => app.renderExtractionPreview()));
 document.querySelectorAll("#view-settings input[type='number']").forEach(input => input.addEventListener("input", () => app.updateSettingsDisplay()));
 on("btn-save-shot", "click", () => app.saveShot()); on("btn-cancel-shot", "click", () => app.router("detail")); on("btn-cancel-shot-top", "click", () => app.router("detail")); on("btn-delete-shot", "click", () => app.deleteShot());
 on("btn-save-profile", "click", () => app.saveProfile()); on("btn-export-data", "click", () => app.exportData()); on("btn-open-analytics", "click", () => app.openAnalytics("all"));

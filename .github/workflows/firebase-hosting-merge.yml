@@ -15,9 +15,6 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install Functions Dependencies
-        run: npm --prefix functions ci
-
       - name: Run checks
         run: |
           npm run check
@@ -35,4 +32,4 @@ jobs:
           project_id: espresso-4298d
 
       - name: Deploy to Firebase
-        run: npx --yes firebase-tools@15.22.1 deploy --project espresso-4298d --only hosting,functions,firestore:rules,storage --force
+        run: npx --yes firebase-tools@15.22.1 deploy --project espresso-4298d --only hosting,firestore:rules,storage --force

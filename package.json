@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check public/js/app.js && node --check public/js/brew-advice.js && node --check public/js/shot-analytics.js && node --check public/sw.js && node --check functions/index.js",
+    "check": "node --check public/js/app.js && node --check public/js/brew-advice.js && node --check public/js/shot-analytics.js && node --check public/sw.js",
     "test": "node --test"
   }
 }

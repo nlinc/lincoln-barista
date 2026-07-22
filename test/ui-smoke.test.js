@@ -9,6 +9,7 @@ const rules = readFileSync(new URL("../firestore.rules", import.meta.url), "utf8
 const storageRules = readFileSync(new URL("../storage.rules", import.meta.url), "utf8");
 const manifest = readFileSync(new URL("../public/manifest.json", import.meta.url), "utf8");
 const serviceWorker = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
+const firebaseConfig = readFileSync(new URL("../firebase.json", import.meta.url), "utf8");
 const mergeWorkflow = readFileSync(new URL("../.github/workflows/firebase-hosting-merge.yml", import.meta.url), "utf8");
 const previewWorkflow = readFileSync(new URL("../.github/workflows/firebase-hosting-pull-request.yml", import.meta.url), "utf8");
 
@@ -104,9 +105,10 @@ describe("UI smoke guardrails", () => {
         assert.match(appJs, /updateDoc\(doc\(db, "beans", bean\.id\), \{ \.\.\.uploaded/);
     });
 
-    it("persists AI responses and serves the app shell stale-while-revalidate", () => {
-        assert.match(appJs, /persistAiCache/);
-        assert.match(appJs, /lincoln-barista-tip-/);
+    it("avoids remote AI dependencies and serves the app shell stale-while-revalidate", () => {
+        assert.doesNotMatch(html, /Gemini|True AI|daily-tip-text/i);
+        assert.doesNotMatch(appJs, /httpsCallable|getFunctions|Gemini|aiEnabled|aiCache|getAIAdvice|Butler/);
+        assert.doesNotMatch(firebaseConfig, /"functions"/);
         assert.match(serviceWorker, /caches\.match\(event\.request\)/);
         assert.match(serviceWorker, /event\.waitUntil\(update\.catch/);
     });

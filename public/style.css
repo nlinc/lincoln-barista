@@ -162,13 +162,7 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
 .recipe-label { font-size: 0.6rem; font-weight: 850; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; opacity: 0.8; }
 .recipe-value { font-family: 'Outfit', sans-serif; font-size: 1.35rem; font-weight: 800; color: var(--roast-light); line-height: 1; }
 
-.memory-block {
-    border-top: 1px solid rgba(255,255,255,0.12); padding-top: 1.25rem;
-    display: flex; gap: 1.25rem; align-items: flex-start;
-}
-.memory-icon { font-size: 2rem; filter: grayscale(0.2); }
-.memory-text { font-size: 1rem; font-weight: 600; line-height: 1.5; color: var(--text-secondary); font-style: italic; }
-.machine-badge { font-size: 0.68rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-top: 8px; display: block; opacity: 0.6; }
+.machine-badge { font-size: 0.68rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; display: block; opacity: 0.6; }
 
 .recipe-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
 .recipe-actions .btn { flex: 1; padding: 0.9rem; font-size: 0.9rem; }
@@ -252,7 +246,7 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
 }
 .section-title, .view-heading, .large-heading { font-size: 2rem; letter-spacing: 0; margin-bottom: 1.25rem; }
 .large-heading { font-size: 2.35rem; }
-.daily-tip, .status-strip, .empty-panel, .empty-state {
+.status-strip, .empty-panel, .empty-state {
     color: var(--text-secondary); border: 1px solid var(--panel-border);
     background: var(--panel-bg); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1rem;
 }
@@ -280,11 +274,6 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
     padding-bottom: 0.9rem; margin-bottom: 0.9rem;
 }
 #view-list .section-title { margin-bottom: 0; }
-#view-list .daily-tip {
-    display: flex; align-items: center; gap: 0.35rem; margin-bottom: 1.25rem;
-    padding: 0.8rem 1rem; font-size: 0.95rem;
-}
-
 /* --- FORMS --- */
 .form-grid { display: grid; gap: 1rem; }
 .two-col { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -477,7 +466,7 @@ input.visually-hidden {
 .shot-grid .form-group { margin-bottom: 0; }
 .shot-grid input { font-family: 'Outfit', sans-serif !important; font-size: 1.35rem !important; font-weight: 700; }
 .profile-time-btn { padding: 2px 8px !important; font-size: 0.65rem !important; }
-.butler-preview-card { border-left: 6px solid var(--roast-light); background: var(--warning-bg); }
+.extraction-preview-card { border-left: 6px solid var(--roast-light); background: var(--warning-bg); }
 .preview-text { font-weight: 600; font-size: 0.9rem; }
 .delete-shot-action { margin-top: 1.5rem; }
 .setting-row-title { font-weight: 700; font-size: 0.95rem; }
@@ -631,8 +620,8 @@ input.visually-hidden {
     #view-log-shot .split-label { gap: 0.35rem; }
     #view-log-shot .mini-actions { gap: 0.2rem !important; }
     #view-log-shot .mini-actions .small-btn { min-width: 32px; padding: 0.15rem 0.35rem !important; }
-    #view-log-shot .butler-preview-card { padding: 0.8rem 0.9rem; margin-bottom: 0.75rem; }
-    #view-log-shot .butler-preview-card .field-kicker { margin-bottom: 0.35rem; }
+    #view-log-shot .extraction-preview-card { padding: 0.8rem 0.9rem; margin-bottom: 0.75rem; }
+    #view-log-shot .extraction-preview-card .field-kicker { margin-bottom: 0.35rem; }
     #view-log-shot .shot-actions {
         position: fixed; left: 0; right: 0; bottom: 0; z-index: 1500;
         display: grid; grid-template-columns: minmax(0, 1fr) auto;

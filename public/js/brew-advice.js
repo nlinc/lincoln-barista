@@ -1,4 +1,4 @@
-export const getAIAdvice = (shot, roastLevel = "Medium") => {
+export const getBrewAdvice = (shot, roastLevel = "Medium") => {
     const dose = parseFloat(shot.dose);
     const yieldValue = parseFloat(shot.yield);
     const time = parseFloat(shot.time);
