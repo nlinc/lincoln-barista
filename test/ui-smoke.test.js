@@ -27,18 +27,18 @@ describe("UI smoke guardrails", () => {
     });
 
     it("keeps cache-busted app assets on the current release", () => {
-        assert.match(html, /style\.css\?v=1\.9\.0/);
-        assert.match(html, /js\/app\.js\?v=1\.9\.0/);
-        assert.match(appJs, /firebase-config\.js\?v=1\.9\.0/);
-        assert.match(appJs, /brew-advice\.js\?v=1\.9\.0/);
-        assert.match(appJs, /shot-analytics\.js\?v=1\.9\.0/);
-        assert.match(appJs, /elizabeth-tuning\.js\?v=1\.9\.0/);
-        assert.match(appJs, /bianca-tuning\.js\?v=1\.9\.0/);
-        assert.match(analyticsJs, /brew-advice\.js\?v=1\.9\.0/);
-        assert.match(serviceWorker, /js\/app\.js\?v=1\.9\.0/);
-        assert.match(serviceWorker, /js\/brew-advice\.js\?v=1\.9\.0/);
-        assert.match(serviceWorker, /js\/elizabeth-tuning\.js\?v=1\.9\.0/);
-        assert.match(serviceWorker, /js\/bianca-tuning\.js\?v=1\.9\.0/);
+        assert.match(html, /style\.css\?v=1\.9\.1/);
+        assert.match(html, /js\/app\.js\?v=1\.9\.1/);
+        assert.match(appJs, /firebase-config\.js\?v=1\.9\.1/);
+        assert.match(appJs, /brew-advice\.js\?v=1\.9\.1/);
+        assert.match(appJs, /shot-analytics\.js\?v=1\.9\.1/);
+        assert.match(appJs, /elizabeth-tuning\.js\?v=1\.9\.1/);
+        assert.match(appJs, /bianca-tuning\.js\?v=1\.9\.1/);
+        assert.match(analyticsJs, /brew-advice\.js\?v=1\.9\.1/);
+        assert.match(serviceWorker, /js\/app\.js\?v=1\.9\.1/);
+        assert.match(serviceWorker, /js\/brew-advice\.js\?v=1\.9\.1/);
+        assert.match(serviceWorker, /js\/elizabeth-tuning\.js\?v=1\.9\.1/);
+        assert.match(serviceWorker, /js\/bianca-tuning\.js\?v=1\.9\.1/);
     });
 
     it("caps detail bean images and hides the native file input", () => {
@@ -82,6 +82,8 @@ describe("UI smoke guardrails", () => {
         assert.match(html, /id="btn-select-bianca"/);
         assert.match(html, /id="profile-machine-id"/);
         assert.match(appJs, /machineId: activeMachineId\(\)/);
+        assert.match(appJs, /machineSelectionRequired = savedProfile\.machineId !== "elizabeth"/);
+        assert.match(appJs, /app\.router\(machineSelectionRequired \? 'machine-select' : 'list'\)/);
         assert.match(rules, /data\.machineId == "bianca"/);
     });
 
@@ -188,7 +190,7 @@ describe("UI smoke guardrails", () => {
     });
 
     it("shows and deploy-stamps the running commit", () => {
-        assert.match(html, /class="build-chip">v1\.9\.0 · <code data-build-commit>__BUILD_COMMIT__</);
+        assert.match(html, /class="build-chip">v1\.9\.1 · <code data-build-commit>__BUILD_COMMIT__</);
         assert.match(appJs, /querySelectorAll\("\[data-build-commit\]"\)/);
         assert.match(serviceWorker, /lincoln-barista-__BUILD_COMMIT__/);
         assert.match(mergeWorkflow, /Stamp build commit/);

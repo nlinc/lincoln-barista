@@ -7,7 +7,7 @@ A personal espresso tracking Progressive Web App (PWA) designed to help dial in 
 * **Bean Management:** Track different coffee bags, roasters, and roast dates.
 * **Shot Logging:** Record grind, dose, time, yield, machine profile, taste, brew temperature, gauge pressure, first-drop time, and channeling observations.
 * **Auto-Analysis:** Calculates roast-aware ratio and flow targets, then asks the user to confirm the result by taste.
-* **Machine Choice:** Choose Elizabeth or Bianca after sign-in; shots and service records retain the machine identity.
+* **Machine Choice:** Choose Elizabeth or Bianca during first-time setup; the choice is saved to the user profile and can be changed later in Settings.
 * **Elizabeth Tuning Lab:** Builds P1 dark/P2 light starting profiles, explains steam versus bloom pre-infusion, and recommends one next change.
 * **Bianca Flow Lab:** Separates the full-paddle baseline, V3 low-flow automation, programmed bloom, manual paddle profiles, brew offset, and pump-pressure diagnostics.
 * **Advanced Elizabeth Reference:** Separates ordinary LCC controls, hidden PID settings, OPV calibration, and experimental modifications with version gates, sources, and safety warnings.

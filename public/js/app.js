@@ -7,22 +7,22 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { firebaseConfig } from "./firebase-config.js?v=1.9.0";
-import { getBrewAdvice } from "./brew-advice.js?v=1.9.0";
-import { summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.9.0";
+import { firebaseConfig } from "./firebase-config.js?v=1.9.1";
+import { getBrewAdvice } from "./brew-advice.js?v=1.9.1";
+import { summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.9.1";
 import {
     ELIZABETH_ADVANCED_PARAMETERS,
     ELIZABETH_SOURCES,
     convertTemperature,
     diagnoseElizabethShot,
     explainPreinfusionMode
-} from "./elizabeth-tuning.js?v=1.9.0";
+} from "./elizabeth-tuning.js?v=1.9.1";
 import {
     BIANCA_ADVANCED_PARAMETERS,
     BIANCA_SOURCES,
     diagnoseBiancaShot,
     explainBiancaFlow
-} from "./bianca-tuning.js?v=1.9.0";
+} from "./bianca-tuning.js?v=1.9.1";
 
 // Initialize Firebase
 const appInstance = initializeApp(firebaseConfig);
@@ -83,6 +83,7 @@ let analyticsScope = 'all';
 let legacyMigrationStarted = false;
 let maintenanceRecords = [];
 let settingsTemperatureUnit = 'F';
+let machineSelectionRequired = true;
 
 // --- UTILS ---
 const haptic = (type = 'light') => {
@@ -352,6 +353,7 @@ const app = {
             userProfile.machineName = nextId === "bianca" ? "Lelit Bianca" : "Lelit Elizabeth";
         }
         await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
+        machineSelectionRequired = false;
         if (oldId !== nextId) {
             currentRecipeShot = null;
             logsCache = currentActiveBean ? app.logsForBean(currentActiveBean.id) : [];
@@ -1004,8 +1006,12 @@ const app = {
         try {
             const snap = await getDoc(doc(db, "user_profiles", currentUser.uid));
             if (snap.exists()) {
-                userProfile = normalizeUserProfile(snap.data());
-            } else await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
+                const savedProfile = snap.data();
+                machineSelectionRequired = savedProfile.machineId !== "elizabeth" && savedProfile.machineId !== "bianca";
+                userProfile = normalizeUserProfile(savedProfile);
+            } else {
+                machineSelectionRequired = true;
+            }
             app.applyMachineUi();
         } catch(e) {}
     },
@@ -1128,6 +1134,7 @@ const app = {
         });
         userProfile = { machineId: document.getElementById('profile-machine-id').value === "bianca" ? "bianca" : "elizabeth", machineName: document.getElementById('profile-machine-name').value, defaultDose: parseFloat(document.getElementById('profile-default-dose').value) || 18, finerDirection: document.getElementById('profile-finer-direction').value, b1, b2, elizabeth, bianca };
         await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
+        machineSelectionRequired = false;
         app.applyMachineUi();
         app.router('list');
     },
@@ -1652,7 +1659,7 @@ onAuthStateChanged(auth, async u => {
     logsLoadPromise = null;
     await app.fetchProfile();
     app.applyMachineUi();
-    app.router('machine-select');
+    app.router(machineSelectionRequired ? 'machine-select' : 'list');
     app.fetchAllLogs().then(() => app.renderGlobalStats()).catch(console.error);
     app.fetchBeans();
 });
