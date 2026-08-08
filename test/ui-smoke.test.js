@@ -11,6 +11,8 @@ const manifest = readFileSync(new URL("../public/manifest.json", import.meta.url
 const serviceWorker = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
 const firebaseConfig = readFileSync(new URL("../firebase.json", import.meta.url), "utf8");
 const analyticsJs = readFileSync(new URL("../public/js/shot-analytics.js", import.meta.url), "utf8");
+const tuningJs = readFileSync(new URL("../public/js/elizabeth-tuning.js", import.meta.url), "utf8");
+const biancaTuningJs = readFileSync(new URL("../public/js/bianca-tuning.js", import.meta.url), "utf8");
 const mergeWorkflow = readFileSync(new URL("../.github/workflows/firebase-hosting-merge.yml", import.meta.url), "utf8");
 const previewWorkflow = readFileSync(new URL("../.github/workflows/firebase-hosting-pull-request.yml", import.meta.url), "utf8");
 
@@ -25,14 +27,18 @@ describe("UI smoke guardrails", () => {
     });
 
     it("keeps cache-busted app assets on the current release", () => {
-        assert.match(html, /style\.css\?v=1\.7\.3/);
-        assert.match(html, /js\/app\.js\?v=1\.7\.3/);
-        assert.match(appJs, /firebase-config\.js\?v=1\.7\.3/);
-        assert.match(appJs, /brew-advice\.js\?v=1\.7\.3/);
-        assert.match(appJs, /shot-analytics\.js\?v=1\.7\.3/);
-        assert.match(analyticsJs, /brew-advice\.js\?v=1\.7\.3/);
-        assert.match(serviceWorker, /js\/app\.js\?v=1\.7\.3/);
-        assert.match(serviceWorker, /js\/brew-advice\.js\?v=1\.7\.3/);
+        assert.match(html, /style\.css\?v=1\.9\.0/);
+        assert.match(html, /js\/app\.js\?v=1\.9\.0/);
+        assert.match(appJs, /firebase-config\.js\?v=1\.9\.0/);
+        assert.match(appJs, /brew-advice\.js\?v=1\.9\.0/);
+        assert.match(appJs, /shot-analytics\.js\?v=1\.9\.0/);
+        assert.match(appJs, /elizabeth-tuning\.js\?v=1\.9\.0/);
+        assert.match(appJs, /bianca-tuning\.js\?v=1\.9\.0/);
+        assert.match(analyticsJs, /brew-advice\.js\?v=1\.9\.0/);
+        assert.match(serviceWorker, /js\/app\.js\?v=1\.9\.0/);
+        assert.match(serviceWorker, /js\/brew-advice\.js\?v=1\.9\.0/);
+        assert.match(serviceWorker, /js\/elizabeth-tuning\.js\?v=1\.9\.0/);
+        assert.match(serviceWorker, /js\/bianca-tuning\.js\?v=1\.9\.0/);
     });
 
     it("caps detail bean images and hides the native file input", () => {
@@ -48,6 +54,55 @@ describe("UI smoke guardrails", () => {
         assert.match(html, /id="analytics-pattern-list"/);
         assert.match(appJs, /openAnalytics\("current"\)/);
         assert.match(appJs, /openAnalytics\("all"\)/);
+    });
+
+    it("provides a version-aware Elizabeth tuning lab", () => {
+        assert.match(html, /id="view-tuning"/);
+        assert.match(html, /id="btn-open-tuning"/);
+        assert.match(html, /id="btn-open-detail-tuning"/);
+        assert.match(html, /id="tuning-advanced-parameters"/);
+        assert.match(html, /Opening the chassis exposes mains voltage/);
+        assert.match(appJs, /renderTuningPlan/);
+        assert.match(tuningJs, /classic-v3/);
+        assert.match(tuningJs, /elizabeth3/);
+        assert.doesNotMatch(appJs, /tuning[^\n]*innerHTML/i);
+    });
+
+    it("defaults machine temperatures to Fahrenheit with an optional Celsius setting", () => {
+        assert.match(html, /id="profile-temperature-unit"/);
+        assert.match(html, /<option value="F">Fahrenheit \(default\)<\/option>/);
+        assert.match(html, /<option value="C">Celsius<\/option>/);
+        assert.match(appJs, /convertTemperature/);
+        assert.match(rules, /"temperatureUnit"/);
+    });
+
+    it("selects Elizabeth or Bianca after login and keeps machine data separated", () => {
+        assert.match(html, /id="view-machine-select"/);
+        assert.match(html, /id="btn-select-elizabeth"/);
+        assert.match(html, /id="btn-select-bianca"/);
+        assert.match(html, /id="profile-machine-id"/);
+        assert.match(appJs, /machineId: activeMachineId\(\)/);
+        assert.match(rules, /data\.machineId == "bianca"/);
+    });
+
+    it("provides a version-aware Bianca tuning and maintenance experience", () => {
+        assert.match(html, /id="view-bianca-tuning"/);
+        assert.match(html, /id="bianca-tuning-advanced-parameters"/);
+        assert.match(html, /id="maintenance-guide-bianca"/);
+        assert.match(html, /70 liters \(about 28 full 2\.5-liter tanks\)/);
+        assert.match(html, /Annual service:<\/strong> Lelit assigns hydraulic descaling/);
+        assert.match(appJs, /diagnoseBiancaShot/);
+        assert.match(biancaTuningJs, /low-flow START/i);
+        assert.doesNotMatch(appJs, /bianca[^\n]*innerHTML/i);
+    });
+
+    it("captures optional shot observations for Elizabeth-specific diagnosis", () => {
+        for (const id of ["input-shot-profile", "input-shot-taste", "input-shot-temperature", "input-shot-pressure", "input-shot-first-drop", "input-shot-channeling"]) {
+            assert.match(html, new RegExp(`id="${id}"`));
+        }
+        assert.match(appJs, /channelingObserved/);
+        assert.match(appJs, /firstDropSeconds/);
+        assert.match(rules, /"profileUsed", "taste", "brewTemperature", "pressureObserved"/);
     });
 
     it("keeps analytics code off the critical rendering path", () => {
@@ -133,7 +188,7 @@ describe("UI smoke guardrails", () => {
     });
 
     it("shows and deploy-stamps the running commit", () => {
-        assert.match(html, /class="build-chip">v1\.7\.3 · <code data-build-commit>__BUILD_COMMIT__</);
+        assert.match(html, /class="build-chip">v1\.9\.0 · <code data-build-commit>__BUILD_COMMIT__</);
         assert.match(appJs, /querySelectorAll\("\[data-build-commit\]"\)/);
         assert.match(serviceWorker, /lincoln-barista-__BUILD_COMMIT__/);
         assert.match(mergeWorkflow, /Stamp build commit/);

@@ -39,7 +39,7 @@ export const getBrewAdvice = (shot, roastLevel = "Medium") => {
     }
 
     return {
-        text: advice.length > 0 ? advice.join(" • ") : "Golden Range Identified",
+        text: advice.length > 0 ? advice.join(" • ") : "In Recipe Range — Confirm by Taste",
         status
     };
 };

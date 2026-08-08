@@ -5,15 +5,17 @@ A personal espresso tracking Progressive Web App (PWA) designed to help dial in 
 ## 🚀 Features
 
 * **Bean Management:** Track different coffee bags, roasters, and roast dates.
-* **Shot Logging:** Record grind setting, dose (in), time (s), and yield (out).
-* **Auto-Analysis:** Automatically calculates the brew ratio and provides feedback:
-    * 🟢 **Golden Zone:** 1:1.75 – 1:2.25 ratio (Balanced)
-    * 🔵 **High Yield:** > 1:2.25 (Grind Finer)
-    * 🟠 **Low Yield:** < 1:1.75 (Grind Coarser)
+* **Shot Logging:** Record grind, dose, time, yield, machine profile, taste, brew temperature, gauge pressure, first-drop time, and channeling observations.
+* **Auto-Analysis:** Calculates roast-aware ratio and flow targets, then asks the user to confirm the result by taste.
+* **Machine Choice:** Choose Elizabeth or Bianca after sign-in; shots and service records retain the machine identity.
+* **Elizabeth Tuning Lab:** Builds P1 dark/P2 light starting profiles, explains steam versus bloom pre-infusion, and recommends one next change.
+* **Bianca Flow Lab:** Separates the full-paddle baseline, V3 low-flow automation, programmed bloom, manual paddle profiles, brew offset, and pump-pressure diagnostics.
+* **Advanced Elizabeth Reference:** Separates ordinary LCC controls, hidden PID settings, OPV calibration, and experimental modifications with version gates, sources, and safety warnings.
+* **Temperature Preference:** Defaults to Fahrenheit and can switch the saved machine profile and tuning guidance to Celsius.
 * **History Grouping:** Logs are grouped by the specific "Roast Batch" date to account for bean aging.
 * **Smart Sorting:** Filter beans by Newest, Rating, or Name.
 * **Age Trends:** Compare days off roast with grind movement, flow drift, consistency, and target-shot rate.
-* **Machine Maintenance:** Log common Elizabeth cleaning tasks with one tap, calculate scheduled care automatically, and spot upcoming or overdue work.
+* **Machine Maintenance:** Use model-specific Elizabeth or Bianca care schedules, including Bianca weekly group/wand cycles, filter capacity, and annual technician service.
 * **Mobile First:** Designed as a PWA to look and feel like a native app on iOS/Android.
 
 ## 🛠️ Tech Stack

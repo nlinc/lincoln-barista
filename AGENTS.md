@@ -1,6 +1,6 @@
 # AI Agent Instructions
 
-> ⚙️ **Self-maintenance rule — do this automatically, every time.** If a change you make alters this repo's **shape** (files, entry points, structure), its **stack/dependencies**, the **build/test loop**, or a **guardrail**, you MUST update the matching section of THIS file in the *same commit* — before the task counts as done. This is not optional cleanup or a follow-up task.
+> **Self-maintenance rule.** If a change alters this repo's shape, stack, verification loop, or guardrails, update this file as part of the same change. This rule does not authorize creating a commit.
 
 This repo is a small Firebase/static PWA for tracking espresso beans, brew logs, recipes, and barista advice. Keep changes conservative and preserve the existing app structure.
 
@@ -11,8 +11,10 @@ This repo is a small Firebase/static PWA for tracking espresso beans, brew logs,
 - Main styling: `public/style.css`.
 - Main client logic: `public/js/app.js`.
 - Brew advice rules: `public/js/brew-advice.js`.
+- Elizabeth machine profiles and tuning rules: `public/js/elizabeth-tuning.js`.
+- Bianca machine profiles and flow-tuning rules: `public/js/bianca-tuning.js`.
 - Firebase browser config: `public/js/firebase-config.js`.
-- Tests: `test/brew-advice.test.js`.
+- Tests: `test/brew-advice.test.js`, `test/elizabeth-tuning.test.js`, `test/bianca-tuning.test.js`, `test/shot-analytics.test.js`, and `test/ui-smoke.test.js`.
 - Storage rules: `storage.rules`.
 
 This is not a React, Vite, Next.js, or bundled frontend project. Do not add a build system unless explicitly asked.
@@ -50,11 +52,13 @@ npm test
 ## Existing Behavior To Preserve
 
 - `getBrewAdvice` is deterministic and covered by Node tests.
+- Elizabeth tuning must stay version-aware, default temperature display to Fahrenheit, treat programmed doses as timed auto-stops, and keep chassis/OPV work behind explicit safety warnings.
+- Bianca tuning must distinguish V1/V2 from V3, start with paddle fully open and automation off, treat flow and pressure as interacting measurements, and reserve pump/PID changes for advanced guidance.
 - Bean cards, log rows, global stats, and analytics are rendered dynamically.
 - The floating add/log buttons are route-aware.
 - The app uses Google sign-in and routes by hash/history state.
 - CSV export should work from Settings without requiring extra dependencies.
-- Machine care is one-tap for common Elizabeth tasks: after-use steam wand and filterholder cleaning, weekly machine cleaning, monthly backflushing, and resin-filter changes. Custom logs stay secondary.
+- Machine care is model-specific and one-tap: preserve the Elizabeth schedule and the Bianca manual's daily/weekly, 70-liter/four-month filter, and annual technician-service schedules. Custom logs stay secondary.
 - Machine care records show only the latest reminder for each service type as active; older reminders remain visible as history. Manual-based weekly/monthly tasks calculate their next due date automatically.
 
 ## Style Of Changes

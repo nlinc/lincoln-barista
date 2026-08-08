@@ -1,10 +1,10 @@
 {
   "name": "lincoln-barista",
-  "version": "1.7.3",
+  "version": "1.9.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check public/js/app.js && node --check public/js/brew-advice.js && node --check public/js/shot-analytics.js && node --check public/sw.js",
+    "check": "node --check public/js/app.js && node --check public/js/brew-advice.js && node --check public/js/shot-analytics.js && node --check public/js/elizabeth-tuning.js && node --check public/js/bianca-tuning.js && node --check public/sw.js",
     "test": "node --test"
   }
 }

@@ -41,13 +41,59 @@ service cloud.firestore {
       return !(("tags" in data)) || (data.tags is list && data.tags.size() <= 20);
     }
 
+    function optionalNumber(data, field) {
+      return !(field in data) || data[field] is int || data[field] is float || data[field] == null;
+    }
+
+    function validElizabethProfile(data) {
+      return !("elizabeth" in data) || (
+        data.elizabeth is map &&
+        data.elizabeth.keys().hasOnly([
+          "machineVersion", "firmware", "temperatureUnit", "brewTemperature",
+          "steamTemperature", "observedPressure", "preinfusionMode"
+        ]) &&
+        optionalString(data.elizabeth, "machineVersion") &&
+        optionalString(data.elizabeth, "firmware") &&
+        (!(("temperatureUnit" in data.elizabeth)) || data.elizabeth.temperatureUnit == "F" || data.elizabeth.temperatureUnit == "C") &&
+        optionalNumber(data.elizabeth, "brewTemperature") &&
+        optionalNumber(data.elizabeth, "steamTemperature") &&
+        (!("observedPressure" in data.elizabeth) || data.elizabeth.observedPressure is int || data.elizabeth.observedPressure is float || data.elizabeth.observedPressure == "") &&
+        optionalString(data.elizabeth, "preinfusionMode")
+      );
+    }
+
+    function validBiancaProfile(data) {
+      return !("bianca" in data) || (
+        data.bianca is map &&
+        data.bianca.keys().hasOnly([
+          "machineVersion", "firmware", "temperatureUnit", "brewTemperature",
+          "steamTemperature", "observedPressure", "brewOffset", "preinfusionOn",
+          "preinfusionOff", "lowFlowStart", "lowFlowFinal"
+        ]) &&
+        optionalString(data.bianca, "machineVersion") &&
+        optionalString(data.bianca, "firmware") &&
+        (!("temperatureUnit" in data.bianca) || data.bianca.temperatureUnit == "F" || data.bianca.temperatureUnit == "C") &&
+        optionalNumber(data.bianca, "brewTemperature") &&
+        optionalNumber(data.bianca, "steamTemperature") &&
+        (!("observedPressure" in data.bianca) || data.bianca.observedPressure is int || data.bianca.observedPressure is float || data.bianca.observedPressure == "") &&
+        optionalNumber(data.bianca, "brewOffset") &&
+        optionalNumber(data.bianca, "preinfusionOn") &&
+        optionalNumber(data.bianca, "preinfusionOff") &&
+        optionalNumber(data.bianca, "lowFlowStart") &&
+        optionalNumber(data.bianca, "lowFlowFinal")
+      );
+    }
+
     function validProfile(data) {
-      return data.keys().hasOnly(["machineName", "defaultDose", "finerDirection", "b1", "b2"]) &&
+      return data.keys().hasOnly(["machineId", "machineName", "defaultDose", "finerDirection", "b1", "b2", "elizabeth", "bianca"]) &&
+        (!("machineId" in data) || data.machineId == "elizabeth" || data.machineId == "bianca") &&
         optionalString(data, "machineName") &&
         (!("finerDirection" in data) || data.finerDirection == "lower" || data.finerDirection == "higher") &&
         (!("defaultDose" in data) || data.defaultDose is int || data.defaultDose is float) &&
         (!("b1" in data) || data.b1 is map) &&
-        (!("b2" in data) || data.b2 is map);
+        (!("b2" in data) || data.b2 is map) &&
+        validElizabethProfile(data) &&
+        validBiancaProfile(data);
     }
 
     function validBean(data) {
@@ -79,26 +125,38 @@ service cloud.firestore {
 
     function validBrewLog(data) {
       return data.keys().hasOnly([
-          "uid", "beanId", "grind", "time", "dose", "yield", "date", "roastDate"
+          "uid", "beanId", "grind", "time", "dose", "yield", "date", "roastDate",
+          "machineId",
+          "profileUsed", "taste", "brewTemperature", "pressureObserved",
+          "temperatureUnit", "firstDropSeconds", "channelingObserved"
         ]) &&
         data.keys().hasAll(["uid", "beanId", "grind", "date"]) &&
         data.uid is string &&
         data.beanId is string &&
         data.grind is string &&
         data.grind.size() > 0 &&
+        (!("machineId" in data) || data.machineId == "elizabeth" || data.machineId == "bianca") &&
         optionalNumberText(data, "time") &&
         optionalNumberText(data, "dose") &&
         optionalNumberText(data, "yield") &&
+        (!(("profileUsed" in data)) || data.profileUsed == "" || data.profileUsed == "manual" || data.profileUsed == "p1" || data.profileUsed == "p2" || data.profileUsed == "bianca-standard" || data.profileUsed == "bianca-low-flow" || data.profileUsed == "bianca-paddle" || data.profileUsed == "bianca-bloom") &&
+        (!(("taste" in data)) || data.taste == "" || data.taste == "balanced" || data.taste == "sour" || data.taste == "bitter" || data.taste == "astringent" || data.taste == "hollow" || data.taste == "channeling") &&
+        optionalNumberText(data, "brewTemperature") &&
+        (!(("temperatureUnit" in data)) || data.temperatureUnit == "F" || data.temperatureUnit == "C") &&
+        optionalNumberText(data, "pressureObserved") &&
+        optionalNumberText(data, "firstDropSeconds") &&
+        (!("channelingObserved" in data) || data.channelingObserved is bool) &&
         optionalString(data, "roastDate") &&
         data.date is timestamp;
     }
 
     function validMaintenanceRecord(data) {
       return data.keys().hasOnly([
-          "uid", "type", "completedDate", "nextDueDate", "notes", "createdAt"
+          "uid", "machineId", "type", "completedDate", "nextDueDate", "notes", "createdAt"
         ]) &&
         data.keys().hasAll(["uid", "type", "completedDate", "createdAt"]) &&
         data.uid is string &&
+        (!("machineId" in data) || data.machineId == "elizabeth" || data.machineId == "bianca") &&
         data.type is string && data.type.size() > 0 && data.type.size() <= 80 &&
         data.completedDate is string && data.completedDate.size() == 10 &&
         optionalString(data, "nextDueDate") &&

@@ -7,9 +7,22 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { firebaseConfig } from "./firebase-config.js?v=1.7.3";
-import { getBrewAdvice } from "./brew-advice.js?v=1.7.3";
-import { summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.7.3";
+import { firebaseConfig } from "./firebase-config.js?v=1.9.0";
+import { getBrewAdvice } from "./brew-advice.js?v=1.9.0";
+import { summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.9.0";
+import {
+    ELIZABETH_ADVANCED_PARAMETERS,
+    ELIZABETH_SOURCES,
+    convertTemperature,
+    diagnoseElizabethShot,
+    explainPreinfusionMode
+} from "./elizabeth-tuning.js?v=1.9.0";
+import {
+    BIANCA_ADVANCED_PARAMETERS,
+    BIANCA_SOURCES,
+    diagnoseBiancaShot,
+    explainBiancaFlow
+} from "./bianca-tuning.js?v=1.9.0";
 
 // Initialize Firebase
 const appInstance = initializeApp(firebaseConfig);
@@ -33,11 +46,34 @@ let chartDist = null;
 let chartAge = null;
 let chartLoadPromise = null;
 let userProfile = {
+    machineId: 'elizabeth',
     machineName: 'Lelit Elizabeth',
     defaultDose: 18,
     finerDirection: 'lower',
-    b1: { infusion: 3, bloom: 7, brew: 20 },
-    b2: { infusion: 0, bloom: 0, brew: 30 }
+    b1: { infusion: 3, bloom: 2, brew: 25 },
+    b2: { infusion: 5, bloom: 7, brew: 28 },
+    elizabeth: {
+        machineVersion: 'classic-v3',
+        firmware: '',
+        temperatureUnit: 'F',
+        brewTemperature: 200,
+        steamTemperature: 275,
+        observedPressure: '',
+        preinfusionMode: 'auto'
+    },
+    bianca: {
+        machineVersion: 'v3',
+        firmware: '',
+        temperatureUnit: 'F',
+        brewTemperature: 200,
+        steamTemperature: 257,
+        observedPressure: '',
+        brewOffset: 0,
+        preinfusionOn: 0,
+        preinfusionOff: 0,
+        lowFlowStart: 0,
+        lowFlowFinal: 0
+    }
 };
 let currentEditingTags = [];
 let currentEditingImage = null;
@@ -46,6 +82,7 @@ let currentRecipeShot = null;
 let analyticsScope = 'all';
 let legacyMigrationStarted = false;
 let maintenanceRecords = [];
+let settingsTemperatureUnit = 'F';
 
 // --- UTILS ---
 const haptic = (type = 'light') => {
@@ -85,6 +122,57 @@ const ratioFor = (shot) => {
     return yieldVal / dose;
 };
 
+const normalizeElizabethProfile = (value = {}) => {
+    const temperatureUnit = value.temperatureUnit === "C" ? "C" : "F";
+    return {
+        machineVersion: ["classic-v3", "classic-early", "elizabeth3", "unknown"].includes(value.machineVersion) ? value.machineVersion : "classic-v3",
+        firmware: typeof value.firmware === "string" ? value.firmware : "",
+        temperatureUnit,
+        brewTemperature: Number.isFinite(parseFloat(value.brewTemperature)) ? parseFloat(value.brewTemperature) : (temperatureUnit === "F" ? 200 : 93),
+        steamTemperature: Number.isFinite(parseFloat(value.steamTemperature)) ? parseFloat(value.steamTemperature) : (temperatureUnit === "F" ? 275 : 135),
+        observedPressure: Number.isFinite(parseFloat(value.observedPressure)) ? parseFloat(value.observedPressure) : "",
+        preinfusionMode: ["auto", "steam", "bloom", "none"].includes(value.preinfusionMode) ? value.preinfusionMode : "auto"
+    };
+};
+
+const normalizeBiancaProfile = (value = {}) => {
+    const temperatureUnit = value.temperatureUnit === "C" ? "C" : "F";
+    const numberOr = (field, fallback) => Number.isFinite(parseFloat(value[field])) ? parseFloat(value[field]) : fallback;
+    return {
+        machineVersion: ["v3", "v2", "v1", "unknown"].includes(value.machineVersion) ? value.machineVersion : "v3",
+        firmware: typeof value.firmware === "string" ? value.firmware : "",
+        temperatureUnit,
+        brewTemperature: numberOr("brewTemperature", temperatureUnit === "F" ? 200 : 93),
+        steamTemperature: numberOr("steamTemperature", temperatureUnit === "F" ? 257 : 125),
+        observedPressure: Number.isFinite(parseFloat(value.observedPressure)) ? parseFloat(value.observedPressure) : "",
+        brewOffset: numberOr("brewOffset", 0),
+        preinfusionOn: numberOr("preinfusionOn", 0),
+        preinfusionOff: numberOr("preinfusionOff", 0),
+        lowFlowStart: numberOr("lowFlowStart", 0),
+        lowFlowFinal: numberOr("lowFlowFinal", 0)
+    };
+};
+
+const normalizeUserProfile = (data = {}) => ({
+    machineId: data.machineId === "bianca" ? "bianca" : "elizabeth",
+    machineName: data.machineName || (data.machineId === "bianca" ? "Lelit Bianca" : "Lelit Elizabeth"),
+    defaultDose: parseFloat(data.defaultDose) || 18,
+    finerDirection: data.finerDirection === "higher" ? "higher" : "lower",
+    b1: data.b1 || { infusion: data.infusion || 3, bloom: 2, brew: 25 },
+    b2: data.b2 || { infusion: 5, bloom: 7, brew: 28 },
+    elizabeth: normalizeElizabethProfile(data.elizabeth),
+    bianca: normalizeBiancaProfile(data.bianca)
+});
+
+const activeMachineId = () => userProfile.machineId === "bianca" ? "bianca" : "elizabeth";
+const activeMachineProfile = () => activeMachineId() === "bianca" ? normalizeBiancaProfile(userProfile.bianca) : normalizeElizabethProfile(userProfile.elizabeth);
+const recordMachineId = (record) => record?.machineId === "bianca" ? "bianca" : "elizabeth";
+const activeMaintenanceRecords = () => maintenanceRecords.filter(record => recordMachineId(record) === activeMachineId());
+
+const updateTemperatureUnitLabels = (unit) => {
+    document.querySelectorAll("[data-temperature-unit]").forEach(label => { label.textContent = unit; });
+};
+
 const formatDate = (dateLike) => {
     if (!dateLike) return "";
     const date = dateLike.toDate ? dateLike.toDate() : new Date(dateLike.seconds ? dateLike.seconds * 1000 : dateLike);
@@ -101,13 +189,25 @@ const localDateKey = (date = new Date()) => [
 
 const maintenanceTime = (record) => parseDateKey(record?.completedDate)?.getTime() || 0;
 
-const maintenancePresets = [
+const elizabethMaintenancePresets = [
     { type: "Steam wand clean", icon: "💨", title: "Steam wand", action: "Wand cleaned", cadence: "After every use", detail: "Wipe with a damp cloth and purge briefly." },
     { type: "Filterholder clean", icon: "☕", title: "Filterholder", action: "Filterholder cleaned", cadence: "After every use", detail: "Remove oily coffee residue after brewing." },
     { type: "Machine clean", icon: "✨", title: "Machine wipe-down", action: "Machine cleaned", cadence: "Weekly", detail: "Soft cloth and plain water.", daysUntilDue: 7 },
     { type: "Backflush", icon: "💧", title: "Backflush", action: "Backflush done", cadence: "Monthly", detail: "Blind filter and 3–5 g detergent.", monthsUntilDue: 1 },
     { type: "Water filter", icon: "🚰", title: "Resin filter", action: "Filter changed", cadence: "By water usage", detail: "Follow the liter capacity on the filter pack." }
 ];
+
+const biancaMaintenancePresets = [
+    { type: "Daily group and tray care", icon: "☕", title: "Group, basket & tray", action: "Daily care done", cadence: "After shots / daily", detail: "Wash basket and portafilter, brush the gasket, and hand-wash the tray." },
+    { type: "Steam wand clean", icon: "💨", title: "Steam wand", action: "Wand cleaned", cadence: "After every milk drink", detail: "Wipe immediately and purge briefly." },
+    { type: "Detergent backflush", icon: "💧", title: "Detergent backflush", action: "Backflush done", cadence: "Weekly", detail: "10s on / 10s off ×10; rinse, then water-only ×5.", daysUntilDue: 7 },
+    { type: "Portafilter and basket soak", icon: "🧼", title: "Metal parts soak", action: "Parts cleaned", cadence: "Weekly", detail: "15 minutes; keep the wooden handle out of solution.", daysUntilDue: 7 },
+    { type: "Steam wand deep clean", icon: "✨", title: "Wand deep clean", action: "Deep clean done", cadence: "Weekly", detail: "Use milk-system detergent and the manual's 5s on/off cycle.", daysUntilDue: 7 },
+    { type: "Water filter", icon: "🚰", title: "Water filter", action: "Filter changed", cadence: "70 L or 4 months", detail: "Replace earlier after one month unused.", monthsUntilDue: 4 },
+    { type: "Professional annual service", icon: "🛠️", title: "Professional service", action: "Annual service done", cadence: "Annual", detail: "Technician inspection and hydraulic descaling.", monthsUntilDue: 12 }
+];
+
+const maintenancePresetsForActiveMachine = () => activeMachineId() === "bianca" ? biancaMaintenancePresets : elizabethMaintenancePresets;
 
 const presetDueDate = (preset, completedDate) => {
     const date = parseDateKey(completedDate);
@@ -203,7 +303,7 @@ const hideStatus = () => {
 
 const chooseCurrentRecipe = (logs, roastLevel) => {
     if (!logs.length) return null;
-    const latestGood = logs.find(log => getBrewAdvice(log, roastLevel).status === "good");
+    const latestGood = logs.find(log => getBrewAdvice(log, roastLevel).status === "good" && (!log.taste || log.taste === "balanced"));
     return {
         shot: latestGood || logs[0],
         status: latestGood ? "Dialed" : "Resume"
@@ -224,7 +324,7 @@ const app = {
         if (targetView) targetView.classList.add('active');
         
         const topBar = document.getElementById('top-bar');
-        if (topBar) topBar.style.display = (viewName === 'login') ? 'none' : 'flex';
+        if (topBar) topBar.style.display = (viewName === 'login' || viewName === 'machine-select') ? 'none' : 'flex';
         
         // FAB Visibility
         const fabAdd = document.getElementById('fab-add-bean');
@@ -244,6 +344,31 @@ const app = {
     // --- AUTH ---
     login: async () => { haptic('medium'); try { await signInWithPopup(auth, provider); } catch(e) { alert(e.message); } },
     logout: () => { if(confirm("Logout?")) { haptic('heavy'); signOut(auth).then(() => location.reload()); } },
+    selectMachine: async (machineId) => {
+        const nextId = machineId === "bianca" ? "bianca" : "elizabeth";
+        const oldId = activeMachineId();
+        userProfile.machineId = nextId;
+        if (!userProfile.machineName || userProfile.machineName === "Lelit Elizabeth" || userProfile.machineName === "Lelit Bianca") {
+            userProfile.machineName = nextId === "bianca" ? "Lelit Bianca" : "Lelit Elizabeth";
+        }
+        await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
+        if (oldId !== nextId) {
+            currentRecipeShot = null;
+            logsCache = currentActiveBean ? app.logsForBean(currentActiveBean.id) : [];
+        }
+        app.applyMachineUi();
+        app.router('list');
+        app.renderBeanList();
+        app.renderGlobalStats();
+    },
+    applyMachineUi: () => {
+        const isBianca = activeMachineId() === "bianca";
+        document.getElementById('btn-open-detail-tuning').textContent = isBianca ? "Tune Bianca" : "Tune Elizabeth";
+        document.getElementById('btn-open-tuning').setAttribute("aria-label", isBianca ? "Open Bianca tuning lab" : "Open Elizabeth tuning lab");
+        document.querySelectorAll('[data-machine-option="elizabeth"]').forEach(option => { option.hidden = isBianca; });
+        document.querySelectorAll('[data-machine-option="bianca"]').forEach(option => { option.hidden = !isBianca; });
+        updateTemperatureUnitLabels(activeMachineProfile().temperatureUnit);
+    },
 
     // --- BEAN MANAGEMENT ---
     fetchAllLogs: (force = false) => {
@@ -257,7 +382,7 @@ const app = {
         }).finally(() => { logsLoadPromise = null; });
         return logsLoadPromise;
     },
-    logsForBean: (beanId) => newestFirst(allLogsCache.filter(log => log.beanId === beanId)),
+    logsForBean: (beanId) => newestFirst(allLogsCache.filter(log => log.beanId === beanId && recordMachineId(log) === activeMachineId())),
     upsertCachedLog: (log) => {
         const index = allLogsCache.findIndex(item => item.id === log.id);
         if (index >= 0) allLogsCache[index] = log;
@@ -491,8 +616,10 @@ const app = {
             app.renderDialInSummary();
             app.renderCurrentRecipe();
 
-            const b1Offset = (parseInt(userProfile.b1?.infusion)||0) + (parseInt(userProfile.b1?.bloom)||0);
-            document.getElementById('machine-badge').innerText = (userProfile.machineName || 'Generic') + " • " + b1Offset + "s Offset (P1)";
+            const machineContext = activeMachineId() === "bianca"
+                ? `${normalizeBiancaProfile(userProfile.bianca).machineVersion.toUpperCase()} • paddle flow`
+                : `${(parseInt(userProfile.b1?.infusion)||0) + (parseInt(userProfile.b1?.bloom)||0)}s P1 pre-infusion`;
+            document.getElementById('machine-badge').innerText = (userProfile.machineName || 'Espresso machine') + " • " + machineContext;
 
         } catch(e) {
             console.error("Detail error:", e);
@@ -528,6 +655,18 @@ const app = {
                 const advice = validation.valid
                     ? getBrewAdvice(log, currentActiveBean?.roastLevel)
                     : { status: "slow", text: "Incomplete legacy shot data" };
+                const observedSymptom = log.channelingObserved ? "channeling" : log.taste;
+                const historyTuningContext = {
+                    roast: currentActiveBean?.roastLevel,
+                    symptom: observedSymptom,
+                    dose: log.dose,
+                    yield: log.yield,
+                    time: log.time,
+                    pressure: log.pressureObserved,
+                    machineVersion: activeMachineProfile().machineVersion,
+                    temperatureUnit: activeMachineProfile().temperatureUnit
+                };
+                const tuningAdvice = observedSymptom ? (activeMachineId() === "bianca" ? diagnoseBiancaShot(historyTuningContext) : diagnoseElizabethShot(historyTuningContext)) : null;
                 const ratioValue = ratioFor(log);
                 const ratio = ratioValue ? ratioValue.toFixed(1) : "—";
                 const row = el("div", "log-row ext-" + advice.status);
@@ -542,7 +681,8 @@ const app = {
                 const ratioCol = el("div", "metric-col right");
                 ratioCol.append(el("div", "metric-value", "1:" + ratio), el("div", "recipe-label", log.dose + "g -> " + log.yield + "g"));
                 metrics.append(timeCol, grindCol, ratioCol);
-                row.append(metrics, el("div", "advice-text", advice.text));
+                const adviceText = tuningAdvice?.actions[0] ? advice.text + " • Next: " + tuningAdvice.actions[0] : advice.text;
+                row.append(metrics, el("div", "advice-text", adviceText));
                 row.onclick = () => app.openEditShot(log.id);
                 row.onkeydown = (event) => {
                     if (event.key === "Enter" || event.key === " ") {
@@ -604,7 +744,7 @@ const app = {
     renderGlobalStats: async () => {
         const statsContent = document.getElementById('global-stats-content');
         try {
-            const logs = await app.fetchAllLogs();
+            const logs = (await app.fetchAllLogs()).filter(log => recordMachineId(log) === activeMachineId());
             let total = 0; const grinds = {};
             logs.forEach(log => { total++; const g = log.grind; if(g) grinds[g] = (grinds[g] || 0) + 1; });
             if(total === 0) { document.getElementById('global-stats-card').classList.add('hidden'); return; }
@@ -725,6 +865,10 @@ const app = {
     removeTag: (i) => { currentEditingTags.splice(i, 1); app.renderEditingTags(); },
     openLogShot: () => {
         haptic('light');
+        const machineProfile = activeMachineProfile();
+        const isBianca = activeMachineId() === "bianca";
+        updateTemperatureUnitLabels(machineProfile.temperatureUnit);
+        app.applyMachineUi();
         document.getElementById('log-shot-title').innerText = currentRecipeShot ? "Repeat Recipe" : "Log Extraction";
         document.getElementById('log-bean-name').innerText = [currentActiveBean?.roaster, currentActiveBean?.name].filter(Boolean).join(" · ");
         document.getElementById('input-log-bean-id').value = currentActiveBean?.id || '';
@@ -735,10 +879,22 @@ const app = {
         document.getElementById('input-shot-yield').value = currentRecipeShot?.yield || defDose * 2;
         document.getElementById('input-shot-grind').value = currentRecipeShot?.grind || logsCache[0]?.grind || '';
         document.getElementById('input-shot-time').value = currentRecipeShot?.time || '';
+        const requestedProfile = currentRecipeShot?.profileUsed || 'manual';
+        document.getElementById('input-shot-profile').value = [...document.getElementById('input-shot-profile').options].some(option => option.value === requestedProfile && !option.hidden) ? requestedProfile : 'manual';
+        document.getElementById('input-shot-taste').value = currentRecipeShot?.taste || '';
+        const recipeTemperature = currentRecipeShot?.brewTemperature && currentRecipeShot.temperatureUnit && currentRecipeShot.temperatureUnit !== machineProfile.temperatureUnit
+            ? convertTemperature(currentRecipeShot.brewTemperature, currentRecipeShot.temperatureUnit, machineProfile.temperatureUnit)
+            : currentRecipeShot?.brewTemperature;
+        document.getElementById('input-shot-temperature').value = recipeTemperature || machineProfile.brewTemperature;
+        document.getElementById('input-shot-pressure').value = currentRecipeShot?.pressureObserved || machineProfile.observedPressure;
+        document.getElementById('input-shot-first-drop').value = currentRecipeShot?.firstDropSeconds || '';
+        document.getElementById('input-shot-channeling').checked = currentRecipeShot?.channelingObserved === true;
         const b1T = userProfile.b1 ? (parseInt(userProfile.b1.infusion)||0) + (parseInt(userProfile.b1.bloom)||0) + (parseInt(userProfile.b1.brew)||0) : 30;
         const b2T = userProfile.b2 ? (parseInt(userProfile.b2.infusion)||0) + (parseInt(userProfile.b2.bloom)||0) + (parseInt(userProfile.b2.brew)||0) : 30;
         document.getElementById('btn-time-1').innerText = "P1 (" + b1T + "s)";
         document.getElementById('btn-time-2').innerText = "P2 (" + b2T + "s)";
+        document.getElementById('btn-time-1').classList.toggle('hidden', isBianca);
+        document.getElementById('btn-time-2').classList.toggle('hidden', isBianca);
         document.getElementById('btn-save-shot').innerText = "Save Shot";
         document.getElementById('btn-delete-shot').classList.add('hidden');
         app.renderExtractionPreview();
@@ -749,6 +905,7 @@ const app = {
         if(n === 1 && userProfile.b1) t = (parseInt(userProfile.b1.infusion)||0) + (parseInt(userProfile.b1.bloom)||0) + (parseInt(userProfile.b1.brew)||0);
         else if(n === 2 && userProfile.b2) t = (parseInt(userProfile.b2.infusion)||0) + (parseInt(userProfile.b2.bloom)||0) + (parseInt(userProfile.b2.brew)||0);
         document.getElementById('input-shot-time').value = t;
+        document.getElementById('input-shot-profile').value = n === 1 ? "p1" : "p2";
         app.renderExtractionPreview();
     },
     renderExtractionPreview: () => {
@@ -759,7 +916,20 @@ const app = {
             const mock = { time: t, dose: d, yield: y };
             const adv = getBrewAdvice(mock, currentActiveBean?.roastLevel);
             const r = ratioFor(mock);
-            document.getElementById('extraction-preview-text').innerText = "1:" + (r ? r.toFixed(1) : '?') + ". " + adv.text;
+            const taste = document.getElementById('input-shot-channeling').checked ? "channeling" : document.getElementById('input-shot-taste').value;
+            const tuningContext = {
+                roast: currentActiveBean?.roastLevel,
+                symptom: taste,
+                dose: d,
+                yield: y,
+                time: t,
+                pressure: document.getElementById('input-shot-pressure').value,
+                machineVersion: activeMachineProfile().machineVersion,
+                temperatureUnit: activeMachineProfile().temperatureUnit
+            };
+            const tuning = taste ? (activeMachineId() === "bianca" ? diagnoseBiancaShot(tuningContext) : diagnoseElizabethShot(tuningContext)) : null;
+            const next = tuning?.actions[0] ? " Next: " + tuning.actions[0] : "";
+            document.getElementById('extraction-preview-text').innerText = "1:" + (r ? r.toFixed(1) : '?') + ". " + adv.text + next;
             document.getElementById('extraction-preview').classList.remove('hidden');
         } else document.getElementById('extraction-preview').classList.add('hidden');
     },
@@ -774,10 +944,18 @@ const app = {
             const sId = document.getElementById('input-log-shot-id').value;
             const data = {
                 beanId: bId, uid: currentUser.uid,
+                machineId: activeMachineId(),
                 grind: document.getElementById('input-shot-grind').value.trim(),
                 time: document.getElementById('input-shot-time').value.trim(),
                 dose: document.getElementById('input-shot-dose').value.trim(),
                 yield: document.getElementById('input-shot-yield').value.trim(),
+                profileUsed: document.getElementById('input-shot-profile').value,
+                taste: document.getElementById('input-shot-taste').value,
+                brewTemperature: document.getElementById('input-shot-temperature').value.trim(),
+                temperatureUnit: activeMachineProfile().temperatureUnit || "F",
+                pressureObserved: document.getElementById('input-shot-pressure').value.trim(),
+                firstDropSeconds: document.getElementById('input-shot-first-drop').value.trim(),
+                channelingObserved: document.getElementById('input-shot-channeling').checked,
                 date: new Date()
             };
             const validation = validateShot(data);
@@ -805,6 +983,17 @@ const app = {
         document.getElementById('input-shot-time').value = log.time;
         document.getElementById('input-shot-dose').value = log.dose;
         document.getElementById('input-shot-yield').value = log.yield;
+        app.applyMachineUi();
+        document.getElementById('input-shot-profile').value = log.profileUsed || 'manual';
+        document.getElementById('input-shot-taste').value = log.taste || '';
+        const profileUnit = activeMachineProfile().temperatureUnit || "F";
+        const loggedTemperature = log.brewTemperature && log.temperatureUnit && log.temperatureUnit !== profileUnit
+            ? convertTemperature(log.brewTemperature, log.temperatureUnit, profileUnit)
+            : log.brewTemperature;
+        document.getElementById('input-shot-temperature').value = loggedTemperature || activeMachineProfile().brewTemperature || '';
+        document.getElementById('input-shot-pressure').value = log.pressureObserved || '';
+        document.getElementById('input-shot-first-drop').value = log.firstDropSeconds || '';
+        document.getElementById('input-shot-channeling').checked = log.channelingObserved === true;
         document.getElementById('btn-save-shot').innerText = "Update Log";
         document.getElementById('btn-delete-shot').classList.remove('hidden');
         app.renderExtractionPreview();
@@ -815,9 +1004,9 @@ const app = {
         try {
             const snap = await getDoc(doc(db, "user_profiles", currentUser.uid));
             if (snap.exists()) {
-                const d = snap.data();
-                userProfile = { machineName: d.machineName || 'Lelit Elizabeth', defaultDose: parseFloat(d.defaultDose) || 18, finerDirection: d.finerDirection === "higher" ? "higher" : "lower", b1: d.b1 || { infusion: d.infusion || 3, bloom: d.bloom || 7, brew: 20 }, b2: d.b2 || { infusion: 0, bloom: 0, brew: 30 } };
+                userProfile = normalizeUserProfile(snap.data());
             } else await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
+            app.applyMachineUi();
         } catch(e) {}
     },
     updateSettingsDisplay: () => {
@@ -827,24 +1016,293 @@ const app = {
         document.getElementById('profile-b2-total-display').innerText = b2;
     },
     openSettings: () => {
+        const elizabeth = normalizeElizabethProfile(userProfile.elizabeth);
+        const bianca = normalizeBiancaProfile(userProfile.bianca);
+        document.getElementById('profile-machine-id').value = activeMachineId();
         document.getElementById('profile-machine-name').value = userProfile.machineName;
         document.getElementById('profile-default-dose').value = userProfile.defaultDose;
         document.getElementById('profile-finer-direction').value = userProfile.finerDirection || "lower";
+        document.getElementById('profile-machine-version').value = elizabeth.machineVersion;
+        document.getElementById('profile-firmware').value = elizabeth.firmware;
+        document.getElementById('profile-temperature-unit').value = elizabeth.temperatureUnit;
+        document.getElementById('profile-brew-temperature').value = elizabeth.brewTemperature;
+        document.getElementById('profile-steam-temperature').value = elizabeth.steamTemperature;
+        document.getElementById('profile-observed-pressure').value = elizabeth.observedPressure;
+        document.getElementById('profile-preinfusion-mode').value = elizabeth.preinfusionMode;
+        document.getElementById('profile-bianca-version').value = bianca.machineVersion;
+        document.getElementById('profile-bianca-firmware').value = bianca.firmware;
+        document.getElementById('profile-bianca-temperature-unit').value = bianca.temperatureUnit;
+        document.getElementById('profile-bianca-brew-temperature').value = bianca.brewTemperature;
+        document.getElementById('profile-bianca-steam-temperature').value = bianca.steamTemperature;
+        document.getElementById('profile-bianca-pressure').value = bianca.observedPressure;
+        document.getElementById('profile-bianca-brew-offset').value = bianca.brewOffset;
+        document.getElementById('profile-bianca-pi-on').value = bianca.preinfusionOn;
+        document.getElementById('profile-bianca-pi-off').value = bianca.preinfusionOff;
+        document.getElementById('profile-bianca-low-start').value = bianca.lowFlowStart;
+        document.getElementById('profile-bianca-low-final').value = bianca.lowFlowFinal;
+        settingsTemperatureUnit = elizabeth.temperatureUnit;
+        app.updateTemperatureSettings(elizabeth.temperatureUnit, false);
         if(userProfile.b1) { document.getElementById('profile-b1-infusion').value = userProfile.b1.infusion; document.getElementById('profile-b1-bloom').value = userProfile.b1.bloom; document.getElementById('profile-b1-brew').value = userProfile.b1.brew; }
         if(userProfile.b2) { document.getElementById('profile-b2-infusion').value = userProfile.b2.infusion; document.getElementById('profile-b2-bloom').value = userProfile.b2.bloom; document.getElementById('profile-b2-brew').value = userProfile.b2.brew; }
         app.updateSettingsDisplay();
+        app.updateBiancaTemperatureSettings(bianca.temperatureUnit, false);
+        app.updateMachineSettingsFields(activeMachineId());
         app.router('settings');
+    },
+    updateMachineSettingsFields: (machineId) => {
+        const isBianca = machineId === "bianca";
+        document.getElementById('settings-elizabeth-fields').classList.toggle('hidden', isBianca);
+        document.getElementById('settings-bianca-fields').classList.toggle('hidden', !isBianca);
+        const suggestedName = isBianca ? "Lelit Bianca" : "Lelit Elizabeth";
+        const input = document.getElementById('profile-machine-name');
+        if (!input.value || input.value === "Lelit Elizabeth" || input.value === "Lelit Bianca") input.value = suggestedName;
+    },
+    updateTemperatureSettings: (nextUnit, convertValues = true) => {
+        const unit = nextUnit === "C" ? "C" : "F";
+        const brewInput = document.getElementById('profile-brew-temperature');
+        const steamInput = document.getElementById('profile-steam-temperature');
+        if (convertValues && settingsTemperatureUnit !== unit) {
+            const brew = convertTemperature(brewInput.value, settingsTemperatureUnit, unit);
+            const steam = convertTemperature(steamInput.value, settingsTemperatureUnit, unit);
+            if (brew !== null) brewInput.value = brew;
+            if (steam !== null) steamInput.value = steam;
+        }
+        settingsTemperatureUnit = unit;
+        document.getElementById('profile-temperature-unit').value = unit;
+        brewInput.min = unit === "F" ? "175" : "80";
+        brewInput.max = unit === "F" ? "230" : "110";
+        brewInput.placeholder = unit === "F" ? "200" : "93";
+        steamInput.min = unit === "F" ? "239" : "115";
+        steamInput.max = unit === "F" ? "293" : "145";
+        steamInput.placeholder = unit === "F" ? "275" : "135";
+        updateTemperatureUnitLabels(unit);
+    },
+    updateBiancaTemperatureSettings: (nextUnit, convertValues = true) => {
+        const unit = nextUnit === "C" ? "C" : "F";
+        const brewInput = document.getElementById('profile-bianca-brew-temperature');
+        const steamInput = document.getElementById('profile-bianca-steam-temperature');
+        const offsetInput = document.getElementById('profile-bianca-brew-offset');
+        const previous = document.getElementById('profile-bianca-temperature-unit').dataset.previousUnit || normalizeBiancaProfile(userProfile.bianca).temperatureUnit;
+        if (convertValues && previous !== unit) {
+            const brew = convertTemperature(brewInput.value, previous, unit);
+            const steam = convertTemperature(steamInput.value, previous, unit);
+            const offset = parseFloat(offsetInput.value);
+            if (brew !== null) brewInput.value = brew;
+            if (steam !== null) steamInput.value = steam;
+            if (Number.isFinite(offset)) offsetInput.value = unit === "C" ? Math.round(offset * 5 / 9) : Math.round(offset * 9 / 5);
+        }
+        document.getElementById('profile-bianca-temperature-unit').dataset.previousUnit = unit;
+        brewInput.min = unit === "F" ? "176" : "80";
+        brewInput.max = unit === "F" ? "239" : "115";
+        steamInput.min = unit === "F" ? "239" : "115";
+        steamInput.max = unit === "F" ? "275" : "135";
+        offsetInput.min = unit === "F" ? "-36" : "-20";
+        offsetInput.max = unit === "F" ? "36" : "20";
+        document.querySelectorAll('[data-bianca-temperature-unit]').forEach(label => { label.textContent = unit; });
     },
     saveProfile: async () => {
         const b1 = { infusion: parseInt(document.getElementById('profile-b1-infusion').value) || 0, bloom: parseInt(document.getElementById('profile-b1-bloom').value) || 0, brew: parseInt(document.getElementById('profile-b1-brew').value) || 0 };
         const b2 = { infusion: parseInt(document.getElementById('profile-b2-infusion').value) || 0, bloom: parseInt(document.getElementById('profile-b2-bloom').value) || 0, brew: parseInt(document.getElementById('profile-b2-brew').value) || 0 };
-        userProfile = { machineName: document.getElementById('profile-machine-name').value, defaultDose: parseFloat(document.getElementById('profile-default-dose').value) || 18, finerDirection: document.getElementById('profile-finer-direction').value, b1, b2 };
+        const temperatureUnit = document.getElementById('profile-temperature-unit').value === "C" ? "C" : "F";
+        const elizabeth = normalizeElizabethProfile({
+            machineVersion: document.getElementById('profile-machine-version').value,
+            firmware: document.getElementById('profile-firmware').value.trim(),
+            temperatureUnit,
+            brewTemperature: document.getElementById('profile-brew-temperature').value,
+            steamTemperature: document.getElementById('profile-steam-temperature').value,
+            observedPressure: document.getElementById('profile-observed-pressure').value,
+            preinfusionMode: document.getElementById('profile-preinfusion-mode').value
+        });
+        const bianca = normalizeBiancaProfile({
+            machineVersion: document.getElementById('profile-bianca-version').value,
+            firmware: document.getElementById('profile-bianca-firmware').value.trim(),
+            temperatureUnit: document.getElementById('profile-bianca-temperature-unit').value,
+            brewTemperature: document.getElementById('profile-bianca-brew-temperature').value,
+            steamTemperature: document.getElementById('profile-bianca-steam-temperature').value,
+            observedPressure: document.getElementById('profile-bianca-pressure').value,
+            brewOffset: document.getElementById('profile-bianca-brew-offset').value,
+            preinfusionOn: document.getElementById('profile-bianca-pi-on').value,
+            preinfusionOff: document.getElementById('profile-bianca-pi-off').value,
+            lowFlowStart: document.getElementById('profile-bianca-low-start').value,
+            lowFlowFinal: document.getElementById('profile-bianca-low-final').value
+        });
+        userProfile = { machineId: document.getElementById('profile-machine-id').value === "bianca" ? "bianca" : "elizabeth", machineName: document.getElementById('profile-machine-name').value, defaultDose: parseFloat(document.getElementById('profile-default-dose').value) || 18, finerDirection: document.getElementById('profile-finer-direction').value, b1, b2, elizabeth, bianca };
         await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
+        app.applyMachineUi();
         app.router('list');
+    },
+    openTuning: () => {
+        if (activeMachineId() === "bianca") return app.openBiancaTuning();
+        const roast = String(currentActiveBean?.roastLevel || "medium").toLowerCase();
+        document.getElementById('tuning-roast').value = ["light", "medium", "dark"].includes(roast) ? roast : "medium";
+        document.getElementById('tuning-symptom').value = "starting";
+        document.getElementById('tuning-pressure').value = userProfile.elizabeth?.observedPressure || "";
+        app.renderTuningReference();
+        app.renderTuningPlan();
+        app.router('tuning');
+    },
+    renderTuningReference: () => {
+        const elizabeth = normalizeElizabethProfile(userProfile.elizabeth);
+        updateTemperatureUnitLabels(elizabeth.temperatureUnit);
+        const versionNames = {
+            "classic-v3": "Classic V3",
+            "classic-early": "Early classic",
+            "elizabeth3": "Elizabeth3 / Pagaia",
+            "unknown": "Version unknown"
+        };
+        document.getElementById('tuning-machine-chip').textContent = versionNames[elizabeth.machineVersion];
+        const profileParts = [
+            `${elizabeth.brewTemperature}°${elizabeth.temperatureUnit} brew`,
+            `${elizabeth.steamTemperature}°${elizabeth.temperatureUnit} steam`,
+            elizabeth.preinfusionMode + " pre-infusion"
+        ];
+        if (elizabeth.firmware) profileParts.push("firmware " + elizabeth.firmware);
+        document.getElementById('tuning-profile-context').textContent = "Your saved machine: " + profileParts.join(" • ");
+        document.getElementById('tuning-mode-explanation').textContent = explainPreinfusionMode(elizabeth);
+
+        const warning = document.getElementById('tuning-version-warning');
+        if (elizabeth.machineVersion === "classic-v3") warning.classList.add("hidden");
+        else {
+            warning.textContent = elizabeth.machineVersion === "elizabeth3"
+                ? "Elizabeth3 is a different Pagaia platform. The classic P1/P2 and BLS/BLP profiles below are reference-only and must not be copied to it."
+                : elizabeth.machineVersion === "classic-early"
+                    ? "Early PL92T detected. V3 pump-bloom, purge, and OPV instructions may not apply; verify your firmware manual before using advanced controls."
+                    : "Choose your Elizabeth generation in Settings before using hidden-menu or hardware guidance.";
+            warning.className = "status-strip status-warning";
+        }
+
+        const parameters = document.getElementById('tuning-advanced-parameters');
+        parameters.replaceChildren(...ELIZABETH_ADVANCED_PARAMETERS.map(parameter => {
+            const card = el("div", "advanced-parameter");
+            card.append(el("div", "advanced-parameter-name", parameter.name), el("div", "advanced-parameter-copy", parameter.text));
+            return card;
+        }));
+
+        const sources = document.getElementById('tuning-sources');
+        sources.replaceChildren(...ELIZABETH_SOURCES.map(source => {
+            const link = el("a", "tuning-source");
+            link.href = source.url;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.append(el("span", "tuning-source-title", source.title), el("span", "tuning-source-quality", source.quality));
+            return link;
+        }));
+    },
+    renderTuningPlan: () => {
+        const elizabeth = normalizeElizabethProfile(userProfile.elizabeth);
+        const advice = diagnoseElizabethShot({
+            roast: document.getElementById('tuning-roast').value,
+            symptom: document.getElementById('tuning-symptom').value,
+            pressure: document.getElementById('tuning-pressure').value,
+            dose: userProfile.defaultDose,
+            startingGrind: currentRecipeShot?.grind || logsCache[0]?.grind,
+            machineVersion: elizabeth.machineVersion,
+            temperatureUnit: elizabeth.temperatureUnit
+        });
+        const plan = el("div", "card tuning-plan-card");
+        const heading = el("div", "tuning-plan-heading");
+        const headingText = el("div");
+        headingText.append(el("div", "field-kicker", advice.baseline.button + " starting profile"), el("h3", "", advice.summary));
+        heading.append(headingText, el("span", "evidence-badge", "Consensus start"));
+
+        const metrics = el("div", "tuning-baseline-grid");
+        [
+            [`${advice.baseline.dose}g → ${advice.baseline.yield}g`, "Dose → yield"],
+            [`${advice.baseline.temperature}°${advice.baseline.temperatureUnit}`, advice.baseline.temperatureRange],
+            [advice.baseline.preinfusion, "Total pre-infusion"],
+            [advice.baseline.timeRange, "Includes pre-infusion"]
+        ].forEach(([value, label]) => {
+            const item = el("div", "tuning-baseline-item");
+            item.append(el("span", "tuning-baseline-value", value), el("span", "tuning-baseline-label", label));
+            metrics.appendChild(item);
+        });
+
+        const actions = el("ol", "tuning-actions");
+        advice.actions.forEach(action => actions.appendChild(el("li", "", action)));
+        plan.append(heading, metrics, actions);
+        advice.warnings.forEach(warning => plan.appendChild(el("div", "tuning-warning", warning)));
+        document.getElementById('tuning-plan').replaceChildren(plan);
+    },
+    openBiancaTuning: () => {
+        const roast = String(currentActiveBean?.roastLevel || "medium").toLowerCase();
+        document.getElementById('bianca-tuning-roast').value = ["light", "medium", "dark"].includes(roast) ? roast : "medium";
+        document.getElementById('bianca-tuning-symptom').value = "starting";
+        document.getElementById('bianca-tuning-pressure').value = userProfile.bianca?.observedPressure || "";
+        app.renderBiancaTuningReference();
+        app.renderBiancaTuningPlan();
+        app.router('bianca-tuning');
+    },
+    renderBiancaTuningReference: () => {
+        const bianca = normalizeBiancaProfile(userProfile.bianca);
+        const names = { v3: "V3 · 120V", v2: "V2 · 120V", v1: "V1 · 120V", unknown: "Version unknown" };
+        document.getElementById('bianca-tuning-machine-chip').textContent = names[bianca.machineVersion];
+        const parts = [
+            `${bianca.brewTemperature}°${bianca.temperatureUnit} brew`,
+            `${bianca.steamTemperature}°${bianca.temperatureUnit} steam`,
+            `${bianca.observedPressure || "—"} bar group peak`
+        ];
+        if (bianca.firmware) parts.push("firmware " + bianca.firmware);
+        document.getElementById('bianca-tuning-profile-context').textContent = "Your saved machine: " + parts.join(" • ");
+        document.getElementById('bianca-tuning-flow-explanation').textContent = explainBiancaFlow(bianca);
+        const warning = document.getElementById('bianca-tuning-version-warning');
+        if (bianca.machineVersion === "v3") warning.classList.add('hidden');
+        else {
+            warning.textContent = bianca.machineVersion === "unknown"
+                ? "Choose the Bianca generation in Settings before copying programmed low-flow timings. PL162T-120 identifies voltage, not V1/V2/V3."
+                : `${bianca.machineVersion.toUpperCase()} selected: manual paddle profiles apply, but factory V3 low-flow and brew-offset controls do not unless an authorized conversion is installed.`;
+            warning.className = "status-strip status-warning";
+        }
+        document.getElementById('bianca-tuning-advanced-parameters').replaceChildren(...BIANCA_ADVANCED_PARAMETERS.map(parameter => {
+            const card = el("div", "advanced-parameter");
+            card.append(el("div", "advanced-parameter-name", parameter.name), el("div", "advanced-parameter-copy", parameter.text));
+            return card;
+        }));
+        document.getElementById('bianca-tuning-sources').replaceChildren(...BIANCA_SOURCES.map(source => {
+            const link = el("a", "tuning-source");
+            link.href = source.url;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.append(el("span", "tuning-source-title", source.title), el("span", "tuning-source-quality", source.quality));
+            return link;
+        }));
+    },
+    renderBiancaTuningPlan: () => {
+        const bianca = normalizeBiancaProfile(userProfile.bianca);
+        const advice = diagnoseBiancaShot({
+            roast: document.getElementById('bianca-tuning-roast').value,
+            symptom: document.getElementById('bianca-tuning-symptom').value,
+            pressure: document.getElementById('bianca-tuning-pressure').value,
+            dose: userProfile.defaultDose,
+            machineVersion: bianca.machineVersion,
+            temperatureUnit: bianca.temperatureUnit
+        });
+        const plan = el("div", "card tuning-plan-card");
+        const heading = el("div", "tuning-plan-heading");
+        const headingText = el("div");
+        headingText.append(el("div", "field-kicker", advice.baseline.profile + " starting profile"), el("h3", "", advice.summary));
+        heading.append(headingText, el("span", "evidence-badge", "Consensus start"));
+        const metrics = el("div", "tuning-baseline-grid");
+        [
+            [`${advice.baseline.dose}g → ${advice.baseline.yield}g`, advice.baseline.ratioRange],
+            [`${advice.baseline.temperature}°${advice.baseline.temperatureUnit}`, advice.baseline.temperatureRange],
+            [advice.baseline.flow, advice.baseline.preinfusion],
+            [advice.baseline.peakPressure, advice.baseline.timeRange]
+        ].forEach(([value, label]) => {
+            const item = el("div", "tuning-baseline-item");
+            item.append(el("span", "tuning-baseline-value", value), el("span", "tuning-baseline-label", label));
+            metrics.appendChild(item);
+        });
+        const actions = el("ol", "tuning-actions");
+        advice.actions.forEach(action => actions.appendChild(el("li", "", action)));
+        plan.append(heading, metrics, actions);
+        advice.warnings.forEach(warning => plan.appendChild(el("div", "tuning-warning", warning)));
+        document.getElementById('bianca-tuning-plan').replaceChildren(plan);
     },
     openMaintenance: async () => {
         app.router('maintenance');
         document.getElementById('maintenance-machine-name').textContent = userProfile.machineName || "Espresso machine";
+        document.getElementById('maintenance-guide-elizabeth').classList.toggle('hidden', activeMachineId() !== "elizabeth");
+        document.getElementById('maintenance-guide-bianca').classList.toggle('hidden', activeMachineId() !== "bianca");
         document.getElementById('maintenance-completed-date').value = localDateKey();
         const status = document.getElementById('maintenance-status');
         status.textContent = "Syncing service history...";
@@ -863,16 +1321,17 @@ const app = {
         const list = document.getElementById('maintenance-list');
         const summary = document.getElementById('maintenance-summary');
         const quickActions = document.getElementById('maintenance-quick-actions');
+        const visibleRecords = activeMaintenanceRecords();
         const latestByType = new Map();
-        maintenanceRecords.forEach(record => {
+        visibleRecords.forEach(record => {
             if (!latestByType.has(record.type)) latestByType.set(record.type, record);
         });
         const activeReminders = [...latestByType.values()].filter(record => record.nextDueDate);
         const overdue = activeReminders.filter(record => maintenanceDueState(record.nextDueDate).tone === "overdue").length;
         const dueSoon = activeReminders.filter(record => maintenanceDueState(record.nextDueDate).tone === "due").length;
-        const newest = maintenanceRecords[0];
+        const newest = visibleRecords[0];
         const summaryItems = [
-            [maintenanceRecords.length, "Services logged"],
+            [visibleRecords.length, "Services logged"],
             [overdue, "Overdue"],
             [dueSoon, "Due in 30 days"],
             [newest ? parseDateKey(newest.completedDate).toLocaleDateString() : "—", "Last service"]
@@ -884,7 +1343,7 @@ const app = {
         }));
 
         const today = localDateKey();
-        quickActions.replaceChildren(...maintenancePresets.map(preset => {
+        quickActions.replaceChildren(...maintenancePresetsForActiveMachine().map(preset => {
             const latest = latestByType.get(preset.type);
             const completedToday = latest?.completedDate === today;
             const card = el("article", "maintenance-quick-card");
@@ -909,11 +1368,11 @@ const app = {
             return card;
         }));
 
-        if (!maintenanceRecords.length) {
+        if (!visibleRecords.length) {
             renderEmpty(list, "Nothing logged yet. Tap a button above when you finish a task.");
             return;
         }
-        list.replaceChildren(...maintenanceRecords.map(record => {
+        list.replaceChildren(...visibleRecords.map(record => {
             const isLatest = latestByType.get(record.type)?.id === record.id;
             const state = isLatest ? maintenanceDueState(record.nextDueDate) : { tone: "none", label: "Past record" };
             const row = el("article", `maintenance-row maintenance-${state.tone}`);
@@ -935,6 +1394,7 @@ const app = {
         const completedDate = localDateKey();
         const data = {
             uid: currentUser.uid,
+            machineId: activeMachineId(),
             type: preset.type,
             completedDate,
             nextDueDate: presetDueDate(preset, completedDate),
@@ -963,6 +1423,7 @@ const app = {
         if (nextDueDate && nextDueDate < completedDate) return alert("Next due date must be after the completed date.");
         const data = {
             uid: currentUser.uid,
+            machineId: activeMachineId(),
             type: document.getElementById('maintenance-type').value,
             completedDate,
             nextDueDate,
@@ -1002,7 +1463,7 @@ const app = {
         document.getElementById("analytics-insight-text").innerText = "Loading shot patterns...";
         try {
             const useCurrentBean = analyticsScope === "current" && currentActiveBean?.id;
-            const loadedLogs = await app.fetchAllLogs();
+            const loadedLogs = (await app.fetchAllLogs()).filter(log => recordMachineId(log) === activeMachineId());
             const logs = (useCurrentBean ? loadedLogs.filter(log => log.beanId === currentActiveBean.id) : loadedLogs)
                 .slice().sort((a, b) => logTime(a) - logTime(b));
             try { await loadChartLibrary(); }
@@ -1113,20 +1574,37 @@ const app = {
             app.fetchMaintenance()
         ]);
         const beanLookup = new Map(beanSnap.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
-        const rows = [["date", "bean", "roaster", "roast_date", "grind", "time", "dose", "yield"]];
+        const rows = [["date", "machine", "bean", "roaster", "roast_date", "grind", "time", "dose", "yield", "machine_profile", "taste", "brew_temperature", "temperature_unit", "shot_gauge_bar", "first_drop_seconds", "channeling_observed"]];
         logs.forEach(log => {
             const bean = beanLookup.get(log.beanId) || beans.find(b => b.id === log.beanId) || {};
-            rows.push([formatDate(log.date), bean.name || log.beanId, bean.roaster || "", log.roastDate || "", log.grind, log.time, log.dose, log.yield]);
+            rows.push([formatDate(log.date), recordMachineId(log), bean.name || log.beanId, bean.roaster || "", log.roastDate || "", log.grind, log.time, log.dose, log.yield, log.profileUsed || "", log.taste || "", log.brewTemperature || "", log.temperatureUnit || activeMachineProfile().temperatureUnit || "F", log.pressureObserved || "", log.firstDropSeconds || "", log.channelingObserved === true]);
         });
         downloadCsv("lincoln-barista-export.csv", rows);
-        const maintenanceRows = [["completed_date", "service", "next_due_date", "notes"]];
-        maintenance.forEach(record => maintenanceRows.push([record.completedDate, record.type, record.nextDueDate, record.notes]));
+        const maintenanceRows = [["completed_date", "machine", "service", "next_due_date", "notes"]];
+        maintenance.forEach(record => maintenanceRows.push([record.completedDate, recordMachineId(record), record.type, record.nextDueDate, record.notes]));
         downloadCsv("lincoln-barista-maintenance.csv", maintenanceRows);
     },
     repeatCurrentRecipe: async () => {
         if (!currentRecipeShot || !currentActiveBean) return app.openLogShot();
         if(confirm("Repeat recipe?")) {
-            const data = { beanId: currentActiveBean.id, uid: currentUser.uid, grind: currentRecipeShot.grind, time: currentRecipeShot.time, dose: currentRecipeShot.dose, yield: currentRecipeShot.yield, roastDate: currentActiveBean.currentRoastDate || "Unknown", date: new Date() };
+            const data = {
+                beanId: currentActiveBean.id,
+                uid: currentUser.uid,
+                machineId: activeMachineId(),
+                grind: currentRecipeShot.grind,
+                time: currentRecipeShot.time,
+                dose: currentRecipeShot.dose,
+                yield: currentRecipeShot.yield,
+                profileUsed: currentRecipeShot.profileUsed || "manual",
+                taste: "",
+                brewTemperature: currentRecipeShot.brewTemperature || String(activeMachineProfile().brewTemperature || ""),
+                temperatureUnit: currentRecipeShot.temperatureUnit || activeMachineProfile().temperatureUnit || "F",
+                pressureObserved: "",
+                firstDropSeconds: "",
+                channelingObserved: false,
+                roastDate: currentActiveBean.currentRoastDate || "Unknown",
+                date: new Date()
+            };
             const created = await addDoc(collection(db, "brew_logs"), data);
             app.upsertCachedLog({ id: created.id, ...data });
             await app.loadBeanDetail(currentActiveBean.id);
@@ -1166,18 +1644,20 @@ if ("serviceWorker" in navigator) {
         } catch { /* The app still works online without installation support. */ }
     });
 }
-onAuthStateChanged(auth, u => {
+onAuthStateChanged(auth, async u => {
     if (!u) { app.router('login'); return; }
     currentUser = u;
     allLogsCache = [];
     allLogsLoaded = false;
     logsLoadPromise = null;
-    app.router(window.location.hash.substring(1) || 'list');
-    app.fetchProfile();
+    await app.fetchProfile();
+    app.applyMachineUi();
+    app.router('machine-select');
     app.fetchAllLogs().then(() => app.renderGlobalStats()).catch(console.error);
     app.fetchBeans();
 });
-on("btn-login", "click", () => app.login()); on("btn-open-settings", "click", () => app.openSettings()); on("btn-logout", "click", () => app.logout()); on("btn-logout-settings", "click", () => app.logout());
+on("btn-login", "click", () => app.login()); on("btn-open-settings", "click", () => app.openSettings()); on("btn-open-tuning", "click", () => app.openTuning()); on("btn-logout", "click", () => app.logout()); on("btn-logout-settings", "click", () => app.logout());
+on("btn-select-elizabeth", "click", () => app.selectMachine("elizabeth")); on("btn-select-bianca", "click", () => app.selectMachine("bianca"));
 on("btn-open-maintenance", "click", () => app.openMaintenance()); on("btn-save-maintenance", "click", () => app.saveMaintenance());
 on("input-sort-beans", "change", (e) => app.setSort(e.target.value)); on("fab-add-bean", "click", () => { app.resetBeanForm(); app.router("edit-bean"); }); on("fab-log-shot", "click", () => app.openLogShot());
 on("input-bean-image", "change", (e) => app.handleImageUpload(e)); on("btn-remove-image", "click", () => app.removeImage()); on("btn-add-tag", "click", () => app.addTag());
@@ -1185,6 +1665,7 @@ on("input-new-tag", "keydown", (event) => { if (event.key === "Enter") { event.p
 document.querySelectorAll(".bean-star").forEach(s => s.onclick = () => app.setBeanRating(parseInt(s.dataset.rating)));
 on("btn-save-bean", "click", () => app.saveBean()); on("btn-cancel-bean", "click", () => app.router("list")); on("btn-delete-bean", "click", () => app.deleteBean());
 on("btn-edit-active-bean", "click", () => app.editActiveBean()); on("btn-update-roast-date", "click", () => app.promptNewDate()); on("btn-repeat-recipe", "click", () => app.repeatCurrentRecipe());
+on("btn-open-detail-tuning", "click", () => app.openTuning());
 on("btn-adjust-recipe", "click", () => app.openLogShot());
 on("btn-open-detail-analytics", "click", () => app.openAnalytics("current"));
 on("btn-analytics-current", "click", () => app.openAnalytics("current"));
@@ -1192,8 +1673,16 @@ on("btn-analytics-all", "click", () => app.openAnalytics("all"));
 document.querySelectorAll("[data-route]").forEach(b => b.onclick = () => app.router(b.dataset.route));
 on("btn-time-1", "click", () => app.setTimeFromProfile(1)); on("btn-time-2", "click", () => app.setTimeFromProfile(2));
 document.querySelectorAll(".shot-preview-input").forEach(input => input.addEventListener("input", () => app.renderExtractionPreview()));
+on("input-shot-taste", "change", () => app.renderExtractionPreview()); on("input-shot-pressure", "input", () => app.renderExtractionPreview()); on("input-shot-channeling", "change", () => app.renderExtractionPreview());
 document.querySelectorAll("#view-settings input[type='number']").forEach(input => input.addEventListener("input", () => app.updateSettingsDisplay()));
+on("profile-temperature-unit", "change", event => app.updateTemperatureSettings(event.target.value));
+on("profile-bianca-temperature-unit", "change", event => app.updateBiancaTemperatureSettings(event.target.value));
+on("profile-machine-id", "change", event => app.updateMachineSettingsFields(event.target.value));
+on("tuning-roast", "change", () => app.renderTuningPlan()); on("tuning-symptom", "change", () => app.renderTuningPlan()); on("tuning-pressure", "input", () => app.renderTuningPlan());
+on("bianca-tuning-roast", "change", () => app.renderBiancaTuningPlan()); on("bianca-tuning-symptom", "change", () => app.renderBiancaTuningPlan()); on("bianca-tuning-pressure", "input", () => app.renderBiancaTuningPlan());
 on("btn-save-shot", "click", () => app.saveShot()); on("btn-cancel-shot", "click", () => app.router("detail")); on("btn-cancel-shot-top", "click", () => app.router("detail")); on("btn-delete-shot", "click", () => app.deleteShot());
 on("btn-save-profile", "click", () => app.saveProfile()); on("btn-export-data", "click", () => app.exportData()); on("btn-open-analytics", "click", () => app.openAnalytics("all"));
+on("btn-tuning-open-settings", "click", () => app.openSettings());
+on("btn-bianca-tuning-open-settings", "click", () => app.openSettings());
 on("btn-refresh-app", "click", () => window.location.reload());
 window.addEventListener('popstate', (e) => { if (e.state?.view) app.router(e.state.view, false); });

@@ -19,16 +19,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"></noscript>
-    <link rel="stylesheet" href="style.css?v=1.7.3">
+    <link rel="stylesheet" href="style.css?v=1.9.0">
 </head>
 <body>
 
     <div id="top-bar">
         <div class="app-brand">
             <div class="app-logo">Lincoln <span>Barista <small>Platinum</small></span></div>
-            <div class="build-chip">v1.7.3 · <code data-build-commit>__BUILD_COMMIT__</code></div>
+            <div class="build-chip">v1.9.0 · <code data-build-commit>__BUILD_COMMIT__</code></div>
         </div>
         <div class="top-actions">
+            <button class="icon-btn" id="btn-open-tuning" type="button" aria-label="Open machine tuning lab" title="Machine tuning">🎛️</button>
             <button class="icon-btn" id="btn-open-analytics" type="button" aria-label="Open analytics" title="Analytics">📊</button>
             <button class="icon-btn" id="btn-open-maintenance" type="button" aria-label="Open machine care" title="Machine care">🔧</button>
             <button class="icon-btn" id="btn-open-settings" type="button" aria-label="Open settings" title="Settings">⚙️</button>
@@ -50,6 +51,25 @@
         <h1 class="login-title">Lincoln Barista</h1>
         <p class="login-subtitle">The art of the perfect extraction.</p>
         <button class="btn login-btn" id="btn-login">Sign in with Google</button>
+    </div>
+
+    <!-- VIEW: MACHINE SELECT -->
+    <div id="view-machine-select" class="view machine-select-view">
+        <div class="field-kicker">Choose today’s machine</div>
+        <h1 class="large-heading">Which Lelit are you using?</h1>
+        <p class="machine-select-intro">Shots, tuning advice, and service history will be labeled for the selected machine. You can switch again from Settings.</p>
+        <div class="machine-choice-grid">
+            <button class="machine-choice-card" id="btn-select-elizabeth" type="button">
+                <span class="machine-choice-icon" aria-hidden="true">☕</span>
+                <span class="machine-choice-name">Elizabeth</span>
+                <span class="machine-choice-model">PL92T · programmable pre-infusion</span>
+            </button>
+            <button class="machine-choice-card" id="btn-select-bianca" type="button">
+                <span class="machine-choice-icon" aria-hidden="true">🎚️</span>
+                <span class="machine-choice-name">Bianca</span>
+                <span class="machine-choice-model">PL162T-120 · paddle flow control</span>
+            </button>
+        </div>
     </div>
 
     <!-- VIEW: LIST -->
@@ -172,6 +192,7 @@
             
             <div class="detail-actions">
                 <button class="btn-secondary small-btn" id="btn-edit-active-bean" type="button">Edit Profile</button>
+                <button class="btn-secondary small-btn" id="btn-open-detail-tuning" type="button">Tune Machine</button>
                 <button class="btn-secondary small-btn" id="btn-open-detail-analytics" type="button">Analytics</button>
             </div>
         </div>
@@ -282,6 +303,57 @@
                     <input type="number" inputmode="decimal" step="0.1" id="input-shot-yield" placeholder="36.0" class="shot-preview-input">
                 </div>
             </div>
+
+            <details class="shot-observations">
+                <summary>Tuning observations (optional)</summary>
+                <div class="shot-observation-fields">
+                    <div class="form-grid two-col">
+                        <div class="form-group">
+                            <label for="input-shot-profile">Machine profile</label>
+                            <select id="input-shot-profile">
+                                <option value="manual">Manual</option>
+                                <option value="p1" data-machine-option="elizabeth">P1 · Classic / dark</option>
+                                <option value="p2" data-machine-option="elizabeth">P2 · Modern / light</option>
+                                <option value="bianca-standard" data-machine-option="bianca">Bianca · Standard / full paddle</option>
+                                <option value="bianca-low-flow" data-machine-option="bianca">Bianca · Programmed low flow</option>
+                                <option value="bianca-paddle" data-machine-option="bianca">Bianca · Manual paddle</option>
+                                <option value="bianca-bloom" data-machine-option="bianca">Bianca · Bloom</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="input-shot-taste">Taste result</label>
+                            <select id="input-shot-taste">
+                                <option value="">Not assessed</option>
+                                <option value="balanced">Balanced / save it</option>
+                                <option value="sour">Sour / sharp</option>
+                                <option value="bitter">Bitter / dry</option>
+                                <option value="astringent">Astringent</option>
+                                <option value="hollow">Weak / hollow</option>
+                                <option value="channeling">Sour + bitter / channeling</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-grid three-col">
+                        <div class="form-group">
+                            <label for="input-shot-temperature">Brew temp (°<span data-temperature-unit>F</span>)</label>
+                            <input type="number" inputmode="decimal" id="input-shot-temperature" min="175" max="230" step="1" placeholder="200">
+                        </div>
+                        <div class="form-group">
+                            <label for="input-shot-pressure">Gauge (bar)</label>
+                            <input type="number" inputmode="decimal" id="input-shot-pressure" min="0" max="16" step="0.1" placeholder="9.0">
+                        </div>
+                        <div class="form-group">
+                            <label for="input-shot-first-drop">First drop (s)</label>
+                            <input type="number" inputmode="decimal" id="input-shot-first-drop" min="0" max="99" step="0.1" placeholder="10">
+                        </div>
+                    </div>
+                    <label class="check-row" for="input-shot-channeling">
+                        <input type="checkbox" id="input-shot-channeling">
+                        <span>Bottomless flow sprayed or looked uneven</span>
+                    </label>
+                    <div class="subtle-note">Pressure here means the front gauge during the coffee shot—not a blind-basket static test.</div>
+                </div>
+            </details>
         </div>
 
         <div id="extraction-preview" class="card extraction-preview-card hidden">
@@ -293,6 +365,108 @@
             <button class="btn" id="btn-save-shot" type="button">Save Shot</button>
             <button class="btn btn-secondary stack-action" id="btn-cancel-shot" type="button">Cancel</button>
             <button class="btn btn-danger hidden delete-shot-action" id="btn-delete-shot" type="button">Delete Log</button>
+        </div>
+    </div>
+
+    <!-- VIEW: BIANCA TUNING -->
+    <div id="view-bianca-tuning" class="view">
+        <button class="btn-secondary back-btn" type="button" data-route="list">← Collection</button>
+        <div class="tuning-heading">
+            <div>
+                <div class="field-kicker">Lelit Bianca PL162T-120</div>
+                <h2 class="large-heading">Flow Tuning Lab</h2>
+            </div>
+            <div id="bianca-tuning-machine-chip" class="machine-name-chip"></div>
+        </div>
+
+        <div id="bianca-tuning-version-warning" class="status-strip hidden"></div>
+        <div class="card tuning-controls-card">
+            <div class="section-label">Build the next shot</div>
+            <div class="form-grid three-col">
+                <div class="form-group">
+                    <label for="bianca-tuning-roast">Roast style</label>
+                    <select id="bianca-tuning-roast">
+                        <option value="dark">Dark / traditional</option>
+                        <option value="medium">Medium / everyday</option>
+                        <option value="light">Light / dense</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="bianca-tuning-symptom">What happened?</label>
+                    <select id="bianca-tuning-symptom">
+                        <option value="starting">I need a starting point</option>
+                        <option value="balanced">Balanced</option>
+                        <option value="sour">Sour / sharp</option>
+                        <option value="bitter">Bitter / dry</option>
+                        <option value="astringent">Astringent</option>
+                        <option value="hollow">Weak / hollow</option>
+                        <option value="channeling">Sour + bitter / spraying</option>
+                        <option value="fast">Fast / gushing</option>
+                        <option value="slow">Slow / choked</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="bianca-tuning-pressure">Group gauge (bar)</label>
+                    <input type="number" inputmode="decimal" id="bianca-tuning-pressure" min="0" max="16" step="0.1" placeholder="Optional">
+                </div>
+            </div>
+            <div class="tuning-profile-context" id="bianca-tuning-profile-context"></div>
+        </div>
+        <div id="bianca-tuning-plan"></div>
+
+        <div class="card tuning-truth-card">
+            <div class="field-kicker">Flow is not fixed pressure</div>
+            <h3>Paddle position, puck resistance, and pressure interact</h3>
+            <p>The paddle meters water flow. It does not save a fixed bar setting, and the same position can show different pressure as the puck erodes.</p>
+            <p>V3 low-flow automation makes a repeatable restricted-flow start or finish. Programmed pre-infusion separately turns the pump on, then off. Combining both is powerful but should come after a repeatable full-paddle shot.</p>
+            <p id="bianca-tuning-flow-explanation"></p>
+        </div>
+
+        <div class="tuning-library-grid">
+            <details class="maintenance-disclosure card" open>
+                <summary>Out-of-box tuning order</summary>
+                <div class="manual-guidance tuning-guide">
+                    <ol>
+                        <li>Warm at least 20–25 minutes with the portafilter installed; the E61 group trails the boiler display.</li>
+                        <li>Use the 16–18g basket around 18g, preserve headspace, and stop every shot by scale weight.</li>
+                        <li>Turn pre-infusion and low-flow OFF. Put the paddle fully open and dial ratio, grind, and puck prep.</li>
+                        <li>Adjust brew temperature in 2°F (1°C) steps by taste only after shots repeat.</li>
+                        <li>Choose one experiment: low-flow start, low-flow final, programmed bloom, or manual paddle—not several at once.</li>
+                    </ol>
+                    <p class="manual-warning"><strong>Water:</strong> Follow Lelit’s limits: 0–110 ppm total hardness as CaCO₃, 40–75 ppm carbonate hardness, pH 6.5–7.5, and no chlorine.</p>
+                </div>
+            </details>
+            <details class="maintenance-disclosure card">
+                <summary>V3 programmed flow controls</summary>
+                <div class="manual-guidance tuning-guide">
+                    <p>PI ON pumps water, PI OFF pauses the pump, low-flow START restricts flow until its timestamp, and low-flow FINAL restricts from its timestamp to lever-down. The paddle can further restrict every stage.</p>
+                    <div id="bianca-tuning-advanced-parameters" class="advanced-parameter-list"></div>
+                    <p class="manual-warning"><strong>Version gate:</strong> V1/V2 have manual paddle control but not factory V3 low-flow automation. Confirm the LCC options or an authorized V3 conversion.</p>
+                </div>
+            </details>
+            <details class="maintenance-disclosure card">
+                <summary>Pressure and paddle calibration</summary>
+                <div class="manual-guidance tuning-guide">
+                    <p>The small group gauge measures pressure near the puck; the chassis gauge reports pump-circuit pressure. A difference is normal. Dial flavor and flow, not a decorative 9-bar target.</p>
+                    <p>With no portafilter, pressure should be near zero regardless of paddle. Never use an open group flow test to set pump pressure.</p>
+                    <p class="manual-warning"><strong>Advanced:</strong> The external rotary-pump screw changes the ceiling for every shot. Photograph the original setting, make no change until a repeatable standard recipe exists, and use qualified service if diagnosis requires opening panels or energized calibration.</p>
+                </div>
+            </details>
+            <details class="maintenance-disclosure card">
+                <summary>Water supply and technical menu</summary>
+                <div class="manual-guidance tuning-guide">
+                    <p>Tank and plumbed operation share the V3 pump/solenoid logic. Do not assume a half-raised lever provides safe line-pressure pre-infusion; V3’s safety solenoid changes older E61 behavior.</p>
+                    <p class="manual-warning"><strong>Technician boundary:</strong> Record every factory PID/offset value before entering the technical menu. Annual hydraulic descaling, electrical work, internal leaks, and pressure calibration belong to qualified service.</p>
+                </div>
+            </details>
+        </div>
+        <div class="card">
+            <div class="field-kicker">Evidence library</div>
+            <p class="tuning-source-intro">Manufacturer behavior is separated from measured reviews and owner reports. Profiles are starting ranges, not guarantees.</p>
+            <div id="bianca-tuning-sources" class="tuning-source-list"></div>
+        </div>
+        <div class="view-actions">
+            <button class="btn btn-secondary" id="btn-bianca-tuning-open-settings" type="button">Edit My Bianca Profile</button>
         </div>
     </div>
 
@@ -340,6 +514,116 @@
         </div>
     </div>
 
+    <!-- VIEW: ELIZABETH TUNING -->
+    <div id="view-tuning" class="view">
+        <button class="btn-secondary back-btn" type="button" data-route="list">← Collection</button>
+        <div class="tuning-heading">
+            <div>
+                <div class="field-kicker">Lelit Elizabeth PL92T</div>
+                <h2 class="large-heading">Tuning Lab</h2>
+            </div>
+            <div id="tuning-machine-chip" class="machine-name-chip"></div>
+        </div>
+
+        <div id="tuning-version-warning" class="status-strip hidden"></div>
+
+        <div class="card tuning-controls-card">
+            <div class="section-label">Build the next shot</div>
+            <div class="form-grid three-col">
+                <div class="form-group">
+                    <label for="tuning-roast">Roast style</label>
+                    <select id="tuning-roast">
+                        <option value="dark">Dark / traditional</option>
+                        <option value="medium">Medium / everyday</option>
+                        <option value="light">Light / dense</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="tuning-symptom">What happened?</label>
+                    <select id="tuning-symptom">
+                        <option value="starting">I need a starting point</option>
+                        <option value="balanced">Balanced</option>
+                        <option value="sour">Sour / sharp</option>
+                        <option value="bitter">Bitter / dry</option>
+                        <option value="astringent">Astringent</option>
+                        <option value="hollow">Weak / hollow</option>
+                        <option value="channeling">Sour + bitter / spraying</option>
+                        <option value="fast">Fast / gushing</option>
+                        <option value="slow">Slow / choked</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="tuning-pressure">Shot gauge (bar)</label>
+                    <input type="number" inputmode="decimal" id="tuning-pressure" min="0" max="16" step="0.1" placeholder="Optional">
+                </div>
+            </div>
+            <div class="tuning-profile-context" id="tuning-profile-context"></div>
+        </div>
+
+        <div id="tuning-plan"></div>
+
+        <div class="card tuning-truth-card">
+            <div class="field-kicker">What P1 and P2 really save</div>
+            <h3>P1 dark, P2 light—with two global controls</h3>
+            <p>The buttons remember their own <strong>total pre-infusion</strong> and <strong>timed auto-stop</strong>. They do not save a grind, beverage weight, brew temperature, or independent steam-vs-bloom mode.</p>
+            <p>The programmed stop time includes every pre-infusion second. A 40-second P2 with 12 seconds of pre-infusion leaves about 28 seconds for the full-pressure phase.</p>
+            <p id="tuning-mode-explanation"></p>
+        </div>
+
+        <div class="tuning-library-grid">
+            <details class="maintenance-disclosure card" open>
+                <summary>Out-of-box tuning order</summary>
+                <div class="manual-guidance tuning-guide">
+                    <ol>
+                        <li>Warm for 20–30 minutes with the portafilter installed. Use a short purge, not a large cooling flush.</li>
+                        <li>Use the stock 14–18g double basket around 17–18g; confirm its engraving and preserve headspace.</li>
+                        <li>Turn timed auto-stop OFF while dialing. Stop by beverage weight on a scale.</li>
+                        <li>Lock dose and puck prep, choose a ratio, then adjust grind for controlled flow.</li>
+                        <li>Move brew temperature in 2°F steps by taste. Test pre-infusion only after the baseline repeats.</li>
+                        <li>A/B test steam, bloom, or no pre-infusion. There is no universal roast-to-mode winner.</li>
+                    </ol>
+                    <p class="manual-warning"><strong>Water:</strong> Use mineralized, espresso-safe water—not straight distilled/RO. Track hardness and alkalinity separately, and replace the resin filter by hardness and liters used.</p>
+                </div>
+            </details>
+
+            <details class="maintenance-disclosure card">
+                <summary>Hidden LCC controls</summary>
+                <div class="manual-guidance tuning-guide">
+                    <p>With the machine off, hold + and − while switching on; keep holding until KPc appears. Photograph every original value first. Incorrect timing can reset the controller.</p>
+                    <div id="tuning-advanced-parameters" class="advanced-parameter-list"></div>
+                    <p class="manual-warning"><strong>Amber risk:</strong> Firmware defaults vary. Change one subsystem at a time and give PID changes several days before judging them.</p>
+                </div>
+            </details>
+
+            <details class="maintenance-disclosure card">
+                <summary>Pressure and OPV</summary>
+                <div class="manual-guidance tuning-guide">
+                    <p>The front gauge during a shot, a blind-basket static ceiling, and pressure at the puck under calibrated flow are different measurements. A factory reading around 10–10.5 bar static can be near 9 bar under flow.</p>
+                    <p>Do not grind merely to force 9 bar, and do not open the machine only because a blind basket reads 10–10.5. First verify taste, repeatability, puck preparation, and flowing-shot behavior.</p>
+                    <p class="manual-warning"><strong>Red risk:</strong> Opening the chassis exposes mains voltage, hot boilers, and pressurized plumbing and may affect warranty. Confirm a V3, unplug, cool fully, mark the factory position, make only a tiny reversible change, and refit the cover before every test. Older PL92T instructions differ; technician service is the safe path.</p>
+                </div>
+            </details>
+
+            <details class="maintenance-disclosure card">
+                <summary>Experimental modifications</summary>
+                <div class="manual-guidance tuning-guide">
+                    <p>The classic Elizabeth has programmable pre-infusion, not true live flow control. E61/Bianca paddle kits do not fit merely because the basket standard is called LELIT58.</p>
+                    <p class="manual-warning"><strong>Technician-only:</strong> Pump dimmers, triac control, sensors, Gaggiuino-style conversions, wiring changes, and pressure-profile retrofits lack mature Elizabeth-specific consensus. This app does not provide wiring steps.</p>
+                </div>
+            </details>
+        </div>
+
+        <div class="card">
+            <div class="field-kicker">Evidence library</div>
+            <p class="tuning-source-intro">Manufacturer behavior is separated from independent testing and owner reports. Starting recipes are consensus ranges, not promises.</p>
+            <div id="tuning-sources" class="tuning-source-list"></div>
+        </div>
+
+        <div class="view-actions">
+            <button class="btn btn-secondary" id="btn-tuning-open-settings" type="button">Edit My Machine Profile</button>
+        </div>
+    </div>
+
     <!-- VIEW: MAINTENANCE -->
     <div id="view-maintenance" class="view">
         <button class="btn-secondary back-btn" type="button" data-route="list">← Collection</button>
@@ -364,7 +648,7 @@
             <div id="maintenance-list"></div>
         </div>
 
-        <details class="maintenance-disclosure card">
+        <details id="maintenance-guide-elizabeth" class="maintenance-disclosure card">
             <summary>Elizabeth cleaning guide</summary>
             <div class="manual-guidance">
                 <p><strong>After every use:</strong> Wipe the steam wand with a damp cloth, release a little steam, and clean the filterholder.</p>
@@ -372,6 +656,18 @@
                 <p><strong>Monthly:</strong> Backflush with the blind filter and 3–5 g of espresso-machine detergent. Run the LCC backflush cycle, rinse the group and filterholder, brush the group and gasket, then repeat the cycle without detergent.</p>
                 <p class="manual-warning"><strong>Important:</strong> Never put descaling products in the water tank. Replace the resin filter according to the capacity printed on its packaging.</p>
                 <div class="manual-source">Lelit Elizabeth PL92T manual, pages 23–25</div>
+            </div>
+        </details>
+
+        <details id="maintenance-guide-bianca" class="maintenance-disclosure card hidden">
+            <summary>Bianca cleaning and service guide</summary>
+            <div class="manual-guidance">
+                <p><strong>After every shot / daily:</strong> Empty and wash basket and portafilter, brush the group gasket, wipe and purge the steam wand after milk, and hand-wash the drip tray with neutral soap.</p>
+                <p><strong>Weekly group care:</strong> Soak metal portafilter parts and baskets for 15 minutes; keep the wooden handle dry. Detergent backflush 10 seconds on / 10 seconds off ×10, rinse, then repeat ×5 with water only.</p>
+                <p><strong>Weekly wand care:</strong> Use the manual’s milk-system detergent cycle: 500 ml solution, steam 5 seconds / rest 5 seconds ×10, then repeat with 1 liter of fresh water.</p>
+                <p><strong>Filter:</strong> Replace by 70 liters (about 28 full 2.5-liter tanks), at four months maximum, or after one month unused—whichever comes first.</p>
+                <p class="manual-warning"><strong>Annual service:</strong> Lelit assigns hydraulic descaling, inspection, and lubrication to a qualified technician. Unplug and cool before owner cleaning; keep wood away from water and steam.</p>
+                <div class="manual-source">Lelit Bianca PL162T V3 Extended Guide, pages 24–27</div>
             </div>
         </details>
 
@@ -414,50 +710,163 @@
 
         <div class="card">
             <div class="section-label">Machine Profile</div>
+
+            <div class="form-group">
+                <label for="profile-machine-id">Active machine</label>
+                <select id="profile-machine-id">
+                    <option value="elizabeth">Lelit Elizabeth PL92T</option>
+                    <option value="bianca">Lelit Bianca PL162T-120</option>
+                </select>
+            </div>
             
             <div class="form-group">
                 <label for="profile-machine-name">Machine Name</label>
                 <input type="text" id="profile-machine-name" placeholder="Lelit Elizabeth">
             </div>
 
+            <div id="settings-elizabeth-fields">
+            <div class="form-grid two-col">
+                <div class="form-group">
+                    <label for="profile-machine-version">Elizabeth generation</label>
+                    <select id="profile-machine-version">
+                        <option value="classic-v3">Classic PL92T V3 / Software 5.05+</option>
+                        <option value="classic-early">Early classic PL92T</option>
+                        <option value="elizabeth3">Elizabeth3 PL92T3 / Pagaia</option>
+                        <option value="unknown">Not sure yet</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="profile-firmware">Firmware shown at startup</label>
+                    <input type="text" id="profile-firmware" maxlength="20" placeholder="5.05, 5.07…">
+                </div>
+            </div>
+
+            <div class="form-grid three-col">
+                <div class="form-group">
+                    <label for="profile-temperature-unit">Temperature display</label>
+                    <select id="profile-temperature-unit">
+                        <option value="F">Fahrenheit (default)</option>
+                        <option value="C">Celsius</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="profile-brew-temperature">Brew setpoint (°<span data-temperature-unit>F</span>)</label>
+                    <input type="number" id="profile-brew-temperature" min="175" max="230" step="1" placeholder="200">
+                </div>
+                <div class="form-group">
+                    <label for="profile-steam-temperature">Steam setpoint (°<span data-temperature-unit>F</span>)</label>
+                    <input type="number" id="profile-steam-temperature" min="239" max="293" step="1" placeholder="275">
+                </div>
+            </div>
+            <div class="form-grid two-col">
+                <div class="form-group">
+                    <label for="profile-observed-pressure">Normal-shot gauge (bar)</label>
+                    <input type="number" id="profile-observed-pressure" min="0" max="16" step="0.1" placeholder="9.0">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="profile-preinfusion-mode">Pre-infusion control</label>
+                <select id="profile-preinfusion-mode">
+                    <option value="auto">EVS 1 / follows steam-boiler state</option>
+                    <option value="steam">Steam pre-infusion</option>
+                    <option value="bloom">Bloom forced / steam boiler off</option>
+                    <option value="none">No pre-infusion</option>
+                </select>
+            </div>
+
+            <div class="section-label profile-label">P1 · Classic / Dark Starting Profile</div>
+            <div class="form-grid three-col">
+                <div class="form-group">
+                    <label for="profile-b1-infusion">Initial wet (s)</label>
+                    <input type="number" id="profile-b1-infusion" placeholder="3">
+                </div>
+                <div class="form-group">
+                    <label for="profile-b1-bloom">Gentle/hold (s)</label>
+                    <input type="number" id="profile-b1-bloom" placeholder="2">
+                </div>
+                <div class="form-group">
+                    <label for="profile-b1-brew">Full pressure (s)</label>
+                    <input type="number" id="profile-b1-brew" placeholder="25">
+                </div>
+            </div>
+
+            <div class="section-label profile-label">P2 · Modern / Light Starting Profile</div>
+            <div class="form-grid three-col">
+                <div class="form-group">
+                    <label for="profile-b2-infusion">Initial wet (s)</label>
+                    <input type="number" id="profile-b2-infusion" placeholder="5">
+                </div>
+                <div class="form-group">
+                    <label for="profile-b2-bloom">Gentle/hold (s)</label>
+                    <input type="number" id="profile-b2-bloom" placeholder="7">
+                </div>
+                <div class="form-group">
+                    <label for="profile-b2-brew">Full pressure (s)</label>
+                    <input type="number" id="profile-b2-brew" placeholder="28">
+                </div>
+            </div>
+            
+            <div class="subtle-note">P1 total: <span id="profile-b1-total-display">30</span>s • P2 total: <span id="profile-b2-total-display">40</span>s. Initial wet + hold is the LCC total pre-infusion; the timed auto-stop includes every phase.</div>
+            </div>
+
+            <div id="settings-bianca-fields" class="hidden">
+                <div class="form-grid two-col">
+                    <div class="form-group">
+                        <label for="profile-bianca-version">Bianca generation</label>
+                        <select id="profile-bianca-version">
+                            <option value="v3">V3 / low-flow LCC</option>
+                            <option value="v2">V2 / manual paddle</option>
+                            <option value="v1">V1 / manual paddle</option>
+                            <option value="unknown">Not sure yet</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-bianca-firmware">Firmware shown at startup</label>
+                        <input type="text" id="profile-bianca-firmware" maxlength="20" placeholder="7.00…">
+                    </div>
+                </div>
+                <div class="form-grid three-col">
+                    <div class="form-group">
+                        <label for="profile-bianca-temperature-unit">Temperature display</label>
+                        <select id="profile-bianca-temperature-unit">
+                            <option value="F">Fahrenheit (default)</option>
+                            <option value="C">Celsius</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-bianca-brew-temperature">Brew setpoint (°<span data-bianca-temperature-unit>F</span>)</label>
+                        <input type="number" id="profile-bianca-brew-temperature" min="176" max="239" step="1" placeholder="200">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-bianca-steam-temperature">Steam setpoint (°<span data-bianca-temperature-unit>F</span>)</label>
+                        <input type="number" id="profile-bianca-steam-temperature" min="239" max="275" step="1" placeholder="257">
+                    </div>
+                </div>
+                <div class="form-grid two-col">
+                    <div class="form-group">
+                        <label for="profile-bianca-pressure">Normal group-gauge peak (bar)</label>
+                        <input type="number" id="profile-bianca-pressure" min="0" max="16" step="0.1" placeholder="9.0">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-bianca-brew-offset">Brew offset (°<span data-bianca-temperature-unit>F</span>)</label>
+                        <input type="number" id="profile-bianca-brew-offset" min="-36" max="36" step="1" placeholder="0">
+                    </div>
+                </div>
+                <div class="section-label profile-label">V3 programmed timeline</div>
+                <div class="form-grid four-col">
+                    <div class="form-group"><label for="profile-bianca-pi-on">PI pump on (s)</label><input type="number" id="profile-bianca-pi-on" min="0" max="20" placeholder="0"></div>
+                    <div class="form-group"><label for="profile-bianca-pi-off">PI pump off (s)</label><input type="number" id="profile-bianca-pi-off" min="0" max="20" placeholder="0"></div>
+                    <div class="form-group"><label for="profile-bianca-low-start">Low flow until (s)</label><input type="number" id="profile-bianca-low-start" min="0" max="20" placeholder="0"></div>
+                    <div class="form-group"><label for="profile-bianca-low-final">Low flow from (s)</label><input type="number" id="profile-bianca-low-final" min="0" max="99" placeholder="0"></div>
+                </div>
+                <div class="subtle-note">Set 0 for OFF. Test automation with the paddle fully open so manual restriction does not hide the programmed phases.</div>
+            </div>
+
             <div class="form-group">
                 <label for="profile-default-dose">Default Dose (g)</label>
                 <input type="number" id="profile-default-dose" step="0.1" placeholder="18.0">
             </div>
-
-            <div class="section-label profile-label">Button 1 Profile</div>
-            <div class="form-grid three-col">
-                <div class="form-group">
-                    <label for="profile-b1-infusion">Pre (s)</label>
-                    <input type="number" id="profile-b1-infusion" placeholder="3">
-                </div>
-                <div class="form-group">
-                    <label for="profile-b1-bloom">Bloom (s)</label>
-                    <input type="number" id="profile-b1-bloom" placeholder="7">
-                </div>
-                <div class="form-group">
-                    <label for="profile-b1-brew">Brew (s)</label>
-                    <input type="number" id="profile-b1-brew" placeholder="20">
-                </div>
-            </div>
-
-            <div class="section-label profile-label">Button 2 Profile</div>
-            <div class="form-grid three-col">
-                <div class="form-group">
-                    <label for="profile-b2-infusion">Pre (s)</label>
-                    <input type="number" id="profile-b2-infusion" placeholder="0">
-                </div>
-                <div class="form-group">
-                    <label for="profile-b2-bloom">Bloom (s)</label>
-                    <input type="number" id="profile-b2-bloom" placeholder="0">
-                </div>
-                <div class="form-group">
-                    <label for="profile-b2-brew">Brew (s)</label>
-                    <input type="number" id="profile-b2-brew" placeholder="30">
-                </div>
-            </div>
-            
-            <div class="subtle-note">Button 1 Total: <span id="profile-b1-total-display">30</span>s • Button 2 Total: <span id="profile-b2-total-display">30</span>s</div>
 
             <div class="form-group grinder-direction-field">
                 <label for="profile-finer-direction">On your grinder, finer means</label>
@@ -475,7 +884,7 @@
         </div>
 
         <div class="build-info">
-            Lincoln Barista 1.7.3 • Build <code data-build-commit>__BUILD_COMMIT__</code>
+            Lincoln Barista 1.9.0 • Build <code data-build-commit>__BUILD_COMMIT__</code>
         </div>
     </div>
 
@@ -484,6 +893,6 @@
     <button class="fab hidden" id="fab-log-shot" type="button" aria-label="Log Shot">☕</button>
 
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.7.3"></script>
+    <script type="module" src="js/app.js?v=1.9.0"></script>
 </body>
 </html>
