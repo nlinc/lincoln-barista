@@ -7,22 +7,22 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { firebaseConfig } from "./firebase-config.js?v=1.9.1";
-import { getBrewAdvice } from "./brew-advice.js?v=1.9.1";
-import { summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.9.1";
+import { firebaseConfig } from "./firebase-config.js?v=1.9.2";
+import { getBrewAdvice } from "./brew-advice.js?v=1.9.2";
+import { summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.9.2";
 import {
     ELIZABETH_ADVANCED_PARAMETERS,
     ELIZABETH_SOURCES,
     convertTemperature,
     diagnoseElizabethShot,
     explainPreinfusionMode
-} from "./elizabeth-tuning.js?v=1.9.1";
+} from "./elizabeth-tuning.js?v=1.9.2";
 import {
     BIANCA_ADVANCED_PARAMETERS,
     BIANCA_SOURCES,
     diagnoseBiancaShot,
     explainBiancaFlow
-} from "./bianca-tuning.js?v=1.9.1";
+} from "./bianca-tuning.js?v=1.9.2";
 
 // Initialize Firebase
 const appInstance = initializeApp(firebaseConfig);
@@ -80,7 +80,10 @@ let currentEditingImage = null;
 let currentEditingImagePath = null;
 let currentRecipeShot = null;
 let analyticsScope = 'all';
+let analyticsReturnView = 'list';
 let legacyMigrationStarted = false;
+let historyExpanded = false;
+let beanFetchSequence = 0;
 let maintenanceRecords = [];
 let settingsTemperatureUnit = 'F';
 let machineSelectionRequired = true;
@@ -316,6 +319,12 @@ const on = (id, eventName, handler) => {
     if (node) node.addEventListener(eventName, handler);
 };
 
+const syncKeyboardInset = () => {
+    const viewport = window.visualViewport;
+    const inset = viewport ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0;
+    document.documentElement.style.setProperty("--keyboard-inset", `${Math.round(inset)}px`);
+};
+
 const app = {
     // --- ROUTING ---
     router: (viewName, addToHistory = true) => {
@@ -406,7 +415,13 @@ const app = {
     },
     fetchBeans: async () => {
         const container = document.getElementById('bean-list-container');
+        const fetchSequence = ++beanFetchSequence;
         if (container) renderEmpty(container, "Syncing collection...");
+        const slowTimer = window.setTimeout(() => {
+            if (fetchSequence === beanFetchSequence && container) {
+                renderEmpty(container, "Still syncing… The first load can take a few seconds.");
+            }
+        }, 4500);
         try {
             const q = query(collection(db, "beans"), where("uid", "==", currentUser.uid));
             const snapshot = await getDocs(q);
@@ -422,6 +437,8 @@ const app = {
             console.error("Bean fetch error:", e);
             showStatus("Couldn't sync your collection. Check your connection and try again.", "error");
             if (container) renderEmptyAction(container, "Sync unavailable", "Your saved beans could not be loaded right now.", "Retry", () => app.fetchBeans());
+        } finally {
+            window.clearTimeout(slowTimer);
         }
     },
 
@@ -587,6 +604,7 @@ const app = {
 
             logsCache = [];
             currentRecipeShot = null;
+            historyExpanded = false;
             document.getElementById("dial-in-console").classList.add("hidden");
             document.getElementById("detail-age").textContent = "";
             document.getElementById("stale-warning-container").classList.add("hidden");
@@ -650,9 +668,14 @@ const app = {
         if(logsCache.length === 0) { renderEmptyAction(container, "No logs", "Log your first extraction.", "Log Shot", () => app.openLogShot()); return; }
         const groups = {};
         logsCache.forEach(log => { const k = log.roastDate || "Original Batch"; if(!groups[k]) groups[k] = []; groups[k].push(log); });
-        Object.keys(groups).sort().reverse().forEach(batch => {
-            container.appendChild(el("div", "field-kicker", "Batch: " + batch));
-            groups[batch].forEach(log => {
+        const orderedLogs = Object.keys(groups).sort().reverse().flatMap(batch => groups[batch].map(log => ({ batch, log })));
+        const visibleLogs = historyExpanded ? orderedLogs : orderedLogs.slice(0, 8);
+        let renderedBatch = null;
+        visibleLogs.forEach(({ batch, log }) => {
+            if (batch !== renderedBatch) {
+                renderedBatch = batch;
+                container.appendChild(el("div", "field-kicker", "Batch: " + batch));
+            }
                 const validation = validateShot(log);
                 const advice = validation.valid
                     ? getBrewAdvice(log, currentActiveBean?.roastLevel)
@@ -693,8 +716,18 @@ const app = {
                     }
                 };
                 container.appendChild(row);
-            });
         });
+        if (orderedLogs.length > 8) {
+            const more = el("div", "history-more");
+            const button = el("button", "btn-secondary small-btn", historyExpanded ? "Show recent shots only" : `Show ${orderedLogs.length - 8} older shots`);
+            button.type = "button";
+            button.addEventListener("click", () => {
+                historyExpanded = !historyExpanded;
+                app.renderHistory();
+            });
+            more.appendChild(button);
+            container.appendChild(more);
+        }
     },
 
     renderDialInSummary: () => {
@@ -755,7 +788,7 @@ const app = {
             const totalStat = el("div", "stat-item");
             totalStat.append(el("strong", "", total), el("span", "", "Total Logs"));
             const grindStat = el("div", "stat-item");
-            grindStat.append(el("strong", "", top.map(t => t[0]).join(", ") || "None"), el("span", "", "Legacy Grinds"));
+            grindStat.append(el("strong", "", top.map(t => t[0]).join(", ") || "None"), el("span", "", "Common Grinds"));
             statsContent.replaceChildren(totalStat, grindStat);
         } catch(e) {
             console.error("Stats error:", e);
@@ -836,6 +869,7 @@ const app = {
                 Object.assign(bean, uploaded);
             } catch (error) {
                 console.warn("Legacy image optimization skipped:", error);
+                if (error?.code === "storage/unauthorized" || error?.code === "permission-denied") break;
             }
         }
     },
@@ -865,32 +899,38 @@ const app = {
         if(tag && !currentEditingTags.includes(tag)) { currentEditingTags.push(tag); input.value = ''; app.renderEditingTags(); }
     },
     removeTag: (i) => { currentEditingTags.splice(i, 1); app.renderEditingTags(); },
-    openLogShot: () => {
+    openLogShot: ({ useRecipe = true } = {}) => {
         haptic('light');
         const machineProfile = activeMachineProfile();
         const isBianca = activeMachineId() === "bianca";
+        const recipeShot = useRecipe ? currentRecipeShot : null;
         updateTemperatureUnitLabels(machineProfile.temperatureUnit);
         app.applyMachineUi();
-        document.getElementById('log-shot-title').innerText = currentRecipeShot ? "Repeat Recipe" : "Log Extraction";
+        document.getElementById('log-shot-title').innerText = recipeShot ? "New Shot from Recipe" : "Log Extraction";
         document.getElementById('log-bean-name').innerText = [currentActiveBean?.roaster, currentActiveBean?.name].filter(Boolean).join(" · ");
         document.getElementById('input-log-bean-id').value = currentActiveBean?.id || '';
         document.getElementById('input-log-shot-id').value = '';
         document.getElementById('log-display-date').innerText = currentActiveBean?.currentRoastDate || "N/A";
         const defDose = userProfile.defaultDose || 18;
-        document.getElementById('input-shot-dose').value = currentRecipeShot?.dose || defDose;
-        document.getElementById('input-shot-yield').value = currentRecipeShot?.yield || defDose * 2;
-        document.getElementById('input-shot-grind').value = currentRecipeShot?.grind || logsCache[0]?.grind || '';
-        document.getElementById('input-shot-time').value = currentRecipeShot?.time || '';
-        const requestedProfile = currentRecipeShot?.profileUsed || 'manual';
+        document.getElementById('input-shot-dose').value = recipeShot?.dose || defDose;
+        const yieldInput = document.getElementById('input-shot-yield');
+        const yieldHint = document.getElementById('shot-yield-hint');
+        yieldInput.value = '';
+        yieldInput.placeholder = recipeShot?.yield || defDose * 2;
+        yieldHint.textContent = recipeShot?.yield ? `Recipe target: ${recipeShot.yield}g. Enter the actual yield.` : '';
+        yieldHint.classList.toggle('hidden', !recipeShot?.yield);
+        document.getElementById('input-shot-grind').value = recipeShot?.grind || logsCache[0]?.grind || '';
+        document.getElementById('input-shot-time').value = recipeShot?.time || '';
+        const requestedProfile = recipeShot?.profileUsed || 'manual';
         document.getElementById('input-shot-profile').value = [...document.getElementById('input-shot-profile').options].some(option => option.value === requestedProfile && !option.hidden) ? requestedProfile : 'manual';
-        document.getElementById('input-shot-taste').value = currentRecipeShot?.taste || '';
-        const recipeTemperature = currentRecipeShot?.brewTemperature && currentRecipeShot.temperatureUnit && currentRecipeShot.temperatureUnit !== machineProfile.temperatureUnit
-            ? convertTemperature(currentRecipeShot.brewTemperature, currentRecipeShot.temperatureUnit, machineProfile.temperatureUnit)
-            : currentRecipeShot?.brewTemperature;
+        document.getElementById('input-shot-taste').value = '';
+        const recipeTemperature = recipeShot?.brewTemperature && recipeShot.temperatureUnit && recipeShot.temperatureUnit !== machineProfile.temperatureUnit
+            ? convertTemperature(recipeShot.brewTemperature, recipeShot.temperatureUnit, machineProfile.temperatureUnit)
+            : recipeShot?.brewTemperature;
         document.getElementById('input-shot-temperature').value = recipeTemperature || machineProfile.brewTemperature;
-        document.getElementById('input-shot-pressure').value = currentRecipeShot?.pressureObserved || machineProfile.observedPressure;
-        document.getElementById('input-shot-first-drop').value = currentRecipeShot?.firstDropSeconds || '';
-        document.getElementById('input-shot-channeling').checked = currentRecipeShot?.channelingObserved === true;
+        document.getElementById('input-shot-pressure').value = machineProfile.observedPressure;
+        document.getElementById('input-shot-first-drop').value = '';
+        document.getElementById('input-shot-channeling').checked = false;
         const b1T = userProfile.b1 ? (parseInt(userProfile.b1.infusion)||0) + (parseInt(userProfile.b1.bloom)||0) + (parseInt(userProfile.b1.brew)||0) : 30;
         const b2T = userProfile.b2 ? (parseInt(userProfile.b2.infusion)||0) + (parseInt(userProfile.b2.bloom)||0) + (parseInt(userProfile.b2.brew)||0) : 30;
         document.getElementById('btn-time-1').innerText = "P1 (" + b1T + "s)";
@@ -985,6 +1025,7 @@ const app = {
         document.getElementById('input-shot-time').value = log.time;
         document.getElementById('input-shot-dose').value = log.dose;
         document.getElementById('input-shot-yield').value = log.yield;
+        document.getElementById('shot-yield-hint').classList.add('hidden');
         app.applyMachineUi();
         document.getElementById('input-shot-profile').value = log.profileUsed || 'manual';
         document.getElementById('input-shot-taste').value = log.taste || '';
@@ -1464,7 +1505,8 @@ const app = {
             alert(error.message);
         }
     },
-    openAnalytics: async (scope = analyticsScope) => {
+    openAnalytics: async (scope = analyticsScope, returnView) => {
+        if (returnView) analyticsReturnView = returnView;
         analyticsScope = scope;
         app.router('analytics');
         document.getElementById("analytics-insight-text").innerText = "Loading shot patterns...";
@@ -1591,32 +1633,6 @@ const app = {
         maintenance.forEach(record => maintenanceRows.push([record.completedDate, recordMachineId(record), record.type, record.nextDueDate, record.notes]));
         downloadCsv("lincoln-barista-maintenance.csv", maintenanceRows);
     },
-    repeatCurrentRecipe: async () => {
-        if (!currentRecipeShot || !currentActiveBean) return app.openLogShot();
-        if(confirm("Repeat recipe?")) {
-            const data = {
-                beanId: currentActiveBean.id,
-                uid: currentUser.uid,
-                machineId: activeMachineId(),
-                grind: currentRecipeShot.grind,
-                time: currentRecipeShot.time,
-                dose: currentRecipeShot.dose,
-                yield: currentRecipeShot.yield,
-                profileUsed: currentRecipeShot.profileUsed || "manual",
-                taste: "",
-                brewTemperature: currentRecipeShot.brewTemperature || String(activeMachineProfile().brewTemperature || ""),
-                temperatureUnit: currentRecipeShot.temperatureUnit || activeMachineProfile().temperatureUnit || "F",
-                pressureObserved: "",
-                firstDropSeconds: "",
-                channelingObserved: false,
-                roastDate: currentActiveBean.currentRoastDate || "Unknown",
-                date: new Date()
-            };
-            const created = await addDoc(collection(db, "brew_logs"), data);
-            app.upsertCachedLog({ id: created.id, ...data });
-            await app.loadBeanDetail(currentActiveBean.id);
-        }
-    },
     promptNewDate: async () => app.editActiveBean()
 };
 
@@ -1671,12 +1687,13 @@ on("input-bean-image", "change", (e) => app.handleImageUpload(e)); on("btn-remov
 on("input-new-tag", "keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); app.addTag(); } });
 document.querySelectorAll(".bean-star").forEach(s => s.onclick = () => app.setBeanRating(parseInt(s.dataset.rating)));
 on("btn-save-bean", "click", () => app.saveBean()); on("btn-cancel-bean", "click", () => app.router("list")); on("btn-delete-bean", "click", () => app.deleteBean());
-on("btn-edit-active-bean", "click", () => app.editActiveBean()); on("btn-update-roast-date", "click", () => app.promptNewDate()); on("btn-repeat-recipe", "click", () => app.repeatCurrentRecipe());
+on("btn-edit-active-bean", "click", () => app.editActiveBean()); on("btn-update-roast-date", "click", () => app.promptNewDate()); on("btn-repeat-recipe", "click", () => app.openLogShot({ useRecipe: true }));
 on("btn-open-detail-tuning", "click", () => app.openTuning());
-on("btn-adjust-recipe", "click", () => app.openLogShot());
-on("btn-open-detail-analytics", "click", () => app.openAnalytics("current"));
+on("btn-adjust-recipe", "click", () => app.openLogShot({ useRecipe: false }));
+on("btn-open-detail-analytics", "click", () => app.openAnalytics("current", "detail"));
 on("btn-analytics-current", "click", () => app.openAnalytics("current"));
 on("btn-analytics-all", "click", () => app.openAnalytics("all"));
+on("btn-back-analytics", "click", () => app.router(analyticsReturnView === "detail" && currentActiveBean ? "detail" : "list"));
 document.querySelectorAll("[data-route]").forEach(b => b.onclick = () => app.router(b.dataset.route));
 on("btn-time-1", "click", () => app.setTimeFromProfile(1)); on("btn-time-2", "click", () => app.setTimeFromProfile(2));
 document.querySelectorAll(".shot-preview-input").forEach(input => input.addEventListener("input", () => app.renderExtractionPreview()));
@@ -1688,8 +1705,11 @@ on("profile-machine-id", "change", event => app.updateMachineSettingsFields(even
 on("tuning-roast", "change", () => app.renderTuningPlan()); on("tuning-symptom", "change", () => app.renderTuningPlan()); on("tuning-pressure", "input", () => app.renderTuningPlan());
 on("bianca-tuning-roast", "change", () => app.renderBiancaTuningPlan()); on("bianca-tuning-symptom", "change", () => app.renderBiancaTuningPlan()); on("bianca-tuning-pressure", "input", () => app.renderBiancaTuningPlan());
 on("btn-save-shot", "click", () => app.saveShot()); on("btn-cancel-shot", "click", () => app.router("detail")); on("btn-cancel-shot-top", "click", () => app.router("detail")); on("btn-delete-shot", "click", () => app.deleteShot());
-on("btn-save-profile", "click", () => app.saveProfile()); on("btn-export-data", "click", () => app.exportData()); on("btn-open-analytics", "click", () => app.openAnalytics("all"));
+on("btn-save-profile", "click", () => app.saveProfile()); on("btn-export-data", "click", () => app.exportData()); on("btn-open-analytics", "click", () => app.openAnalytics("all", "list"));
 on("btn-tuning-open-settings", "click", () => app.openSettings());
 on("btn-bianca-tuning-open-settings", "click", () => app.openSettings());
 on("btn-refresh-app", "click", () => window.location.reload());
+window.visualViewport?.addEventListener("resize", syncKeyboardInset);
+window.visualViewport?.addEventListener("scroll", syncKeyboardInset);
+syncKeyboardInset();
 window.addEventListener('popstate', (e) => { if (e.state?.view) app.router(e.state.view, false); });

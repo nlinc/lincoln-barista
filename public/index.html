@@ -19,14 +19,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"></noscript>
-    <link rel="stylesheet" href="style.css?v=1.9.1">
+    <link rel="stylesheet" href="style.css?v=1.9.2">
 </head>
 <body>
 
     <div id="top-bar">
         <div class="app-brand">
             <div class="app-logo">Lincoln <span>Barista <small>Platinum</small></span></div>
-            <div class="build-chip">v1.9.1 · <code data-build-commit>__BUILD_COMMIT__</code></div>
+            <div class="build-chip">v1.9.2 · <code data-build-commit>__BUILD_COMMIT__</code></div>
         </div>
         <div class="top-actions">
             <button class="icon-btn" id="btn-open-tuning" type="button" aria-label="Open machine tuning lab" title="Machine tuning">🎛️</button>
@@ -225,8 +225,8 @@
             <div id="machine-badge" class="machine-badge">LELIT ELIZABETH • 3/7/20 PROFILING</div>
 
             <div class="recipe-actions">
-                <button class="btn" id="btn-repeat-recipe" type="button">Log Same Shot</button>
-                <button class="btn btn-secondary" id="btn-adjust-recipe" type="button">Adjust</button>
+                <button class="btn" id="btn-repeat-recipe" type="button">Log New Shot</button>
+                <button class="btn btn-secondary" id="btn-adjust-recipe" type="button">Start Blank</button>
             </div>
         </div>
 
@@ -285,13 +285,7 @@
                     <input type="number" inputmode="decimal" step="0.1" id="input-shot-grind" placeholder="14.0" class="shot-preview-input">
                 </div>
                 <div class="form-group">
-                    <div class="form-label split-label">
-                        Time
-                        <div class="mini-actions">
-                            <button id="btn-time-1" class="btn-secondary small-btn profile-time-btn" type="button" data-profile="1">P1</button>
-                            <button id="btn-time-2" class="btn-secondary small-btn profile-time-btn" type="button" data-profile="2">P2</button>
-                        </div>
-                    </div>
+                    <label for="input-shot-time">Time</label>
                     <input type="number" inputmode="decimal" id="input-shot-time" placeholder="30" class="shot-preview-input">
                 </div>
                 <div class="form-group">
@@ -300,7 +294,16 @@
                 </div>
                 <div class="form-group">
                     <label for="input-shot-yield">Yield out</label>
-                    <input type="number" inputmode="decimal" step="0.1" id="input-shot-yield" placeholder="36.0" class="shot-preview-input">
+                    <input type="number" inputmode="decimal" enterkeyhint="done" step="0.1" id="input-shot-yield" placeholder="36.0" class="shot-preview-input" aria-describedby="shot-yield-hint">
+                    <div id="shot-yield-hint" class="input-hint hidden"></div>
+                </div>
+            </div>
+
+            <div class="shot-time-presets">
+                <span class="shot-time-presets-label">Set time from profile</span>
+                <div class="mini-actions">
+                    <button id="btn-time-1" class="btn-secondary small-btn profile-time-btn" type="button" data-profile="1">P1</button>
+                    <button id="btn-time-2" class="btn-secondary small-btn profile-time-btn" type="button" data-profile="2">P2</button>
                 </div>
             </div>
 
@@ -472,7 +475,7 @@
 
     <!-- VIEW: ANALYTICS -->
     <div id="view-analytics" class="view">
-        <button class="btn-secondary back-btn" type="button" data-route="list">← Collection</button>
+        <button class="btn-secondary back-btn" id="btn-back-analytics" type="button">← Collection</button>
         <h2 class="view-heading">Visual Trends</h2>
 
         <div class="analytics-scope" role="group" aria-label="Analytics scope">
@@ -884,7 +887,7 @@
         </div>
 
         <div class="build-info">
-            Lincoln Barista 1.9.1 • Build <code data-build-commit>__BUILD_COMMIT__</code>
+            Lincoln Barista 1.9.2 • Build <code data-build-commit>__BUILD_COMMIT__</code>
         </div>
     </div>
 
@@ -893,6 +896,6 @@
     <button class="fab hidden" id="fab-log-shot" type="button" aria-label="Log Shot">☕</button>
 
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.9.1"></script>
+    <script type="module" src="js/app.js?v=1.9.2"></script>
 </body>
 </html>

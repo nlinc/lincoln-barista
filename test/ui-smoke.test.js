@@ -27,18 +27,18 @@ describe("UI smoke guardrails", () => {
     });
 
     it("keeps cache-busted app assets on the current release", () => {
-        assert.match(html, /style\.css\?v=1\.9\.1/);
-        assert.match(html, /js\/app\.js\?v=1\.9\.1/);
-        assert.match(appJs, /firebase-config\.js\?v=1\.9\.1/);
-        assert.match(appJs, /brew-advice\.js\?v=1\.9\.1/);
-        assert.match(appJs, /shot-analytics\.js\?v=1\.9\.1/);
-        assert.match(appJs, /elizabeth-tuning\.js\?v=1\.9\.1/);
-        assert.match(appJs, /bianca-tuning\.js\?v=1\.9\.1/);
-        assert.match(analyticsJs, /brew-advice\.js\?v=1\.9\.1/);
-        assert.match(serviceWorker, /js\/app\.js\?v=1\.9\.1/);
-        assert.match(serviceWorker, /js\/brew-advice\.js\?v=1\.9\.1/);
-        assert.match(serviceWorker, /js\/elizabeth-tuning\.js\?v=1\.9\.1/);
-        assert.match(serviceWorker, /js\/bianca-tuning\.js\?v=1\.9\.1/);
+        assert.match(html, /style\.css\?v=1\.9\.2/);
+        assert.match(html, /js\/app\.js\?v=1\.9\.2/);
+        assert.match(appJs, /firebase-config\.js\?v=1\.9\.2/);
+        assert.match(appJs, /brew-advice\.js\?v=1\.9\.2/);
+        assert.match(appJs, /shot-analytics\.js\?v=1\.9\.2/);
+        assert.match(appJs, /elizabeth-tuning\.js\?v=1\.9\.2/);
+        assert.match(appJs, /bianca-tuning\.js\?v=1\.9\.2/);
+        assert.match(analyticsJs, /brew-advice\.js\?v=1\.9\.2/);
+        assert.match(serviceWorker, /js\/app\.js\?v=1\.9\.2/);
+        assert.match(serviceWorker, /js\/brew-advice\.js\?v=1\.9\.2/);
+        assert.match(serviceWorker, /js\/elizabeth-tuning\.js\?v=1\.9\.2/);
+        assert.match(serviceWorker, /js\/bianca-tuning\.js\?v=1\.9\.2/);
     });
 
     it("caps detail bean images and hides the native file input", () => {
@@ -125,14 +125,43 @@ describe("UI smoke guardrails", () => {
         assert.match(html, /id="btn-cancel-shot-top"/);
         assert.match(css, /\.shot-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s);
         assert.match(css, /#view-log-shot \.shot-actions\s*\{[^}]*position:\s*fixed;/s);
+        assert.match(css, /bottom:\s*var\(--keyboard-inset, 0px\)/);
         assert.match(css, /body\[data-view="log-shot"\] #top-bar/);
         assert.match(appJs, /document\.body\.dataset\.view = viewName/);
+        assert.match(appJs, /window\.visualViewport\?\.addEventListener\("resize", syncKeyboardInset\)/);
+        assert.doesNotMatch(css, /@keyframes fadeIn[^}]*transform/s);
+        assert.match(html, /<label for="input-shot-time">Time<\/label>/);
+        assert.match(html, /id="shot-yield-hint"/);
+        assert.match(html, /Set time from profile/);
+        assert.match(css, /#view-log-shot \.mini-actions \.small-btn\s*\{[^}]*min-width:\s*44px;[^}]*min-height:\s*44px;/s);
         assert.match(html, /id="btn-logout-settings"/);
+    });
+
+    it("starts a real shot log from the saved recipe instead of cloning its result", () => {
+        assert.match(html, /id="btn-repeat-recipe"[^>]*>Log New Shot<\/button>/);
+        assert.match(html, /id="btn-adjust-recipe"[^>]*>Start Blank<\/button>/);
+        assert.match(appJs, /yieldInput\.value = ''/);
+        assert.match(appJs, /Enter the actual yield\./);
+        assert.doesNotMatch(appJs, /Repeat recipe\?/);
     });
 
     it("keeps mobile extraction history compact", () => {
         assert.match(css, /\.log-row\s*\{[^}]*padding:\s*0\.85rem 1rem;[^}]*margin-bottom:\s*0\.65rem;/s);
         assert.match(css, /\.log-row-metrics\s*\{[^}]*grid-template-columns:\s*repeat\(3,/s);
+        assert.match(appJs, /orderedLogs\.slice\(0, 8\)/);
+        assert.match(appJs, /Show \$\{orderedLogs\.length - 8\} older shots/);
+    });
+
+    it("returns bean-scoped analytics to the bean detail", () => {
+        assert.match(html, /id="btn-back-analytics"/);
+        assert.match(appJs, /openAnalytics\("current", "detail"\)/);
+        assert.match(appJs, /analyticsReturnView === "detail"/);
+    });
+
+    it("provides useful feedback during a slow collection sync", () => {
+        assert.match(appJs, /Still syncing… The first load can take a few seconds\./);
+        assert.match(appJs, /window\.clearTimeout\(slowTimer\)/);
+        assert.match(appJs, /Common Grinds/);
     });
 
     it("uses local install assets and registers an offline shell", () => {
@@ -190,7 +219,7 @@ describe("UI smoke guardrails", () => {
     });
 
     it("shows and deploy-stamps the running commit", () => {
-        assert.match(html, /class="build-chip">v1\.9\.1 · <code data-build-commit>__BUILD_COMMIT__</);
+        assert.match(html, /class="build-chip">v1\.9\.2 · <code data-build-commit>__BUILD_COMMIT__</);
         assert.match(appJs, /querySelectorAll\("\[data-build-commit\]"\)/);
         assert.match(serviceWorker, /lincoln-barista-__BUILD_COMMIT__/);
         assert.match(mergeWorkflow, /Stamp build commit/);
