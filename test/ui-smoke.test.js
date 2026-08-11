@@ -27,18 +27,18 @@ describe("UI smoke guardrails", () => {
     });
 
     it("keeps cache-busted app assets on the current release", () => {
-        assert.match(html, /style\.css\?v=1\.9\.2/);
-        assert.match(html, /js\/app\.js\?v=1\.9\.2/);
-        assert.match(appJs, /firebase-config\.js\?v=1\.9\.2/);
-        assert.match(appJs, /brew-advice\.js\?v=1\.9\.2/);
-        assert.match(appJs, /shot-analytics\.js\?v=1\.9\.2/);
-        assert.match(appJs, /elizabeth-tuning\.js\?v=1\.9\.2/);
-        assert.match(appJs, /bianca-tuning\.js\?v=1\.9\.2/);
-        assert.match(analyticsJs, /brew-advice\.js\?v=1\.9\.2/);
-        assert.match(serviceWorker, /js\/app\.js\?v=1\.9\.2/);
-        assert.match(serviceWorker, /js\/brew-advice\.js\?v=1\.9\.2/);
-        assert.match(serviceWorker, /js\/elizabeth-tuning\.js\?v=1\.9\.2/);
-        assert.match(serviceWorker, /js\/bianca-tuning\.js\?v=1\.9\.2/);
+        assert.match(html, /style\.css\?v=1\.9\.3/);
+        assert.match(html, /js\/app\.js\?v=1\.9\.3/);
+        assert.match(appJs, /firebase-config\.js\?v=1\.9\.3/);
+        assert.match(appJs, /brew-advice\.js\?v=1\.9\.3/);
+        assert.match(appJs, /shot-analytics\.js\?v=1\.9\.3/);
+        assert.match(appJs, /elizabeth-tuning\.js\?v=1\.9\.3/);
+        assert.match(appJs, /bianca-tuning\.js\?v=1\.9\.3/);
+        assert.match(analyticsJs, /brew-advice\.js\?v=1\.9\.3/);
+        assert.match(serviceWorker, /js\/app\.js\?v=1\.9\.3/);
+        assert.match(serviceWorker, /js\/brew-advice\.js\?v=1\.9\.3/);
+        assert.match(serviceWorker, /js\/elizabeth-tuning\.js\?v=1\.9\.3/);
+        assert.match(serviceWorker, /js\/bianca-tuning\.js\?v=1\.9\.3/);
     });
 
     it("caps detail bean images and hides the native file input", () => {
@@ -137,12 +137,13 @@ describe("UI smoke guardrails", () => {
         assert.match(html, /id="btn-logout-settings"/);
     });
 
-    it("starts a real shot log from the saved recipe instead of cloning its result", () => {
-        assert.match(html, /id="btn-repeat-recipe"[^>]*>Log New Shot<\/button>/);
-        assert.match(html, /id="btn-adjust-recipe"[^>]*>Start Blank<\/button>/);
+    it("uses the route-aware floating action as the single shot entry point", () => {
+        assert.doesNotMatch(html, /id="btn-repeat-recipe"/);
+        assert.doesNotMatch(html, /id="btn-adjust-recipe"/);
+        assert.match(html, /id="fab-log-shot"/);
+        assert.match(appJs, /on\("fab-log-shot", "click", \(\) => app\.openLogShot\(\)\)/);
         assert.match(appJs, /yieldInput\.value = ''/);
         assert.match(appJs, /Enter the actual yield\./);
-        assert.doesNotMatch(appJs, /Repeat recipe\?/);
     });
 
     it("keeps mobile extraction history compact", () => {
@@ -219,7 +220,7 @@ describe("UI smoke guardrails", () => {
     });
 
     it("shows and deploy-stamps the running commit", () => {
-        assert.match(html, /class="build-chip">v1\.9\.2 · <code data-build-commit>__BUILD_COMMIT__</);
+        assert.match(html, /class="build-chip">v1\.9\.3 · <code data-build-commit>__BUILD_COMMIT__</);
         assert.match(appJs, /querySelectorAll\("\[data-build-commit\]"\)/);
         assert.match(serviceWorker, /lincoln-barista-__BUILD_COMMIT__/);
         assert.match(mergeWorkflow, /Stamp build commit/);

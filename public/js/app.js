@@ -7,22 +7,22 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { firebaseConfig } from "./firebase-config.js?v=1.9.2";
-import { getBrewAdvice } from "./brew-advice.js?v=1.9.2";
-import { summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.9.2";
+import { firebaseConfig } from "./firebase-config.js?v=1.9.3";
+import { getBrewAdvice } from "./brew-advice.js?v=1.9.3";
+import { summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.9.3";
 import {
     ELIZABETH_ADVANCED_PARAMETERS,
     ELIZABETH_SOURCES,
     convertTemperature,
     diagnoseElizabethShot,
     explainPreinfusionMode
-} from "./elizabeth-tuning.js?v=1.9.2";
+} from "./elizabeth-tuning.js?v=1.9.3";
 import {
     BIANCA_ADVANCED_PARAMETERS,
     BIANCA_SOURCES,
     diagnoseBiancaShot,
     explainBiancaFlow
-} from "./bianca-tuning.js?v=1.9.2";
+} from "./bianca-tuning.js?v=1.9.3";
 
 // Initialize Firebase
 const appInstance = initializeApp(firebaseConfig);
@@ -899,11 +899,11 @@ const app = {
         if(tag && !currentEditingTags.includes(tag)) { currentEditingTags.push(tag); input.value = ''; app.renderEditingTags(); }
     },
     removeTag: (i) => { currentEditingTags.splice(i, 1); app.renderEditingTags(); },
-    openLogShot: ({ useRecipe = true } = {}) => {
+    openLogShot: () => {
         haptic('light');
         const machineProfile = activeMachineProfile();
         const isBianca = activeMachineId() === "bianca";
-        const recipeShot = useRecipe ? currentRecipeShot : null;
+        const recipeShot = currentRecipeShot;
         updateTemperatureUnitLabels(machineProfile.temperatureUnit);
         app.applyMachineUi();
         document.getElementById('log-shot-title').innerText = recipeShot ? "New Shot from Recipe" : "Log Extraction";
@@ -1687,9 +1687,8 @@ on("input-bean-image", "change", (e) => app.handleImageUpload(e)); on("btn-remov
 on("input-new-tag", "keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); app.addTag(); } });
 document.querySelectorAll(".bean-star").forEach(s => s.onclick = () => app.setBeanRating(parseInt(s.dataset.rating)));
 on("btn-save-bean", "click", () => app.saveBean()); on("btn-cancel-bean", "click", () => app.router("list")); on("btn-delete-bean", "click", () => app.deleteBean());
-on("btn-edit-active-bean", "click", () => app.editActiveBean()); on("btn-update-roast-date", "click", () => app.promptNewDate()); on("btn-repeat-recipe", "click", () => app.openLogShot({ useRecipe: true }));
+on("btn-edit-active-bean", "click", () => app.editActiveBean()); on("btn-update-roast-date", "click", () => app.promptNewDate());
 on("btn-open-detail-tuning", "click", () => app.openTuning());
-on("btn-adjust-recipe", "click", () => app.openLogShot({ useRecipe: false }));
 on("btn-open-detail-analytics", "click", () => app.openAnalytics("current", "detail"));
 on("btn-analytics-current", "click", () => app.openAnalytics("current"));
 on("btn-analytics-all", "click", () => app.openAnalytics("all"));
