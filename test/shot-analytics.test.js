@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { summarizeShotPatterns, validateShot } from "../public/js/shot-analytics.js";
+import { summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "../public/js/shot-analytics.js";
 
 const shot = (age, grind, overrides = {}) => ({
     beanId: "bean-1",
@@ -54,6 +54,22 @@ describe("shot analytics", () => {
         ]);
 
         assert.equal(summary.isSingleBean, false);
-        assert.deepEqual(summary.agePoints.map(point => point.y), [0, 0, -0.5, -0.5]);
+        assert.deepEqual(summary.agePoints.map(point => point.y), [0, 0, 0.5, 0.5]);
+        assert.match(summary.insights[0].text, /finer every 7 days/);
+    });
+
+    it("sorts grind frequency by numeric setting", () => {
+        const frequency = summarizeGrindFrequency([
+            { grind: "8.5" }, { grind: "5" }, { grind: "8" },
+            { grind: "4.7" }, { grind: "8.5" }, { grind: "9" }
+        ]);
+
+        assert.deepEqual(frequency, [
+            { label: "4.7", grind: 4.7, count: 1 },
+            { label: "5", grind: 5, count: 1 },
+            { label: "8", grind: 8, count: 1 },
+            { label: "8.5", grind: 8.5, count: 2 },
+            { label: "9", grind: 9, count: 1 }
+        ]);
     });
 });

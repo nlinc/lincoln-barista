@@ -2,13 +2,13 @@ const CACHE_NAME = "lincoln-barista-__BUILD_COMMIT__";
 const APP_SHELL = [
     "/",
     "/index.html",
-    "/style.css?v=1.9.3",
-    "/js/app.js?v=1.9.3",
-    "/js/brew-advice.js?v=1.9.3",
-    "/js/shot-analytics.js?v=1.9.3",
-    "/js/elizabeth-tuning.js?v=1.9.3",
-    "/js/bianca-tuning.js?v=1.9.3",
-    "/js/firebase-config.js?v=1.9.3",
+    "/style.css?v=1.9.4",
+    "/js/app.js?v=1.9.4",
+    "/js/brew-advice.js?v=1.9.4",
+    "/js/shot-analytics.js?v=1.9.4",
+    "/js/elizabeth-tuning.js?v=1.9.4",
+    "/js/bianca-tuning.js?v=1.9.4",
+    "/js/firebase-config.js?v=1.9.4",
     "/manifest.json",
     "/icon.svg"
 ];

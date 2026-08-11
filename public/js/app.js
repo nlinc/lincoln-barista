@@ -7,22 +7,22 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { firebaseConfig } from "./firebase-config.js?v=1.9.3";
-import { getBrewAdvice } from "./brew-advice.js?v=1.9.3";
-import { summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.9.3";
+import { firebaseConfig } from "./firebase-config.js?v=1.9.4";
+import { getBrewAdvice } from "./brew-advice.js?v=1.9.4";
+import { summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.9.4";
 import {
     ELIZABETH_ADVANCED_PARAMETERS,
     ELIZABETH_SOURCES,
     convertTemperature,
     diagnoseElizabethShot,
     explainPreinfusionMode
-} from "./elizabeth-tuning.js?v=1.9.3";
+} from "./elizabeth-tuning.js?v=1.9.4";
 import {
     BIANCA_ADVANCED_PARAMETERS,
     BIANCA_SOURCES,
     diagnoseBiancaShot,
     explainBiancaFlow
-} from "./bianca-tuning.js?v=1.9.3";
+} from "./bianca-tuning.js?v=1.9.4";
 
 // Initialize Firebase
 const appInstance = initializeApp(firebaseConfig);
@@ -1546,8 +1546,8 @@ const app = {
         trendEmpty.classList.toggle("hidden", canChart);
         distEmpty.classList.toggle("hidden", canChart);
         document.getElementById("age-chart-note").textContent = summary.isSingleBean
-            ? "Each point is a complete shot plotted by days off roast and grinder setting."
-            : "Each bean is normalized from its first complete shot, so this shows setting drift rather than absolute grinder numbers.";
+            ? "Dots are this bean's actual settings. The line estimates whether you usually move finer or coarser as it ages."
+            : "Above 0 means finer and below 0 means coarser than each bean's first shot. Use the line as a starting adjustment, then stop by taste.";
         document.getElementById("analytics-insight-text").innerText = hasData
             ? `Readout based on ${summary.metrics.shots} complete shot${summary.metrics.shots === 1 ? "" : "s"}. Patterns describe correlation, not causation.`
             : "Complete grind, dose, yield, and time values will unlock pattern analysis.";
@@ -1561,17 +1561,39 @@ const app = {
         }
 
         const trendPoints = usableLogs.slice(-30).map(log => ({ x: log.grind, y: log.yield }));
-        const grindCounts = {};
-        usableLogs.forEach(log => { grindCounts[log.grind] = (grindCounts[log.grind] || 0) + 1; });
+        const grindFrequency = summarizeGrindFrequency(usableLogs);
 
         if (chartAge) chartAge.destroy();
         if (chartTrend) chartTrend.destroy();
         if (chartDist) chartDist.destroy();
         if (hasAgeData) {
+            const ageDatasets = [{
+                label: "Logged shots",
+                data: summary.agePoints,
+                backgroundColor: "rgba(251,191,36,0.52)",
+                pointRadius: 3
+            }];
+            if (summary.ageTrend) {
+                const ages = summary.agePoints.map(point => point.x);
+                const firstAge = Math.min(...ages);
+                const lastAge = Math.max(...ages);
+                ageDatasets.push({
+                    type: "line",
+                    label: "Typical direction",
+                    data: [
+                        { x: firstAge, y: summary.ageTrend.intercept + summary.ageTrend.slope * firstAge },
+                        { x: lastAge, y: summary.ageTrend.intercept + summary.ageTrend.slope * lastAge }
+                    ],
+                    borderColor: "#fbbf24",
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    tension: 0
+                });
+            }
             chartAge = new window.Chart(document.getElementById("ageChart"), {
                 type: "scatter",
-                data: { datasets: [{ label: summary.isSingleBean ? "Grind setting" : "Setting change", data: summary.agePoints, backgroundColor: "#fbbf24" }] },
-                options: app.chartOptions("Days off roast", summary.isSingleBean ? "Grind setting" : "Change from first shot")
+                data: { datasets: ageDatasets },
+                options: app.chartOptions("Days off roast", summary.isSingleBean ? "Grind setting" : "Finer (+) / coarser (−)", { showLegend: Boolean(summary.ageTrend) })
             });
         } else chartAge = null;
         chartTrend = new window.Chart(document.getElementById("trendChart"), {
@@ -1581,14 +1603,14 @@ const app = {
         });
         chartDist = new window.Chart(document.getElementById("distChart"), {
             type: "bar",
-            data: { labels: Object.keys(grindCounts), datasets: [{ label: "Logs", data: Object.values(grindCounts), backgroundColor: "#38bdf8" }] },
+            data: { labels: grindFrequency.map(item => item.label), datasets: [{ label: "Logs", data: grindFrequency.map(item => item.count), backgroundColor: "#38bdf8" }] },
             options: app.chartOptions("Grind", "Shot count")
         });
     },
-    chartOptions: (xTitle, yTitle) => ({
+    chartOptions: (xTitle, yTitle, { showLegend = false } = {}) => ({
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: { legend: { display: showLegend, labels: { color: "#cbd5e1", usePointStyle: true } } },
         scales: {
             x: { title: { display: true, text: xTitle, color: "#94a3b8" }, ticks: { color: "#94a3b8" }, grid: { color: "rgba(255,255,255,0.06)" } },
             y: { title: { display: true, text: yTitle, color: "#94a3b8" }, ticks: { color: "#94a3b8" }, grid: { color: "rgba(255,255,255,0.06)" } }

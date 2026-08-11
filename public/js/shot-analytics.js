@@ -1,4 +1,4 @@
-import { getBrewAdvice } from "./brew-advice.js?v=1.9.3";
+import { getBrewAdvice } from "./brew-advice.js?v=1.9.4";
 
 const DAY_MS = 86400000;
 
@@ -94,6 +94,18 @@ export const validateShot = (shot) => {
     };
 };
 
+export const summarizeGrindFrequency = (shots) => {
+    const counts = new Map();
+    shots.forEach(shot => {
+        const grind = toNumber(shot?.grind);
+        if (grind === null) return;
+        counts.set(grind, (counts.get(grind) || 0) + 1);
+    });
+    return [...counts.entries()]
+        .sort(([grindA], [grindB]) => grindA - grindB)
+        .map(([grind, count]) => ({ label: String(grind), grind, count }));
+};
+
 export const summarizeShotPatterns = (logs, beans = [], options = {}) => {
     const beanLookup = new Map(beans.map(bean => [bean.id, bean]));
     const finerDirection = options.finerDirection === "higher" ? "higher" : "lower";
@@ -123,13 +135,14 @@ export const summarizeShotPatterns = (logs, beans = [], options = {}) => {
     usable.forEach(shot => {
         if (!baselines.has(shot.beanId)) baselines.set(shot.beanId, shot.grind);
         shot.grindDelta = shot.grind - baselines.get(shot.beanId);
+        shot.grindMovement = shot.grindDelta === 0 ? 0 : (finerDirection === "higher" ? shot.grindDelta : -shot.grindDelta);
     });
 
     const agePoints = usable
         .filter(shot => shot.age !== null)
         .map(shot => ({
             x: shot.age,
-            y: isSingleBean ? shot.grind : shot.grindDelta,
+            y: isSingleBean ? shot.grind : shot.grindMovement,
             beanId: shot.beanId,
             label: shot.bean.name || "Bean"
         }));
@@ -161,10 +174,12 @@ export const summarizeShotPatterns = (logs, beans = [], options = {}) => {
     if (ageRegression && Math.abs(ageRegression.slope * 7) >= 0.05) {
         const weeklyChange = ageRegression.slope * 7;
         const direction = weeklyChange > 0 ? "higher" : "lower";
-        const move = grinderMove(weeklyChange, finerDirection);
+        const move = isSingleBean ? grinderMove(weeklyChange, finerDirection) : (weeklyChange > 0 ? "finer" : "coarser");
         insights.push({
             title: "Age compensation",
-            text: `The grind setting trends ${direction} by ${Math.abs(weeklyChange).toFixed(2)} every 7 days—${move} on your grinder. This is a correlation across ${agePoints.length} shots, not a rule.`,
+            text: isSingleBean
+                ? `The grind setting trends ${direction} by ${Math.abs(weeklyChange).toFixed(2)} every 7 days—${move} on your grinder. Use that as a starting adjustment, then dial by taste.`
+                : `Across beans, you typically move ${Math.abs(weeklyChange).toFixed(2)} ${move} every 7 days. Use that as a starting adjustment, then dial by taste.`,
             tone: "amber"
         });
     } else {
