@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check public/js/app.js && node --check public/js/brew-advice.js && node --check public/js/shot-analytics.js && node --check public/js/elizabeth-tuning.js && node --check public/js/bianca-tuning.js && node --check public/sw.js",
+    "check": "for file in public/js/*.js public/sw.js; do node --check \"$file\" || exit 1; done",
     "test": "node --test"
   }
 }

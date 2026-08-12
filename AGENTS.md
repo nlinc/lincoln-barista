@@ -9,12 +9,17 @@ This repo is a small Firebase/static PWA for tracking espresso beans, brew logs,
 - Browser app files live in `public/`.
 - Main UI shell: `public/index.html`.
 - Main styling: `public/style.css`.
-- Main client logic: `public/js/app.js`.
+- Main orchestration and event wiring: `public/js/app.js`.
+- Firebase initialization: `public/js/firebase-client.js`.
+- Firebase persistence boundaries: `public/js/*-repository.js`.
+- Feature presentation modules: `public/js/*-view.js`.
+- Shared DOM and navigation helpers: `public/js/dom.js` and `public/js/router.js`.
 - Brew advice rules: `public/js/brew-advice.js`.
 - Elizabeth machine profiles and tuning rules: `public/js/elizabeth-tuning.js`.
 - Bianca machine profiles and flow-tuning rules: `public/js/bianca-tuning.js`.
+- Machine profile defaults, normalization, and maintenance schedules: `public/js/machine-config.js`.
 - Firebase browser config: `public/js/firebase-config.js`.
-- Tests: `test/brew-advice.test.js`, `test/elizabeth-tuning.test.js`, `test/bianca-tuning.test.js`, `test/shot-analytics.test.js`, and `test/ui-smoke.test.js`.
+- Tests: Node tests under `test/`, including pure domain/view-model tests and `test/ui-smoke.test.js` architecture guardrails.
 - Storage rules: `storage.rules`.
 
 This is not a React, Vite, Next.js, or bundled frontend project. Do not add a build system unless explicitly asked.
@@ -31,6 +36,8 @@ npm test
 ## Frontend Rules
 
 - Preserve the current static HTML/CSS/ES module architecture.
+- Keep Firebase SDK calls inside `*-repository.js` modules; `app.js` should coordinate repositories rather than query Firebase directly.
+- Keep reusable DOM construction in `*-view.js` modules and shared element helpers in `dom.js`; feature views should receive plain data and callbacks.
 - Keep Firebase browser imports as CDN ES module imports unless the project is intentionally migrated to a bundler.
 - Keep the release query string synchronized across `index.html`, every local ES-module import, and the service-worker app shell so an update cannot mix incompatible cached modules. Keep document navigations network-first while caching static assets stale-while-revalidate.
 - Keep the current release and deploy-stamped commit visible in the app header, and preserve the service-worker update banner with its explicit refresh action.

@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 const html = readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
 const css = readFileSync(new URL("../public/style.css", import.meta.url), "utf8");
 const appJs = readFileSync(new URL("../public/js/app.js", import.meta.url), "utf8");
+const jsDirectory = new URL("../public/js/", import.meta.url);
+const clientModules = new Map(readdirSync(jsDirectory)
+    .filter(name => name.endsWith(".js"))
+    .map(name => [name, readFileSync(new URL(name, jsDirectory), "utf8")]));
+const allClientJs = [...clientModules.values()].join("\n");
 const rules = readFileSync(new URL("../firestore.rules", import.meta.url), "utf8");
 const storageRules = readFileSync(new URL("../storage.rules", import.meta.url), "utf8");
 const manifest = readFileSync(new URL("../public/manifest.json", import.meta.url), "utf8");
@@ -13,6 +18,15 @@ const firebaseConfig = readFileSync(new URL("../firebase.json", import.meta.url)
 const analyticsJs = readFileSync(new URL("../public/js/shot-analytics.js", import.meta.url), "utf8");
 const tuningJs = readFileSync(new URL("../public/js/elizabeth-tuning.js", import.meta.url), "utf8");
 const biancaTuningJs = readFileSync(new URL("../public/js/bianca-tuning.js", import.meta.url), "utf8");
+const machineConfigJs = readFileSync(new URL("../public/js/machine-config.js", import.meta.url), "utf8");
+const beanRepositoryJs = readFileSync(new URL("../public/js/bean-repository.js", import.meta.url), "utf8");
+const beanDetailViewJs = readFileSync(new URL("../public/js/bean-detail-view.js", import.meta.url), "utf8");
+const maintenanceRepositoryJs = readFileSync(new URL("../public/js/maintenance-repository.js", import.meta.url), "utf8");
+const collectionViewJs = readFileSync(new URL("../public/js/collection-view.js", import.meta.url), "utf8");
+const domJs = readFileSync(new URL("../public/js/dom.js", import.meta.url), "utf8");
+const maintenanceViewJs = readFileSync(new URL("../public/js/maintenance-view.js", import.meta.url), "utf8");
+const routerJs = readFileSync(new URL("../public/js/router.js", import.meta.url), "utf8");
+const firebaseClientJs = readFileSync(new URL("../public/js/firebase-client.js", import.meta.url), "utf8");
 const mergeWorkflow = readFileSync(new URL("../.github/workflows/firebase-hosting-merge.yml", import.meta.url), "utf8");
 const previewWorkflow = readFileSync(new URL("../.github/workflows/firebase-hosting-pull-request.yml", import.meta.url), "utf8");
 
@@ -22,23 +36,29 @@ describe("UI smoke guardrails", () => {
     });
 
     it("keeps client DOM references aligned with the app shell", () => {
-        const referencedIds = [...appJs.matchAll(/getElementById\(["']([^"']+)["']\)/g)].map(match => match[1]);
+        const referencedIds = [...allClientJs.matchAll(/getElementById\(["']([^"']+)["']\)/g)].map(match => match[1]);
         for (const id of new Set(referencedIds)) assert.match(html, new RegExp(`id="${id}"`));
     });
 
     it("keeps cache-busted app assets on the current release", () => {
         assert.match(html, /style\.css\?v=1\.9\.4/);
         assert.match(html, /js\/app\.js\?v=1\.9\.4/);
-        assert.match(appJs, /firebase-config\.js\?v=1\.9\.4/);
-        assert.match(appJs, /brew-advice\.js\?v=1\.9\.4/);
-        assert.match(appJs, /shot-analytics\.js\?v=1\.9\.4/);
-        assert.match(appJs, /elizabeth-tuning\.js\?v=1\.9\.4/);
-        assert.match(appJs, /bianca-tuning\.js\?v=1\.9\.4/);
-        assert.match(analyticsJs, /brew-advice\.js\?v=1\.9\.4/);
-        assert.match(serviceWorker, /js\/app\.js\?v=1\.9\.4/);
-        assert.match(serviceWorker, /js\/brew-advice\.js\?v=1\.9\.4/);
-        assert.match(serviceWorker, /js\/elizabeth-tuning\.js\?v=1\.9\.4/);
-        assert.match(serviceWorker, /js\/bianca-tuning\.js\?v=1\.9\.4/);
+        for (const [name, source] of clientModules) {
+            const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            assert.match(serviceWorker, new RegExp(`/js/${escapedName}\\?v=1\\.9\\.4`), `${name} must be cached`);
+            for (const match of source.matchAll(/from\s+["']\.\/([^"']+\.js)(\?v=[^"']+)?["']/g)) {
+                assert.equal(match[2], "?v=1.9.4", `${name} must version its ${match[1]} import`);
+            }
+        }
+    });
+
+    it("keeps Firebase persistence behind repository modules", () => {
+        assert.doesNotMatch(appJs, /gstatic\.com\/firebasejs|\bcollection\(|\bgetDocs\(|\bsetDoc\(|\bupdateDoc\(|\bdeleteDoc\(/);
+        for (const name of ["auth-repository.js", "bean-repository.js", "maintenance-repository.js", "profile-repository.js", "shot-repository.js"]) {
+            assert.match(appJs, new RegExp(name.replace(".", "\\.") + "\\?v=1\\.9\\.4"));
+        }
+        assert.match(beanRepositoryJs, /collection\(db, "beans"\)/);
+        assert.match(maintenanceRepositoryJs, /collection\(db, "maintenance_records"\)/);
     });
 
     it("caps detail bean images and hides the native file input", () => {
@@ -127,7 +147,7 @@ describe("UI smoke guardrails", () => {
         assert.match(css, /#view-log-shot \.shot-actions\s*\{[^}]*position:\s*fixed;/s);
         assert.match(css, /bottom:\s*var\(--keyboard-inset, 0px\)/);
         assert.match(css, /body\[data-view="log-shot"\] #top-bar/);
-        assert.match(appJs, /document\.body\.dataset\.view = viewName/);
+        assert.match(routerJs, /document\.body\.dataset\.view = viewName/);
         assert.match(appJs, /window\.visualViewport\?\.addEventListener\("resize", syncKeyboardInset\)/);
         assert.doesNotMatch(css, /@keyframes fadeIn[^}]*transform/s);
         assert.match(html, /<label for="input-shot-time">Time<\/label>/);
@@ -149,8 +169,8 @@ describe("UI smoke guardrails", () => {
     it("keeps mobile extraction history compact", () => {
         assert.match(css, /\.log-row\s*\{[^}]*padding:\s*0\.85rem 1rem;[^}]*margin-bottom:\s*0\.65rem;/s);
         assert.match(css, /\.log-row-metrics\s*\{[^}]*grid-template-columns:\s*repeat\(3,/s);
-        assert.match(appJs, /orderedLogs\.slice\(0, 8\)/);
-        assert.match(appJs, /Show \$\{orderedLogs\.length - 8\} older shots/);
+        assert.match(beanDetailViewJs, /orderedLogs\.slice\(0, 8\)/);
+        assert.match(beanDetailViewJs, /Show \$\{orderedLogs\.length - 8\} older shots/);
     });
 
     it("returns bean-scoped analytics to the bean detail", () => {
@@ -162,7 +182,7 @@ describe("UI smoke guardrails", () => {
     it("provides useful feedback during a slow collection sync", () => {
         assert.match(appJs, /Still syncing… The first load can take a few seconds\./);
         assert.match(appJs, /window\.clearTimeout\(slowTimer\)/);
-        assert.match(appJs, /Common Grinds/);
+        assert.match(beanDetailViewJs, /Common Grinds/);
     });
 
     it("uses local install assets and registers an offline shell", () => {
@@ -175,13 +195,13 @@ describe("UI smoke guardrails", () => {
         assert.match(html, /id="view-maintenance"/);
         assert.match(html, /id="maintenance-quick-actions"/);
         assert.match(html, /id="maintenance-next-date"/);
-        assert.match(appJs, /collection\(db, "maintenance_records"\)/);
+        assert.match(maintenanceRepositoryJs, /collection\(db, "maintenance_records"\)/);
         assert.match(appJs, /saveMaintenancePreset/);
-        assert.match(appJs, /monthsUntilDue:\s*1/);
-        assert.match(appJs, /daysUntilDue:\s*7/);
-        assert.match(appJs, /maintenance-notes/);
-        assert.match(appJs, /textContent/);
-        assert.doesNotMatch(appJs, /maintenance[^\n]*innerHTML/i);
+        assert.match(machineConfigJs, /monthsUntilDue:\s*1/);
+        assert.match(machineConfigJs, /daysUntilDue:\s*7/);
+        assert.match(maintenanceViewJs, /maintenance-notes/);
+        assert.match(domJs, /textContent/);
+        assert.doesNotMatch(allClientJs, /maintenance[^\n]*innerHTML/i);
         assert.match(rules, /match \/maintenance_records\/\{docId\}/);
         assert.match(rules, /validMaintenanceRecord/);
     });
@@ -204,9 +224,9 @@ describe("UI smoke guardrails", () => {
 
     it("lazy-loads photos and migrates legacy image payloads in the background", () => {
         assert.match(html, /id="detail-image"[^>]+loading="lazy"[^>]+decoding="async"/);
-        assert.match(appJs, /thumb\.loading = "lazy"/);
+        assert.match(collectionViewJs, /thumb\.loading = "lazy"/);
         assert.match(appJs, /runWhenIdle\(\(\) => app\.migrateLegacyImages\(\)\)/);
-        assert.match(appJs, /updateDoc\(doc\(db, "beans", bean\.id\), \{ \.\.\.uploaded/);
+        assert.match(appJs, /updateBean\(bean\.id, \{ \.\.\.uploaded/);
     });
 
     it("avoids remote AI dependencies and serves the app shell stale-while-revalidate", () => {
@@ -253,8 +273,8 @@ describe("UI smoke guardrails", () => {
 
 describe("Data safety guardrails", () => {
     it("archives beans instead of deleting their documents", () => {
-        assert.match(appJs, /archived:\s*true/);
-        assert.doesNotMatch(appJs, /deleteDoc\(doc\(db,\s*"beans"/);
+        assert.match(beanRepositoryJs, /archived:\s*true/);
+        assert.doesNotMatch(beanRepositoryJs, /deleteDoc\(doc\(db,\s*"beans"/);
     });
 
     it("allows archived bean fields in Firestore rules", () => {
@@ -270,10 +290,10 @@ describe("Data safety guardrails", () => {
     });
 
     it("stores new bean photos in Firebase Storage", () => {
-        assert.match(appJs, /getStorage\(appInstance,\s*'gs:\/\/espresso-4298d\.firebasestorage\.app'\)/);
-        assert.match(appJs, /uploadString\(ref,\s*dataUrl,\s*"data_url"/);
-        assert.match(appJs, /imageUrl/);
-        assert.match(appJs, /imagePath/);
+        assert.match(firebaseClientJs, /getStorage\(firebaseApp,\s*"gs:\/\/espresso-4298d\.firebasestorage\.app"\)/);
+        assert.match(beanRepositoryJs, /uploadString\(ref,\s*dataUrl,\s*"data_url"/);
+        assert.match(beanRepositoryJs, /imageUrl/);
+        assert.match(beanRepositoryJs, /imagePath/);
         assert.match(rules, /"imageUrl"/);
         assert.match(rules, /"imagePath"/);
         assert.match(storageRules, /match \/users\/\{userId\}\/beans\/\{beanId\}\/\{fileName\}/);

@@ -3,33 +3,49 @@
  * Modularized and Optimized for Mobile. v1.3.5 - UI Logic Refinement.
  */
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { firebaseConfig } from "./firebase-config.js?v=1.9.4";
+import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.9.4";
+import { chartOptions, renderAnalyticsMetrics, renderPatternList } from "./analytics-view.js?v=1.9.4";
+import {
+    archiveBean,
+    createBean,
+    createBeanId,
+    deleteBeanPhoto,
+    fetchBeansForUser,
+    updateBean,
+    uploadBeanPhoto
+} from "./bean-repository.js?v=1.9.4";
+import {
+    chooseCurrentRecipe,
+    renderBeanAge,
+    renderBeanIdentity,
+    renderCurrentRecipe as renderCurrentRecipeView,
+    renderDialInSummary as renderDialInSummaryView,
+    renderGlobalStats as renderGlobalStatsView,
+    renderMachineBadge,
+    renderShotHistory
+} from "./bean-detail-view.js?v=1.9.4";
+import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.9.4";
+import { renderBeanCollection } from "./collection-view.js?v=1.9.4";
+import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.9.4";
+import { renderMaintenanceView } from "./maintenance-view.js?v=1.9.4";
+import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.9.4";
+import { navigate } from "./router.js?v=1.9.4";
+import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.9.4";
+import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference } from "./tuning-view.js?v=1.9.4";
 import { getBrewAdvice } from "./brew-advice.js?v=1.9.4";
 import { summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.9.4";
+import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.9.4";
+import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.9.4";
 import {
-    ELIZABETH_ADVANCED_PARAMETERS,
-    ELIZABETH_SOURCES,
-    convertTemperature,
-    diagnoseElizabethShot,
-    explainPreinfusionMode
-} from "./elizabeth-tuning.js?v=1.9.4";
-import {
-    BIANCA_ADVANCED_PARAMETERS,
-    BIANCA_SOURCES,
-    diagnoseBiancaShot,
-    explainBiancaFlow
-} from "./bianca-tuning.js?v=1.9.4";
-
-// Initialize Firebase
-const appInstance = initializeApp(firebaseConfig);
-const auth = getAuth(appInstance);
-const db = getFirestore(appInstance);
-const storage = getStorage(appInstance, 'gs://espresso-4298d.firebasestorage.app');
-const provider = new GoogleAuthProvider();
+    createDefaultUserProfile,
+    localDateKey,
+    maintenanceTime,
+    normalizeBiancaProfile,
+    normalizeElizabethProfile,
+    normalizeUserProfile,
+    presetDueDate,
+    recordMachineId
+} from "./machine-config.js?v=1.9.4";
 
 // App State
 let currentUser = null;
@@ -45,36 +61,7 @@ let chartTrend = null;
 let chartDist = null;
 let chartAge = null;
 let chartLoadPromise = null;
-let userProfile = {
-    machineId: 'elizabeth',
-    machineName: 'Lelit Elizabeth',
-    defaultDose: 18,
-    finerDirection: 'lower',
-    b1: { infusion: 3, bloom: 2, brew: 25 },
-    b2: { infusion: 5, bloom: 7, brew: 28 },
-    elizabeth: {
-        machineVersion: 'classic-v3',
-        firmware: '',
-        temperatureUnit: 'F',
-        brewTemperature: 200,
-        steamTemperature: 275,
-        observedPressure: '',
-        preinfusionMode: 'auto'
-    },
-    bianca: {
-        machineVersion: 'v3',
-        firmware: '',
-        temperatureUnit: 'F',
-        brewTemperature: 200,
-        steamTemperature: 257,
-        observedPressure: '',
-        brewOffset: 0,
-        preinfusionOn: 0,
-        preinfusionOff: 0,
-        lowFlowStart: 0,
-        lowFlowFinal: 0
-    }
-};
+let userProfile = createDefaultUserProfile();
 let currentEditingTags = [];
 let currentEditingImage = null;
 let currentEditingImagePath = null;
@@ -96,29 +83,6 @@ const haptic = (type = 'light') => {
     else if (type === 'heavy') window.navigator.vibrate([50, 30, 50]);
 };
 
-const el = (tag, className, text) => {
-    const node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
-    return node;
-};
-
-const renderEmpty = (target, text) => {
-    target.replaceChildren(el("div", "empty-state", text));
-};
-
-const renderEmptyAction = (target, title, body, actionText, action) => {
-    const empty = el("div", "empty-panel");
-    empty.append(el("div", "empty-panel-title", title), el("div", "empty-panel-copy", body));
-    if (actionText && action) {
-        const button = el("button", "btn empty-panel-action", actionText);
-        button.type = "button";
-        button.addEventListener("click", action);
-        empty.appendChild(button);
-    }
-    target.replaceChildren(empty);
-};
-
 const ratioFor = (shot) => {
     const dose = parseFloat(shot?.dose);
     const yieldVal = parseFloat(shot?.yield);
@@ -126,51 +90,8 @@ const ratioFor = (shot) => {
     return yieldVal / dose;
 };
 
-const normalizeElizabethProfile = (value = {}) => {
-    const temperatureUnit = value.temperatureUnit === "C" ? "C" : "F";
-    return {
-        machineVersion: ["classic-v3", "classic-early", "elizabeth3", "unknown"].includes(value.machineVersion) ? value.machineVersion : "classic-v3",
-        firmware: typeof value.firmware === "string" ? value.firmware : "",
-        temperatureUnit,
-        brewTemperature: Number.isFinite(parseFloat(value.brewTemperature)) ? parseFloat(value.brewTemperature) : (temperatureUnit === "F" ? 200 : 93),
-        steamTemperature: Number.isFinite(parseFloat(value.steamTemperature)) ? parseFloat(value.steamTemperature) : (temperatureUnit === "F" ? 275 : 135),
-        observedPressure: Number.isFinite(parseFloat(value.observedPressure)) ? parseFloat(value.observedPressure) : "",
-        preinfusionMode: ["auto", "steam", "bloom", "none"].includes(value.preinfusionMode) ? value.preinfusionMode : "auto"
-    };
-};
-
-const normalizeBiancaProfile = (value = {}) => {
-    const temperatureUnit = value.temperatureUnit === "C" ? "C" : "F";
-    const numberOr = (field, fallback) => Number.isFinite(parseFloat(value[field])) ? parseFloat(value[field]) : fallback;
-    return {
-        machineVersion: ["v3", "v2", "v1", "unknown"].includes(value.machineVersion) ? value.machineVersion : "v3",
-        firmware: typeof value.firmware === "string" ? value.firmware : "",
-        temperatureUnit,
-        brewTemperature: numberOr("brewTemperature", temperatureUnit === "F" ? 200 : 93),
-        steamTemperature: numberOr("steamTemperature", temperatureUnit === "F" ? 257 : 125),
-        observedPressure: Number.isFinite(parseFloat(value.observedPressure)) ? parseFloat(value.observedPressure) : "",
-        brewOffset: numberOr("brewOffset", 0),
-        preinfusionOn: numberOr("preinfusionOn", 0),
-        preinfusionOff: numberOr("preinfusionOff", 0),
-        lowFlowStart: numberOr("lowFlowStart", 0),
-        lowFlowFinal: numberOr("lowFlowFinal", 0)
-    };
-};
-
-const normalizeUserProfile = (data = {}) => ({
-    machineId: data.machineId === "bianca" ? "bianca" : "elizabeth",
-    machineName: data.machineName || (data.machineId === "bianca" ? "Lelit Bianca" : "Lelit Elizabeth"),
-    defaultDose: parseFloat(data.defaultDose) || 18,
-    finerDirection: data.finerDirection === "higher" ? "higher" : "lower",
-    b1: data.b1 || { infusion: data.infusion || 3, bloom: 2, brew: 25 },
-    b2: data.b2 || { infusion: 5, bloom: 7, brew: 28 },
-    elizabeth: normalizeElizabethProfile(data.elizabeth),
-    bianca: normalizeBiancaProfile(data.bianca)
-});
-
 const activeMachineId = () => userProfile.machineId === "bianca" ? "bianca" : "elizabeth";
 const activeMachineProfile = () => activeMachineId() === "bianca" ? normalizeBiancaProfile(userProfile.bianca) : normalizeElizabethProfile(userProfile.elizabeth);
-const recordMachineId = (record) => record?.machineId === "bianca" ? "bianca" : "elizabeth";
 const activeMaintenanceRecords = () => maintenanceRecords.filter(record => recordMachineId(record) === activeMachineId());
 
 const updateTemperatureUnitLabels = (unit) => {
@@ -181,62 +102,6 @@ const formatDate = (dateLike) => {
     if (!dateLike) return "";
     const date = dateLike.toDate ? dateLike.toDate() : new Date(dateLike.seconds ? dateLike.seconds * 1000 : dateLike);
     return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString();
-};
-
-const parseDateKey = (value) => value ? new Date(`${value}T00:00:00`) : null;
-
-const localDateKey = (date = new Date()) => [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, "0"),
-    String(date.getDate()).padStart(2, "0")
-].join("-");
-
-const maintenanceTime = (record) => parseDateKey(record?.completedDate)?.getTime() || 0;
-
-const elizabethMaintenancePresets = [
-    { type: "Steam wand clean", icon: "💨", title: "Steam wand", action: "Wand cleaned", cadence: "After every use", detail: "Wipe with a damp cloth and purge briefly." },
-    { type: "Filterholder clean", icon: "☕", title: "Filterholder", action: "Filterholder cleaned", cadence: "After every use", detail: "Remove oily coffee residue after brewing." },
-    { type: "Machine clean", icon: "✨", title: "Machine wipe-down", action: "Machine cleaned", cadence: "Weekly", detail: "Soft cloth and plain water.", daysUntilDue: 7 },
-    { type: "Backflush", icon: "💧", title: "Backflush", action: "Backflush done", cadence: "Monthly", detail: "Blind filter and 3–5 g detergent.", monthsUntilDue: 1 },
-    { type: "Water filter", icon: "🚰", title: "Resin filter", action: "Filter changed", cadence: "By water usage", detail: "Follow the liter capacity on the filter pack." }
-];
-
-const biancaMaintenancePresets = [
-    { type: "Daily group and tray care", icon: "☕", title: "Group, basket & tray", action: "Daily care done", cadence: "After shots / daily", detail: "Wash basket and portafilter, brush the gasket, and hand-wash the tray." },
-    { type: "Steam wand clean", icon: "💨", title: "Steam wand", action: "Wand cleaned", cadence: "After every milk drink", detail: "Wipe immediately and purge briefly." },
-    { type: "Detergent backflush", icon: "💧", title: "Detergent backflush", action: "Backflush done", cadence: "Weekly", detail: "10s on / 10s off ×10; rinse, then water-only ×5.", daysUntilDue: 7 },
-    { type: "Portafilter and basket soak", icon: "🧼", title: "Metal parts soak", action: "Parts cleaned", cadence: "Weekly", detail: "15 minutes; keep the wooden handle out of solution.", daysUntilDue: 7 },
-    { type: "Steam wand deep clean", icon: "✨", title: "Wand deep clean", action: "Deep clean done", cadence: "Weekly", detail: "Use milk-system detergent and the manual's 5s on/off cycle.", daysUntilDue: 7 },
-    { type: "Water filter", icon: "🚰", title: "Water filter", action: "Filter changed", cadence: "70 L or 4 months", detail: "Replace earlier after one month unused.", monthsUntilDue: 4 },
-    { type: "Professional annual service", icon: "🛠️", title: "Professional service", action: "Annual service done", cadence: "Annual", detail: "Technician inspection and hydraulic descaling.", monthsUntilDue: 12 }
-];
-
-const maintenancePresetsForActiveMachine = () => activeMachineId() === "bianca" ? biancaMaintenancePresets : elizabethMaintenancePresets;
-
-const presetDueDate = (preset, completedDate) => {
-    const date = parseDateKey(completedDate);
-    if (!date) return "";
-    if (preset.daysUntilDue) date.setDate(date.getDate() + preset.daysUntilDue);
-    else if (preset.monthsUntilDue) {
-        const day = date.getDate();
-        date.setDate(1);
-        date.setMonth(date.getMonth() + preset.monthsUntilDue);
-        const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-        date.setDate(Math.min(day, lastDay));
-    } else return "";
-    return localDateKey(date);
-};
-
-const maintenanceDueState = (dueDate) => {
-    const due = parseDateKey(dueDate);
-    if (!due || Number.isNaN(due.getTime())) return { tone: "none", label: "No reminder" };
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const days = Math.round((due.getTime() - today.getTime()) / 86400000);
-    if (days < 0) return { tone: "overdue", label: `${Math.abs(days)}d overdue` };
-    if (days === 0) return { tone: "due", label: "Due today" };
-    if (days <= 30) return { tone: "due", label: `Due in ${days}d` };
-    return { tone: "scheduled", label: `Due ${due.toLocaleDateString()}` };
 };
 
 const downloadCsv = (filename, rows) => {
@@ -305,20 +170,6 @@ const hideStatus = () => {
     if (status) status.classList.add("hidden");
 };
 
-const chooseCurrentRecipe = (logs, roastLevel) => {
-    if (!logs.length) return null;
-    const latestGood = logs.find(log => getBrewAdvice(log, roastLevel).status === "good" && (!log.taste || log.taste === "balanced"));
-    return {
-        shot: latestGood || logs[0],
-        status: latestGood ? "Dialed" : "Resume"
-    };
-};
-
-const on = (id, eventName, handler) => {
-    const node = document.getElementById(id);
-    if (node) node.addEventListener(eventName, handler);
-};
-
 const syncKeyboardInset = () => {
     const viewport = window.visualViewport;
     const inset = viewport ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0;
@@ -327,33 +178,11 @@ const syncKeyboardInset = () => {
 
 const app = {
     // --- ROUTING ---
-    router: (viewName, addToHistory = true) => {
-        document.body.dataset.view = viewName;
-        document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-        const targetView = document.getElementById('view-' + viewName);
-        if (targetView) targetView.classList.add('active');
-        
-        const topBar = document.getElementById('top-bar');
-        if (topBar) topBar.style.display = (viewName === 'login' || viewName === 'machine-select') ? 'none' : 'flex';
-        
-        // FAB Visibility
-        const fabAdd = document.getElementById('fab-add-bean');
-        const fabLog = document.getElementById('fab-log-shot');
-        if (fabAdd) fabAdd.classList.toggle('hidden', viewName !== 'list');
-        if (fabLog) fabLog.classList.toggle('hidden', viewName !== 'detail');
-
-        if (addToHistory) {
-            const state = { view: viewName };
-            const url = "#" + viewName;
-            if (viewName === 'list' && !history.state) history.replaceState(state, "", url);
-            else history.pushState(state, "", url);
-        }
-        window.scrollTo(0, 0);
-    },
+    router: navigate,
 
     // --- AUTH ---
-    login: async () => { haptic('medium'); try { await signInWithPopup(auth, provider); } catch(e) { alert(e.message); } },
-    logout: () => { if(confirm("Logout?")) { haptic('heavy'); signOut(auth).then(() => location.reload()); } },
+    login: async () => { haptic('medium'); try { await signInWithGoogle(); } catch(e) { alert(e.message); } },
+    logout: () => { if(confirm("Logout?")) { haptic('heavy'); signOutUser().then(() => location.reload()); } },
     selectMachine: async (machineId) => {
         const nextId = machineId === "bianca" ? "bianca" : "elizabeth";
         const oldId = activeMachineId();
@@ -361,7 +190,7 @@ const app = {
         if (!userProfile.machineName || userProfile.machineName === "Lelit Elizabeth" || userProfile.machineName === "Lelit Bianca") {
             userProfile.machineName = nextId === "bianca" ? "Lelit Bianca" : "Lelit Elizabeth";
         }
-        await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
+        await saveUserProfile(currentUser.uid, userProfile);
         machineSelectionRequired = false;
         if (oldId !== nextId) {
             currentRecipeShot = null;
@@ -385,9 +214,8 @@ const app = {
     fetchAllLogs: (force = false) => {
         if (allLogsLoaded && !force) return Promise.resolve(allLogsCache);
         if (logsLoadPromise && !force) return logsLoadPromise;
-        const q = query(collection(db, "brew_logs"), where("uid", "==", currentUser.uid));
-        logsLoadPromise = getDocs(q).then(snapshot => {
-            allLogsCache = newestFirst(snapshot.docs.map(logDoc => ({ id: logDoc.id, ...logDoc.data() })));
+        logsLoadPromise = fetchShotsForUser(currentUser.uid).then(logs => {
+            allLogsCache = newestFirst(logs);
             allLogsLoaded = true;
             return allLogsCache;
         }).finally(() => { logsLoadPromise = null; });
@@ -406,10 +234,7 @@ const app = {
         logsCache = logsCache.filter(log => log.id !== logId);
     },
     fetchMaintenance: async () => {
-        const q = query(collection(db, "maintenance_records"), where("uid", "==", currentUser.uid));
-        const snapshot = await getDocs(q);
-        maintenanceRecords = snapshot.docs
-            .map(recordDoc => ({ id: recordDoc.id, ...recordDoc.data() }))
+        maintenanceRecords = (await fetchMaintenanceForUser(currentUser.uid))
             .sort((a, b) => maintenanceTime(b) - maintenanceTime(a));
         return maintenanceRecords;
     },
@@ -423,9 +248,7 @@ const app = {
             }
         }, 4500);
         try {
-            const q = query(collection(db, "beans"), where("uid", "==", currentUser.uid));
-            const snapshot = await getDocs(q);
-            beans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(bean => bean.archived !== true);
+            beans = (await fetchBeansForUser(currentUser.uid)).filter(bean => bean.archived !== true);
             hideStatus();
             app.renderBeanList();
             app.renderGlobalStats();
@@ -442,71 +265,13 @@ const app = {
         }
     },
 
-    getRoastColor: (level = 'Medium') => {
-        const colors = { 'Light': '#f59e0b', 'Medium': '#d97706', 'Dark': '#78350f', 'Espresso': '#1c1917' };
-        return colors[level] || '#d97706';
-    },
-    getRoastGlow: (level = 'Medium') => {
-        const glows = { 'Light': 'rgba(245, 158, 11, 0.15)', 'Medium': 'rgba(217, 119, 6, 0.15)', 'Dark': 'rgba(120, 53, 15, 0.15)' };
-        return glows[level] || 'rgba(217, 119, 6, 0.15)';
-    },
-
     renderBeanList: () => {
-        const container = document.getElementById('bean-list-container');
-        if (!container) return;
-        container.replaceChildren();
-
-        let visibleBeans = beans.filter(b => {
-            if(activeFilters.size === 0) return true;
-            const searchable = [b.roastLevel, b.origin, b.roaster, ...(b.tags || [])].map(t => (t||'').toLowerCase());
-            for(let f of activeFilters) { if(!searchable.includes(f.toLowerCase())) return false; }
-            return true;
-        });
-
-        if(currentSort === 'name') visibleBeans.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
-        else if (currentSort === 'rating') visibleBeans.sort((a,b) => (b.rating || 0) - (a.rating || 0));
-        else visibleBeans.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-
-        if(visibleBeans.length === 0) {
-            renderEmptyAction(container, "No coffee found", "Start a new profile.", "Add Bean", () => { app.resetBeanForm(); app.router("edit-bean"); });
-            return;
-        }
-
-        visibleBeans.forEach((b, idx) => {
-            const card = document.createElement('div');
-            card.className = 'bean-card';
-            card.tabIndex = 0;
-            card.setAttribute("role", "button");
-            card.setAttribute("aria-label", `Open ${b.name || "untitled bean"} from ${b.roaster || "unknown roaster"}`);
-            card.style.setProperty('--roast-color', app.getRoastColor(b.roastLevel));
-            card.style.setProperty('--roast-glow', app.getRoastGlow(b.roastLevel));
-
-            card.appendChild(el("div", "roast-bar"));
-            const imageSrc = beanImageSource(b);
-            const thumb = imageSrc ? el("img", "bean-card-thumb") : el("div", "bean-card-thumb thumb-placeholder", "☕");
-            if (imageSrc) {
-                thumb.src = imageSrc;
-                thumb.alt = "";
-                thumb.loading = "lazy";
-                thumb.decoding = "async";
-            }
-            card.appendChild(thumb);
-
-            const body = el("div", "bean-card-body");
-            body.appendChild(el("div", "roaster-name", (b.roaster || "Unknown") + (b.rating ? " ★" + b.rating : "")));
-            body.appendChild(el("div", "bean-card-name", b.name || "Untitled"));
-            const tags = el("div", "bean-card-tags");
-            (b.tags || []).slice(0, 2).forEach(t => tags.appendChild(el("span", "tag-pill", "#" + t)));
-            body.appendChild(tags);
-            card.appendChild(body);
-            card.onclick = () => app.loadBeanDetail(b.id);
-            card.onkeydown = (event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    app.loadBeanDetail(b.id);
-                }
-            };
-            container.appendChild(card);
+        renderBeanCollection({
+            beans,
+            activeFilters,
+            currentSort,
+            onAdd: () => { app.resetBeanForm(); app.router("edit-bean"); },
+            onOpen: beanId => app.loadBeanDetail(beanId)
         });
     },
 
@@ -520,7 +285,7 @@ const app = {
         try {
             const id = document.getElementById('input-bean-id').value;
             const existingBean = id ? beans.find(bean => bean.id === id) : null;
-            const beanRef = id ? doc(db, "beans", id) : doc(collection(db, "beans"));
+            const beanId = id || createBeanId();
             const data = {
                 uid: currentUser.uid,
                 roaster: document.getElementById('input-roaster').value,
@@ -538,10 +303,10 @@ const app = {
 
             if(!data.name) throw new Error("Bean name is required.");
 
-            const imageFields = await app.prepareBeanImageFields(beanRef.id, existingBean);
+            const imageFields = await app.prepareBeanImageFields(beanId, existingBean);
             
-            if(id) await updateDoc(beanRef, { ...data, ...imageFields, currentRoastDate: manualRoastDate });
-            else await setDoc(beanRef, { ...data, ...imageFields, currentRoastDate: manualRoastDate || new Date().toISOString().split('T')[0], createdAt: new Date() });
+            if(id) await updateBean(beanId, { ...data, ...imageFields, currentRoastDate: manualRoastDate });
+            else await createBean(beanId, { ...data, ...imageFields, currentRoastDate: manualRoastDate || new Date().toISOString().split('T')[0], createdAt: new Date() });
             
             await app.fetchBeans();
             app.router('list');
@@ -550,7 +315,7 @@ const app = {
 
     deleteBean: async () => {
         if(confirm("Archive this bean? Its shot history will stay available for export and records.")) {
-            await updateDoc(doc(db, "beans", document.getElementById('input-bean-id').value), { archived: true, archivedAt: new Date(), updatedAt: new Date() });
+            await archiveBean(document.getElementById('input-bean-id').value);
             await app.fetchBeans();
             app.router('list');
         }
@@ -590,17 +355,8 @@ const app = {
             currentActiveBean = beans.find(b => b.id === id);
             if(!currentActiveBean) return app.router('list');
 
-            const imgEl = document.getElementById('detail-image');
-            const imageSrc = beanImageSource(currentActiveBean);
-            if(imageSrc) { imgEl.src = imageSrc; imgEl.classList.remove('hidden'); }
-            else { imgEl.classList.add('hidden'); }
-
-            document.getElementById('detail-roaster').innerText = currentActiveBean.roaster;
-            document.getElementById('detail-name').innerText = currentActiveBean.name;
-            document.getElementById('detail-rating').innerText = '★'.repeat(currentActiveBean.rating || 0);
-            
             const roastDate = currentActiveBean.currentRoastDate || "Unknown";
-            document.getElementById('detail-date').innerText = roastDate;
+            renderBeanIdentity(currentActiveBean);
 
             logsCache = [];
             currentRecipeShot = null;
@@ -616,30 +372,18 @@ const app = {
             if (currentActiveBean?.id !== id) return;
             logsCache = app.logsForBean(id);
 
-            if(roastDate !== "Unknown") {
-                const days = Math.floor((new Date() - new Date(roastDate)) / (86400000));
-                const msg = (days >= 7 && days <= 21) ? "✨ Peak Flavor Window" : (days < 7 ? "⏳ Resting..." : "🫘 Aging");
-                document.getElementById('detail-age').innerText = days + " days since roast • " + msg;
-                const staleWarning = document.getElementById("stale-warning-container");
-                if (days > 30) {
-                    staleWarning.textContent = "This batch is over 30 days off roast. Expect faster flow and be ready to adjust.";
-                    staleWarning.className = "status-strip batch-warning";
-                } else {
-                    staleWarning.classList.add("hidden");
-                }
-            } else {
-                document.getElementById('detail-age').innerText = "";
-                document.getElementById("stale-warning-container").classList.add("hidden");
-            }
+            renderBeanAge(roastDate);
 
             app.renderHistory();
             app.renderDialInSummary();
             app.renderCurrentRecipe();
 
-            const machineContext = activeMachineId() === "bianca"
-                ? `${normalizeBiancaProfile(userProfile.bianca).machineVersion.toUpperCase()} • paddle flow`
-                : `${(parseInt(userProfile.b1?.infusion)||0) + (parseInt(userProfile.b1?.bloom)||0)}s P1 pre-infusion`;
-            document.getElementById('machine-badge').innerText = (userProfile.machineName || 'Espresso machine') + " • " + machineContext;
+            renderMachineBadge({
+                b1: userProfile.b1,
+                machineId: activeMachineId(),
+                machineName: userProfile.machineName,
+                machineVersion: activeMachineProfile().machineVersion
+            });
 
         } catch(e) {
             console.error("Detail error:", e);
@@ -648,148 +392,35 @@ const app = {
     },
 
     renderCurrentRecipe: () => {
-        const consoleEl = document.getElementById("dial-in-console");
         const recipe = chooseCurrentRecipe(logsCache, currentActiveBean?.roastLevel);
         currentRecipeShot = recipe?.shot || null;
-        if (!currentRecipeShot) { consoleEl.classList.add("hidden"); return; }
-
-        document.getElementById("recipe-status").textContent = recipe.status;
-        document.getElementById("recipe-status").className = "console-status status-" + recipe.status.toLowerCase();
-        document.getElementById("recipe-grind").textContent = currentRecipeShot.grind || "--";
-        document.getElementById("recipe-dose").textContent = currentRecipeShot.dose ? currentRecipeShot.dose + "g" : "--";
-        document.getElementById("recipe-yield").textContent = currentRecipeShot.yield ? currentRecipeShot.yield + "g" : "--";
-        document.getElementById("recipe-time").textContent = currentRecipeShot.time ? currentRecipeShot.time + "s" : "--";
-        consoleEl.classList.remove("hidden");
+        renderCurrentRecipeView(recipe);
     },
 
     renderHistory: () => {
-        const container = document.getElementById('history-container');
-        container.replaceChildren();
-        if(logsCache.length === 0) { renderEmptyAction(container, "No logs", "Log your first extraction.", "Log Shot", () => app.openLogShot()); return; }
-        const groups = {};
-        logsCache.forEach(log => { const k = log.roastDate || "Original Batch"; if(!groups[k]) groups[k] = []; groups[k].push(log); });
-        const orderedLogs = Object.keys(groups).sort().reverse().flatMap(batch => groups[batch].map(log => ({ batch, log })));
-        const visibleLogs = historyExpanded ? orderedLogs : orderedLogs.slice(0, 8);
-        let renderedBatch = null;
-        visibleLogs.forEach(({ batch, log }) => {
-            if (batch !== renderedBatch) {
-                renderedBatch = batch;
-                container.appendChild(el("div", "field-kicker", "Batch: " + batch));
-            }
-                const validation = validateShot(log);
-                const advice = validation.valid
-                    ? getBrewAdvice(log, currentActiveBean?.roastLevel)
-                    : { status: "slow", text: "Incomplete legacy shot data" };
-                const observedSymptom = log.channelingObserved ? "channeling" : log.taste;
-                const historyTuningContext = {
-                    roast: currentActiveBean?.roastLevel,
-                    symptom: observedSymptom,
-                    dose: log.dose,
-                    yield: log.yield,
-                    time: log.time,
-                    pressure: log.pressureObserved,
-                    machineVersion: activeMachineProfile().machineVersion,
-                    temperatureUnit: activeMachineProfile().temperatureUnit
-                };
-                const tuningAdvice = observedSymptom ? (activeMachineId() === "bianca" ? diagnoseBiancaShot(historyTuningContext) : diagnoseElizabethShot(historyTuningContext)) : null;
-                const ratioValue = ratioFor(log);
-                const ratio = ratioValue ? ratioValue.toFixed(1) : "—";
-                const row = el("div", "log-row ext-" + advice.status);
-                row.tabIndex = 0;
-                row.setAttribute("role", "button");
-                row.setAttribute("aria-label", `Edit shot at grind ${log.grind}, ${log.time} seconds`);
-                const metrics = el("div", "log-row-metrics");
-                const timeCol = el("div", "metric-col");
-                timeCol.append(el("div", "metric-value", log.time + "s"), el("div", "recipe-label", "Time"));
-                const grindCol = el("div", "metric-col center");
-                grindCol.append(el("div", "metric-value", log.grind), el("div", "recipe-label", "Grind"));
-                const ratioCol = el("div", "metric-col right");
-                ratioCol.append(el("div", "metric-value", "1:" + ratio), el("div", "recipe-label", log.dose + "g -> " + log.yield + "g"));
-                metrics.append(timeCol, grindCol, ratioCol);
-                const adviceText = tuningAdvice?.actions[0] ? advice.text + " • Next: " + tuningAdvice.actions[0] : advice.text;
-                row.append(metrics, el("div", "advice-text", adviceText));
-                row.onclick = () => app.openEditShot(log.id);
-                row.onkeydown = (event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        app.openEditShot(log.id);
-                    }
-                };
-                container.appendChild(row);
-        });
-        if (orderedLogs.length > 8) {
-            const more = el("div", "history-more");
-            const button = el("button", "btn-secondary small-btn", historyExpanded ? "Show recent shots only" : `Show ${orderedLogs.length - 8} older shots`);
-            button.type = "button";
-            button.addEventListener("click", () => {
+        renderShotHistory({
+            activeProfile: activeMachineProfile(),
+            bean: currentActiveBean,
+            expanded: historyExpanded,
+            logs: logsCache,
+            machineId: activeMachineId(),
+            onEdit: shotId => app.openEditShot(shotId),
+            onLog: () => app.openLogShot(),
+            onToggle: () => {
                 historyExpanded = !historyExpanded;
                 app.renderHistory();
-            });
-            more.appendChild(button);
-            container.appendChild(more);
-        }
+            }
+        });
     },
 
     renderDialInSummary: () => {
-        const tbody = document.getElementById('dial-in-table-body');
-        if (!tbody) return;
-        tbody.replaceChildren();
-
-        const grouped = {};
-        logsCache.forEach(l => {
-            if (!validateShot(l).valid) return;
-            const g = l.grind;
-            if(!grouped[g]) grouped[g] = { ratioSum: 0, timeSum: 0, ratioCount: 0, timeCount: 0, count: 0 };
-            const r = parseFloat(l.yield) / parseFloat(l.dose);
-            if(Number.isFinite(r)) { grouped[g].ratioSum += r; grouped[g].ratioCount++; }
-            if(Number.isFinite(parseFloat(l.time))) { grouped[g].timeSum += parseFloat(l.time); grouped[g].timeCount++; }
-            grouped[g].count++;
-        });
-
-        const rows = Object.keys(grouped).map(g => {
-            const data = grouped[g];
-            return {
-                grind: g,
-                avgRatio: data.ratioCount > 0 ? data.ratioSum / data.ratioCount : 0,
-                avgTime: data.timeCount > 0 ? Math.round(data.timeSum / data.timeCount) : 0,
-                count: data.count
-            };
-        }).sort((a,b) => Math.abs(a.avgRatio - 2.0) - Math.abs(b.avgRatio - 2.0));
-
-        if(rows.length === 0) {
-            const tr = document.createElement("tr");
-            const td = el("td", "summary-empty", "Log some shots to see your dial-in metrics.");
-            td.colSpan = 4;
-            tr.appendChild(td);
-            tbody.appendChild(tr);
-            return;
-        }
-
-        rows.forEach((row, i) => {
-            const tr = document.createElement('tr');
-            if(i === 0) tr.className = "summary-best-row";
-            tr.append(el("td", "summary-primary", row.grind), el("td", "", "1:" + row.avgRatio.toFixed(1)), el("td", "", row.avgTime + "s"));
-            const countCell = el("td", "", row.count + "x");
-            countCell.style.opacity = "0.6";
-            tr.appendChild(countCell);
-            tbody.appendChild(tr);
-        });
+        renderDialInSummaryView(logsCache);
     },
 
     renderGlobalStats: async () => {
-        const statsContent = document.getElementById('global-stats-content');
         try {
             const logs = (await app.fetchAllLogs()).filter(log => recordMachineId(log) === activeMachineId());
-            let total = 0; const grinds = {};
-            logs.forEach(log => { total++; const g = log.grind; if(g) grinds[g] = (grinds[g] || 0) + 1; });
-            if(total === 0) { document.getElementById('global-stats-card').classList.add('hidden'); return; }
-            document.getElementById('global-stats-card').classList.remove('hidden');
-            const top = Object.entries(grinds).sort((a,b) => b[1]-a[1]).slice(0,2);
-            const totalStat = el("div", "stat-item");
-            totalStat.append(el("strong", "", total), el("span", "", "Total Logs"));
-            const grindStat = el("div", "stat-item");
-            grindStat.append(el("strong", "", top.map(t => t[0]).join(", ") || "None"), el("span", "", "Common Grinds"));
-            statsContent.replaceChildren(totalStat, grindStat);
+            renderGlobalStatsView(logs);
         } catch(e) {
             console.error("Stats error:", e);
             document.getElementById('global-stats-card').classList.add('hidden');
@@ -824,21 +455,10 @@ const app = {
         reader.readAsDataURL(file);
     },
     uploadBeanImage: async (beanId, dataUrl) => {
-        const path = `users/${currentUser.uid}/beans/${beanId}/bag-${Date.now()}.jpg`;
-        const ref = storageRef(storage, path);
-        await uploadString(ref, dataUrl, "data_url", {
-            contentType: "image/jpeg",
-            customMetadata: { uid: currentUser.uid, beanId }
-        });
-        return { image: null, imageUrl: await getDownloadURL(ref), imagePath: path };
+        return uploadBeanPhoto(currentUser.uid, beanId, dataUrl);
     },
     deleteStoredImage: async (path) => {
-        if (!path) return;
-        try {
-            await deleteObject(storageRef(storage, path));
-        } catch (e) {
-            console.warn("Storage cleanup skipped:", e);
-        }
+        await deleteBeanPhoto(path);
     },
     prepareBeanImageFields: async (beanId, existingBean) => {
         if (!currentEditingImage) {
@@ -865,7 +485,7 @@ const app = {
         for (const bean of legacyBeans) {
             try {
                 const uploaded = await app.uploadBeanImage(bean.id, bean.image);
-                await updateDoc(doc(db, "beans", bean.id), { ...uploaded, updatedAt: new Date() });
+                await updateBean(bean.id, { ...uploaded, updatedAt: new Date() });
                 Object.assign(bean, uploaded);
             } catch (error) {
                 console.warn("Legacy image optimization skipped:", error);
@@ -1003,12 +623,12 @@ const app = {
             const validation = validateShot(data);
             if (!validation.valid) throw new Error(validation.errors[0]);
             if(sId) {
-                await updateDoc(doc(db, "brew_logs", sId), data);
+                await updateShot(sId, data);
                 app.upsertCachedLog({ id: sId, ...data });
             } else {
                 data.roastDate = currentActiveBean?.currentRoastDate || "Unknown";
-                const created = await addDoc(collection(db, "brew_logs"), data);
-                app.upsertCachedLog({ id: created.id, ...data });
+                const createdId = await createShot(data);
+                app.upsertCachedLog({ id: createdId, ...data });
             }
             await app.loadBeanDetail(bId);
         } catch(e) { alert(e.message); }
@@ -1042,12 +662,11 @@ const app = {
         app.renderExtractionPreview();
         app.router('log-shot');
     },
-    deleteShot: async () => { if(confirm("Delete log?")) { const sId = document.getElementById('input-log-shot-id').value; const bId = document.getElementById('input-log-bean-id').value; await deleteDoc(doc(db, "brew_logs", sId)); app.removeCachedLog(sId); await app.loadBeanDetail(bId); } },
+    deleteShot: async () => { if(confirm("Delete log?")) { const sId = document.getElementById('input-log-shot-id').value; const bId = document.getElementById('input-log-bean-id').value; await deleteShotRecord(sId); app.removeCachedLog(sId); await app.loadBeanDetail(bId); } },
     fetchProfile: async () => {
         try {
-            const snap = await getDoc(doc(db, "user_profiles", currentUser.uid));
-            if (snap.exists()) {
-                const savedProfile = snap.data();
+            const savedProfile = await fetchUserProfile(currentUser.uid);
+            if (savedProfile) {
                 machineSelectionRequired = savedProfile.machineId !== "elizabeth" && savedProfile.machineId !== "bianca";
                 userProfile = normalizeUserProfile(savedProfile);
             } else {
@@ -1174,7 +793,7 @@ const app = {
             lowFlowFinal: document.getElementById('profile-bianca-low-final').value
         });
         userProfile = { machineId: document.getElementById('profile-machine-id').value === "bianca" ? "bianca" : "elizabeth", machineName: document.getElementById('profile-machine-name').value, defaultDose: parseFloat(document.getElementById('profile-default-dose').value) || 18, finerDirection: document.getElementById('profile-finer-direction').value, b1, b2, elizabeth, bianca };
-        await setDoc(doc(db, "user_profiles", currentUser.uid), userProfile);
+        await saveUserProfile(currentUser.uid, userProfile);
         machineSelectionRequired = false;
         app.applyMachineUi();
         app.router('list');
@@ -1192,49 +811,7 @@ const app = {
     renderTuningReference: () => {
         const elizabeth = normalizeElizabethProfile(userProfile.elizabeth);
         updateTemperatureUnitLabels(elizabeth.temperatureUnit);
-        const versionNames = {
-            "classic-v3": "Classic V3",
-            "classic-early": "Early classic",
-            "elizabeth3": "Elizabeth3 / Pagaia",
-            "unknown": "Version unknown"
-        };
-        document.getElementById('tuning-machine-chip').textContent = versionNames[elizabeth.machineVersion];
-        const profileParts = [
-            `${elizabeth.brewTemperature}°${elizabeth.temperatureUnit} brew`,
-            `${elizabeth.steamTemperature}°${elizabeth.temperatureUnit} steam`,
-            elizabeth.preinfusionMode + " pre-infusion"
-        ];
-        if (elizabeth.firmware) profileParts.push("firmware " + elizabeth.firmware);
-        document.getElementById('tuning-profile-context').textContent = "Your saved machine: " + profileParts.join(" • ");
-        document.getElementById('tuning-mode-explanation').textContent = explainPreinfusionMode(elizabeth);
-
-        const warning = document.getElementById('tuning-version-warning');
-        if (elizabeth.machineVersion === "classic-v3") warning.classList.add("hidden");
-        else {
-            warning.textContent = elizabeth.machineVersion === "elizabeth3"
-                ? "Elizabeth3 is a different Pagaia platform. The classic P1/P2 and BLS/BLP profiles below are reference-only and must not be copied to it."
-                : elizabeth.machineVersion === "classic-early"
-                    ? "Early PL92T detected. V3 pump-bloom, purge, and OPV instructions may not apply; verify your firmware manual before using advanced controls."
-                    : "Choose your Elizabeth generation in Settings before using hidden-menu or hardware guidance.";
-            warning.className = "status-strip status-warning";
-        }
-
-        const parameters = document.getElementById('tuning-advanced-parameters');
-        parameters.replaceChildren(...ELIZABETH_ADVANCED_PARAMETERS.map(parameter => {
-            const card = el("div", "advanced-parameter");
-            card.append(el("div", "advanced-parameter-name", parameter.name), el("div", "advanced-parameter-copy", parameter.text));
-            return card;
-        }));
-
-        const sources = document.getElementById('tuning-sources');
-        sources.replaceChildren(...ELIZABETH_SOURCES.map(source => {
-            const link = el("a", "tuning-source");
-            link.href = source.url;
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
-            link.append(el("span", "tuning-source-title", source.title), el("span", "tuning-source-quality", source.quality));
-            return link;
-        }));
+        renderElizabethReference(elizabeth);
     },
     renderTuningPlan: () => {
         const elizabeth = normalizeElizabethProfile(userProfile.elizabeth);
@@ -1247,29 +824,7 @@ const app = {
             machineVersion: elizabeth.machineVersion,
             temperatureUnit: elizabeth.temperatureUnit
         });
-        const plan = el("div", "card tuning-plan-card");
-        const heading = el("div", "tuning-plan-heading");
-        const headingText = el("div");
-        headingText.append(el("div", "field-kicker", advice.baseline.button + " starting profile"), el("h3", "", advice.summary));
-        heading.append(headingText, el("span", "evidence-badge", "Consensus start"));
-
-        const metrics = el("div", "tuning-baseline-grid");
-        [
-            [`${advice.baseline.dose}g → ${advice.baseline.yield}g`, "Dose → yield"],
-            [`${advice.baseline.temperature}°${advice.baseline.temperatureUnit}`, advice.baseline.temperatureRange],
-            [advice.baseline.preinfusion, "Total pre-infusion"],
-            [advice.baseline.timeRange, "Includes pre-infusion"]
-        ].forEach(([value, label]) => {
-            const item = el("div", "tuning-baseline-item");
-            item.append(el("span", "tuning-baseline-value", value), el("span", "tuning-baseline-label", label));
-            metrics.appendChild(item);
-        });
-
-        const actions = el("ol", "tuning-actions");
-        advice.actions.forEach(action => actions.appendChild(el("li", "", action)));
-        plan.append(heading, metrics, actions);
-        advice.warnings.forEach(warning => plan.appendChild(el("div", "tuning-warning", warning)));
-        document.getElementById('tuning-plan').replaceChildren(plan);
+        renderElizabethPlan(advice);
     },
     openBiancaTuning: () => {
         const roast = String(currentActiveBean?.roastLevel || "medium").toLowerCase();
@@ -1282,37 +837,7 @@ const app = {
     },
     renderBiancaTuningReference: () => {
         const bianca = normalizeBiancaProfile(userProfile.bianca);
-        const names = { v3: "V3 · 120V", v2: "V2 · 120V", v1: "V1 · 120V", unknown: "Version unknown" };
-        document.getElementById('bianca-tuning-machine-chip').textContent = names[bianca.machineVersion];
-        const parts = [
-            `${bianca.brewTemperature}°${bianca.temperatureUnit} brew`,
-            `${bianca.steamTemperature}°${bianca.temperatureUnit} steam`,
-            `${bianca.observedPressure || "—"} bar group peak`
-        ];
-        if (bianca.firmware) parts.push("firmware " + bianca.firmware);
-        document.getElementById('bianca-tuning-profile-context').textContent = "Your saved machine: " + parts.join(" • ");
-        document.getElementById('bianca-tuning-flow-explanation').textContent = explainBiancaFlow(bianca);
-        const warning = document.getElementById('bianca-tuning-version-warning');
-        if (bianca.machineVersion === "v3") warning.classList.add('hidden');
-        else {
-            warning.textContent = bianca.machineVersion === "unknown"
-                ? "Choose the Bianca generation in Settings before copying programmed low-flow timings. PL162T-120 identifies voltage, not V1/V2/V3."
-                : `${bianca.machineVersion.toUpperCase()} selected: manual paddle profiles apply, but factory V3 low-flow and brew-offset controls do not unless an authorized conversion is installed.`;
-            warning.className = "status-strip status-warning";
-        }
-        document.getElementById('bianca-tuning-advanced-parameters').replaceChildren(...BIANCA_ADVANCED_PARAMETERS.map(parameter => {
-            const card = el("div", "advanced-parameter");
-            card.append(el("div", "advanced-parameter-name", parameter.name), el("div", "advanced-parameter-copy", parameter.text));
-            return card;
-        }));
-        document.getElementById('bianca-tuning-sources').replaceChildren(...BIANCA_SOURCES.map(source => {
-            const link = el("a", "tuning-source");
-            link.href = source.url;
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
-            link.append(el("span", "tuning-source-title", source.title), el("span", "tuning-source-quality", source.quality));
-            return link;
-        }));
+        renderBiancaReference(bianca);
     },
     renderBiancaTuningPlan: () => {
         const bianca = normalizeBiancaProfile(userProfile.bianca);
@@ -1324,27 +849,7 @@ const app = {
             machineVersion: bianca.machineVersion,
             temperatureUnit: bianca.temperatureUnit
         });
-        const plan = el("div", "card tuning-plan-card");
-        const heading = el("div", "tuning-plan-heading");
-        const headingText = el("div");
-        headingText.append(el("div", "field-kicker", advice.baseline.profile + " starting profile"), el("h3", "", advice.summary));
-        heading.append(headingText, el("span", "evidence-badge", "Consensus start"));
-        const metrics = el("div", "tuning-baseline-grid");
-        [
-            [`${advice.baseline.dose}g → ${advice.baseline.yield}g`, advice.baseline.ratioRange],
-            [`${advice.baseline.temperature}°${advice.baseline.temperatureUnit}`, advice.baseline.temperatureRange],
-            [advice.baseline.flow, advice.baseline.preinfusion],
-            [advice.baseline.peakPressure, advice.baseline.timeRange]
-        ].forEach(([value, label]) => {
-            const item = el("div", "tuning-baseline-item");
-            item.append(el("span", "tuning-baseline-value", value), el("span", "tuning-baseline-label", label));
-            metrics.appendChild(item);
-        });
-        const actions = el("ol", "tuning-actions");
-        advice.actions.forEach(action => actions.appendChild(el("li", "", action)));
-        plan.append(heading, metrics, actions);
-        advice.warnings.forEach(warning => plan.appendChild(el("div", "tuning-warning", warning)));
-        document.getElementById('bianca-tuning-plan').replaceChildren(plan);
+        renderBiancaPlan(advice);
     },
     openMaintenance: async () => {
         app.router('maintenance');
@@ -1366,77 +871,12 @@ const app = {
         }
     },
     renderMaintenance: () => {
-        const list = document.getElementById('maintenance-list');
-        const summary = document.getElementById('maintenance-summary');
-        const quickActions = document.getElementById('maintenance-quick-actions');
-        const visibleRecords = activeMaintenanceRecords();
-        const latestByType = new Map();
-        visibleRecords.forEach(record => {
-            if (!latestByType.has(record.type)) latestByType.set(record.type, record);
+        renderMaintenanceView({
+            machineId: activeMachineId(),
+            records: activeMaintenanceRecords(),
+            onDelete: recordId => app.deleteMaintenance(recordId),
+            onQuickAction: (preset, button) => app.saveMaintenancePreset(preset, button)
         });
-        const activeReminders = [...latestByType.values()].filter(record => record.nextDueDate);
-        const overdue = activeReminders.filter(record => maintenanceDueState(record.nextDueDate).tone === "overdue").length;
-        const dueSoon = activeReminders.filter(record => maintenanceDueState(record.nextDueDate).tone === "due").length;
-        const newest = visibleRecords[0];
-        const summaryItems = [
-            [visibleRecords.length, "Services logged"],
-            [overdue, "Overdue"],
-            [dueSoon, "Due in 30 days"],
-            [newest ? parseDateKey(newest.completedDate).toLocaleDateString() : "—", "Last service"]
-        ];
-        summary.replaceChildren(...summaryItems.map(([value, label]) => {
-            const card = el("div", "maintenance-metric");
-            card.append(el("span", "maintenance-metric-value", value), el("span", "maintenance-metric-label", label));
-            return card;
-        }));
-
-        const today = localDateKey();
-        quickActions.replaceChildren(...maintenancePresetsForActiveMachine().map(preset => {
-            const latest = latestByType.get(preset.type);
-            const completedToday = latest?.completedDate === today;
-            const card = el("article", "maintenance-quick-card");
-            const icon = el("div", "maintenance-quick-icon", preset.icon);
-            icon.setAttribute("aria-hidden", "true");
-            const copy = el("div", "maintenance-quick-copy");
-            copy.append(
-                el("div", "maintenance-quick-title", preset.title),
-                el("div", "maintenance-quick-cadence", preset.cadence),
-                el("div", "maintenance-quick-detail", preset.detail)
-            );
-            if (latest) {
-                const lastDone = completedToday ? "Done today" : `Last ${parseDateKey(latest.completedDate).toLocaleDateString()}`;
-                const due = latest.nextDueDate ? ` • ${maintenanceDueState(latest.nextDueDate).label}` : "";
-                copy.appendChild(el("div", "maintenance-quick-last", lastDone + due));
-            }
-            const button = el("button", `btn maintenance-quick-button${completedToday ? " is-done" : ""}`, completedToday ? "Done today ✓" : preset.action);
-            button.type = "button";
-            button.disabled = completedToday;
-            button.addEventListener("click", () => app.saveMaintenancePreset(preset, button));
-            card.append(icon, copy, button);
-            return card;
-        }));
-
-        if (!visibleRecords.length) {
-            renderEmpty(list, "Nothing logged yet. Tap a button above when you finish a task.");
-            return;
-        }
-        list.replaceChildren(...visibleRecords.map(record => {
-            const isLatest = latestByType.get(record.type)?.id === record.id;
-            const state = isLatest ? maintenanceDueState(record.nextDueDate) : { tone: "none", label: "Past record" };
-            const row = el("article", `maintenance-row maintenance-${state.tone}`);
-            const heading = el("div", "maintenance-row-heading");
-            const title = el("div", "maintenance-row-title", record.type);
-            const badge = el("span", `maintenance-badge maintenance-badge-${state.tone}`, state.label);
-            heading.append(title, badge);
-            row.append(heading, el("div", "maintenance-date", `Completed ${parseDateKey(record.completedDate).toLocaleDateString()}`));
-            if (record.notes) row.appendChild(el("div", "maintenance-notes", record.notes));
-            const remove = el("button", "btn-secondary small-btn maintenance-delete", "Delete");
-            remove.type = "button";
-            remove.setAttribute("aria-label", `Delete ${record.type} record from ${record.completedDate}`);
-            remove.addEventListener("click", () => app.deleteMaintenance(record.id));
-            row.appendChild(remove);
-            return row;
-        }));
     },
     saveMaintenancePreset: async (preset, button) => {
         const completedDate = localDateKey();
@@ -1452,8 +892,8 @@ const app = {
         button.disabled = true;
         button.textContent = "Logging...";
         try {
-            const created = await addDoc(collection(db, "maintenance_records"), data);
-            maintenanceRecords.push({ id: created.id, ...data });
+            const createdId = await createMaintenanceRecord(data);
+            maintenanceRecords.push({ id: createdId, ...data });
             maintenanceRecords.sort((a, b) => maintenanceTime(b) - maintenanceTime(a));
             app.renderMaintenance();
             haptic('medium');
@@ -1481,8 +921,8 @@ const app = {
         button.disabled = true;
         button.textContent = "Saving...";
         try {
-            const created = await addDoc(collection(db, "maintenance_records"), data);
-            maintenanceRecords.push({ id: created.id, ...data });
+            const createdId = await createMaintenanceRecord(data);
+            maintenanceRecords.push({ id: createdId, ...data });
             maintenanceRecords.sort((a, b) => maintenanceTime(b) - maintenanceTime(a));
             document.getElementById('maintenance-next-date').value = '';
             document.getElementById('maintenance-notes').value = '';
@@ -1498,7 +938,7 @@ const app = {
     deleteMaintenance: async (recordId) => {
         if (!confirm("Delete this maintenance record?")) return;
         try {
-            await deleteDoc(doc(db, "maintenance_records", recordId));
+            await deleteMaintenanceRecord(recordId);
             maintenanceRecords = maintenanceRecords.filter(record => record.id !== recordId);
             app.renderMaintenance();
         } catch (error) {
@@ -1551,8 +991,8 @@ const app = {
         document.getElementById("analytics-insight-text").innerText = hasData
             ? `Readout based on ${summary.metrics.shots} complete shot${summary.metrics.shots === 1 ? "" : "s"}. Patterns describe correlation, not causation.`
             : "Complete grind, dose, yield, and time values will unlock pattern analysis.";
-        app.renderAnalyticsMetrics(summary.metrics);
-        app.renderPatternList(summary.insights);
+        renderAnalyticsMetrics(summary.metrics);
+        renderPatternList(summary.insights);
         if (!canChart) {
             if (chartAge) { chartAge.destroy(); chartAge = null; }
             if (chartTrend) { chartTrend.destroy(); chartTrend = null; }
@@ -1593,58 +1033,27 @@ const app = {
             chartAge = new window.Chart(document.getElementById("ageChart"), {
                 type: "scatter",
                 data: { datasets: ageDatasets },
-                options: app.chartOptions("Days off roast", summary.isSingleBean ? "Grind setting" : "Finer (+) / coarser (−)", { showLegend: Boolean(summary.ageTrend) })
+                options: chartOptions("Days off roast", summary.isSingleBean ? "Grind setting" : "Finer (+) / coarser (−)", { showLegend: Boolean(summary.ageTrend) })
             });
         } else chartAge = null;
         chartTrend = new window.Chart(document.getElementById("trendChart"), {
             type: "scatter",
             data: { datasets: [{ label: "Yield", data: trendPoints, backgroundColor: "#fbbf24" }] },
-            options: app.chartOptions("Grind", "Yield (g)")
+            options: chartOptions("Grind", "Yield (g)")
         });
         chartDist = new window.Chart(document.getElementById("distChart"), {
             type: "bar",
             data: { labels: grindFrequency.map(item => item.label), datasets: [{ label: "Logs", data: grindFrequency.map(item => item.count), backgroundColor: "#38bdf8" }] },
-            options: app.chartOptions("Grind", "Shot count")
+            options: chartOptions("Grind", "Shot count")
         });
-    },
-    chartOptions: (xTitle, yTitle, { showLegend = false } = {}) => ({
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: showLegend, labels: { color: "#cbd5e1", usePointStyle: true } } },
-        scales: {
-            x: { title: { display: true, text: xTitle, color: "#94a3b8" }, ticks: { color: "#94a3b8" }, grid: { color: "rgba(255,255,255,0.06)" } },
-            y: { title: { display: true, text: yTitle, color: "#94a3b8" }, ticks: { color: "#94a3b8" }, grid: { color: "rgba(255,255,255,0.06)" } }
-        }
-    }),
-    renderAnalyticsMetrics: (metrics) => {
-        const target = document.getElementById("analytics-metrics");
-        const items = [
-            [metrics.shots, "Complete shots"],
-            [metrics.dialedPercent + "%", "In target"],
-            [metrics.medianRatio ? "1:" + metrics.medianRatio.toFixed(2) : "—", "Median ratio"],
-            [metrics.ageSpan ? metrics.ageSpan + "d" : "—", "Age range"]
-        ];
-        target.replaceChildren(...items.map(([value, label]) => {
-            const card = el("div", "analytics-metric");
-            card.append(el("span", "analytics-metric-value", value), el("span", "analytics-metric-label", label));
-            return card;
-        }));
-    },
-    renderPatternList: (insights) => {
-        const target = document.getElementById("analytics-pattern-list");
-        target.replaceChildren(...insights.map(insight => {
-            const item = el("div", "pattern-item tone-" + insight.tone);
-            item.append(el("div", "pattern-title", insight.title), el("div", "pattern-copy", insight.text));
-            return item;
-        }));
     },
     exportData: async () => {
         const [logs, beanSnap, maintenance] = await Promise.all([
             app.fetchAllLogs(),
-            getDocs(query(collection(db, "beans"), where("uid", "==", currentUser.uid))),
+            fetchBeansForUser(currentUser.uid),
             app.fetchMaintenance()
         ]);
-        const beanLookup = new Map(beanSnap.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
+        const beanLookup = new Map(beanSnap.map(bean => [bean.id, bean]));
         const rows = [["date", "machine", "bean", "roaster", "roast_date", "grind", "time", "dose", "yield", "machine_profile", "taste", "brew_temperature", "temperature_unit", "shot_gauge_bar", "first_drop_seconds", "channeling_observed"]];
         logs.forEach(log => {
             const bean = beanLookup.get(log.beanId) || beans.find(b => b.id === log.beanId) || {};
@@ -1689,7 +1098,7 @@ if ("serviceWorker" in navigator) {
         } catch { /* The app still works online without installation support. */ }
     });
 }
-onAuthStateChanged(auth, async u => {
+observeAuthState(async u => {
     if (!u) { app.router('login'); return; }
     currentUser = u;
     allLogsCache = [];
