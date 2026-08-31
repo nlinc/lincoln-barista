@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { db } from "./firebase-client.js?v=1.9.4";
+import { db } from "./firebase-client.js?v=1.10.0";
 
 export const fetchUserProfile = async (uid) => {
     const snapshot = await getDoc(doc(db, "user_profiles", uid));

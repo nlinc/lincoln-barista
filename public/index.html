@@ -19,14 +19,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"></noscript>
-    <link rel="stylesheet" href="style.css?v=1.9.4">
+    <link rel="stylesheet" href="style.css?v=1.10.0">
 </head>
 <body>
 
     <div id="top-bar">
         <div class="app-brand">
             <div class="app-logo">Lincoln <span>Barista <small>Platinum</small></span></div>
-            <div class="build-chip">v1.9.4 · <code data-build-commit>__BUILD_COMMIT__</code></div>
+            <div class="build-chip">v1.10.0 · <code data-build-commit>__BUILD_COMMIT__</code></div>
         </div>
         <div class="top-actions">
             <button class="icon-btn" id="btn-open-tuning" type="button" aria-label="Open machine tuning lab" title="Machine tuning">🎛️</button>
@@ -83,7 +83,7 @@
             <select id="input-sort-beans" class="sort-select" aria-label="Sort collection">
                 <option value="newest">Recent</option>
                 <option value="name">A-Z</option>
-                <option value="rating">Top Rated</option>
+                <option value="impression">Enjoyed First</option>
             </select>
         </div>
 
@@ -97,80 +97,88 @@
         <h2 id="bean-form-header" class="view-heading">New Profile</h2>
         <input type="hidden" id="input-bean-id">
         
-        <div class="card center-card">
-            <div class="form-label">Bag Imagery</div>
-            <img id="edit-image-preview" class="image-preview hidden" alt="Selected coffee bag preview">
-            <label class="btn btn-secondary file-picker">
-                📷 Select Photo
-                <input class="visually-hidden" type="file" accept="image/*" capture="environment" id="input-bean-image">
-            </label>
-            <button class="btn btn-danger hidden compact-action" id="btn-remove-image" type="button">Remove</button>
-        </div>
+        <p class="bean-form-intro">Save the basics now. You can add tasting notes, location, and a photo only when they are useful.</p>
 
-        <div class="card">
-            <div class="form-grid two-col">
-                <div class="form-group">
-                    <label for="input-roaster">Roastery</label>
-                    <input type="text" id="input-roaster" placeholder="Onyx, Square Mile...">
-                </div>
-                <div class="form-group">
-                    <label for="input-roaster-location">Region</label>
-                    <input type="text" id="input-roaster-location" placeholder="Arkansas, London...">
-                </div>
+        <div class="card bean-basics-card">
+            <div class="form-group">
+                <label for="input-name">Coffee name <span class="required-marker">Required</span></label>
+                <input type="text" id="input-name" placeholder="Geometry, Sweet Shop..." autocomplete="off" required>
             </div>
 
             <div class="form-group">
-                <label for="input-name">Bean / Blend Name</label>
-                <input type="text" id="input-name" placeholder="Geometry, Sweet Shop...">
+                <label for="input-roaster">Roaster</label>
+                <input type="text" id="input-roaster" list="roaster-suggestions" placeholder="Onyx, Square Mile..." autocomplete="off">
+                <datalist id="roaster-suggestions"></datalist>
             </div>
-            
+
             <div class="form-grid two-col">
                 <div class="form-group">
-                    <label for="input-origin">Origin</label>
-                    <input type="text" id="input-origin" placeholder="Ethiopia, Colombia...">
-                </div>
-                <div class="form-group">
-                    <label for="input-roast-date">Current Roast Date</label>
+                    <label for="input-roast-date">Roast date</label>
                     <input type="date" id="input-roast-date">
                 </div>
-            </div>
-
-            <div class="form-group">
-                <label for="input-roast-level">Roast Level</label>
-                <select id="input-roast-level">
-                    <option value="Light">Light</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Dark">Dark</option>
-                    <option value="Espresso">Espresso</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="input-ten-bean-weight">Density Check (10-Bean Weight)</label>
-                <input type="number" inputmode="decimal" step="0.01" id="input-ten-bean-weight" placeholder="1.70g">
-            </div>
-
-            <div class="form-group">
-                <label for="input-new-tag">Tasting Profiles</label>
-                <div class="inline-field">
-                    <input type="text" id="input-new-tag" placeholder="Blueberry, Floral...">
-                    <button class="btn btn-secondary inline-action" id="btn-add-tag" type="button">Add</button>
+                <div class="form-group">
+                    <label for="input-roast-level">Roast level</label>
+                    <select id="input-roast-level">
+                        <option value="Light">Light</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Dark">Dark</option>
+                        <option value="Espresso">Espresso</option>
+                    </select>
                 </div>
-                <div id="editing-tags-container" class="tag-editor"></div>
             </div>
+
+            <fieldset class="impression-fieldset">
+                <legend>How was it? <span>Optional</span></legend>
+                <div class="impression-control">
+                    <button class="impression-button" type="button" data-impression="enjoyed" aria-pressed="false"><span aria-hidden="true">😊</span> Enjoyed</button>
+                    <button class="impression-button" type="button" data-impression="meh" aria-pressed="false"><span aria-hidden="true">😐</span> Meh</button>
+                    <button class="impression-button" type="button" data-impression="not-for-me" aria-pressed="false"><span aria-hidden="true">🙅</span> Not for me</button>
+                </div>
+                <input type="hidden" id="input-bean-impression" value="">
+            </fieldset>
         </div>
 
-        <div class="card center-card">
-            <div class="form-label">Overall Impression</div>
-            <div class="rating-wrap">
-                <button class="star bean-star" type="button" data-rating="1" aria-label="Rate 1 star">★</button>
-                <button class="star bean-star" type="button" data-rating="2" aria-label="Rate 2 stars">★</button>
-                <button class="star bean-star" type="button" data-rating="3" aria-label="Rate 3 stars">★</button>
-                <button class="star bean-star" type="button" data-rating="4" aria-label="Rate 4 stars">★</button>
-                <button class="star bean-star" type="button" data-rating="5" aria-label="Rate 5 stars">★</button>
+        <details id="bean-extra-details" class="card bean-extra-details">
+            <summary>Optional details &amp; photo</summary>
+            <div class="bean-extra-content">
+                <div class="form-grid two-col">
+                    <div class="form-group">
+                        <label for="input-origin">Coffee origin</label>
+                        <input type="text" id="input-origin" placeholder="Ethiopia, Colombia...">
+                    </div>
+                    <div class="form-group">
+                        <label for="input-roaster-location">Roaster location</label>
+                        <input type="text" id="input-roaster-location" list="roaster-location-suggestions" placeholder="City, state or country" autocomplete="off">
+                        <datalist id="roaster-location-suggestions"></datalist>
+                        <div class="field-help">Previously used locations appear as suggestions.</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="input-new-tag">Tasting notes</label>
+                    <div class="inline-field">
+                        <input type="text" id="input-new-tag" placeholder="Blueberry, floral...">
+                        <button class="btn btn-secondary inline-action" id="btn-add-tag" type="button">Add</button>
+                    </div>
+                    <div id="editing-tags-container" class="tag-editor"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="input-ten-bean-weight">10-bean weight</label>
+                    <input type="number" inputmode="decimal" step="0.01" id="input-ten-bean-weight" placeholder="1.70g">
+                </div>
+
+                <div class="bean-photo-field">
+                    <div class="form-label">Bag photo</div>
+                    <img id="edit-image-preview" class="image-preview hidden" alt="Selected coffee bag preview">
+                    <label class="btn btn-secondary file-picker">
+                        📷 Add Photo
+                        <input class="visually-hidden" type="file" accept="image/*" capture="environment" id="input-bean-image">
+                    </label>
+                    <button class="btn btn-danger hidden compact-action" id="btn-remove-image" type="button">Remove</button>
+                </div>
             </div>
-            <input type="hidden" id="input-bean-rating" value="0">
-        </div>
+        </details>
 
         <div class="view-actions">
             <button class="btn" id="btn-save-bean" type="button">Save Profile</button>
@@ -187,7 +195,7 @@
             <img id="detail-image" src="" class="detail-image hidden" alt="" loading="lazy" decoding="async">
             <div id="detail-roaster" class="detail-roaster"></div>
             <h1 id="detail-name" class="detail-name"></h1>
-            <div id="detail-rating" class="detail-rating"></div>
+            <div id="detail-impression" class="detail-impression hidden"></div>
             <div id="detail-age" class="detail-age"></div>
             
             <div class="detail-actions">
@@ -883,7 +891,7 @@
         </div>
 
         <div class="build-info">
-            Lincoln Barista 1.9.4 • Build <code data-build-commit>__BUILD_COMMIT__</code>
+            Lincoln Barista 1.10.0 • Build <code data-build-commit>__BUILD_COMMIT__</code>
         </div>
     </div>
 
@@ -892,6 +900,6 @@
     <button class="fab hidden" id="fab-log-shot" type="button" aria-label="Log Shot">☕</button>
 
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.9.4"></script>
+    <script type="module" src="js/app.js?v=1.10.0"></script>
 </body>
 </html>

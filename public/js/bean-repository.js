@@ -1,6 +1,6 @@
-import { collection, doc, getDocs, query, setDoc, updateDoc, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, deleteField, doc, getDocs, query, setDoc, updateDoc, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { deleteObject, getDownloadURL, ref as storageRef, uploadString } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { db, storage } from "./firebase-client.js?v=1.9.4";
+import { db, storage } from "./firebase-client.js?v=1.10.0";
 
 export const fetchBeansForUser = async (uid) => {
     const snapshot = await getDocs(query(collection(db, "beans"), where("uid", "==", uid)));
@@ -11,7 +11,9 @@ export const createBeanId = () => doc(collection(db, "beans")).id;
 
 export const createBean = (beanId, data) => setDoc(doc(db, "beans", beanId), data);
 
-export const updateBean = (beanId, data) => updateDoc(doc(db, "beans", beanId), data);
+export const updateBean = (beanId, data) => updateDoc(doc(db, "beans", beanId), data.impression !== undefined
+    ? { ...data, rating: deleteField() }
+    : data);
 
 export const archiveBean = (beanId) => updateBean(beanId, {
     archived: true,

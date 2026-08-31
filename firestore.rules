@@ -37,6 +37,11 @@ service cloud.firestore {
       return !(("rating" in data)) || (data.rating is int && data.rating >= 0 && data.rating <= 5);
     }
 
+    function validImpression(data) {
+      return !(("impression" in data)) || data.impression == null ||
+        data.impression == "enjoyed" || data.impression == "meh" || data.impression == "not-for-me";
+    }
+
     function validTags(data) {
       return !(("tags" in data)) || (data.tags is list && data.tags.size() <= 20);
     }
@@ -99,7 +104,7 @@ service cloud.firestore {
     function validBean(data) {
       return data.keys().hasOnly([
           "uid", "roaster", "roasterLocation", "name", "origin", "roastLevel",
-          "tenBeanWeight", "tags", "rating", "image", "imageUrl", "imagePath", "currentRoastDate",
+          "tenBeanWeight", "tags", "rating", "impression", "image", "imageUrl", "imagePath", "currentRoastDate",
           "createdAt", "updatedAt", "archived", "archivedAt"
         ]) &&
         data.keys().hasAll(["uid", "name"]) &&
@@ -118,6 +123,7 @@ service cloud.firestore {
         (!("archived" in data) || data.archived is bool) &&
         validTags(data) &&
         validRating(data) &&
+        validImpression(data) &&
         optionalTimestamp(data, "createdAt") &&
         optionalTimestamp(data, "updatedAt") &&
         optionalTimestamp(data, "archivedAt");

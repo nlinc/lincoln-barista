@@ -362,6 +362,20 @@ select { cursor: pointer; }
 .inline-field input { flex: 1; }
 .inline-action { width: auto; min-height: 48px; padding: 0 1.25rem; }
 .center-card { text-align: center; }
+.bean-form-intro { color: var(--text-muted); font-size: 0.88rem; line-height: 1.5; margin: -0.35rem 0 1rem; }
+.required-marker {
+    display: inline-block; margin-left: 0.4rem; color: var(--roast-light); font-size: 0.58rem;
+    letter-spacing: 0.06em; vertical-align: 0.08rem;
+}
+.field-help { color: var(--text-muted); font-size: 0.72rem; line-height: 1.4; margin-top: 0.45rem; }
+.bean-extra-details { padding: 0 !important; overflow: hidden; }
+.bean-extra-details summary {
+    cursor: pointer; padding: 1.15rem 1.35rem; color: var(--text-secondary); font-weight: 800;
+    list-style-position: inside;
+}
+.bean-extra-details[open] summary { border-bottom: 1px solid var(--panel-border); color: var(--text-main); }
+.bean-extra-content { padding: 1.35rem; }
+.bean-photo-field { text-align: center; padding-top: 0.25rem; }
 .image-preview { width: 180px; height: 180px; object-fit: cover; border-radius: var(--radius-md); margin: 0.75rem auto 1rem; border: 1px solid var(--panel-border); }
 #view-edit-bean label.file-picker {
     display: inline-flex; width: auto; margin: 0 auto;
@@ -421,18 +435,37 @@ input.visually-hidden {
     margin-left: 0 !important;
 }
 
-/* --- TAGS, RATINGS & BATCHES --- */
+/* --- TAGS, IMPRESSIONS & BATCHES --- */
 .tag-editor { display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 32px; }
 .tag-pill.active { display: inline-flex; align-items: center; gap: 0.35rem; background: rgba(251,191,36,0.16); color: var(--accent-amber); }
 .tag-remove { border: 0; background: transparent; color: inherit; cursor: pointer; font-weight: 900; }
-.rating-wrap { display: flex; justify-content: center; gap: 0.35rem; }
-.star {
-    border: 0; background: transparent; color: rgba(255,255,255,0.22);
-    font-size: 2.3rem; cursor: pointer; line-height: 1; padding: 0.2rem;
-    appearance: none;
+.impression-fieldset { border: 0; padding: 0; margin: 0.25rem 0 0; min-width: 0; }
+.impression-fieldset legend {
+    width: 100%; color: var(--text-muted); font-size: 0.72rem; font-weight: 850;
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.65rem;
 }
-.star.selected { color: var(--accent-amber); }
-.detail-rating { color: var(--accent-amber); min-height: 1.5rem; letter-spacing: 0.08em; }
+.impression-fieldset legend span { color: var(--text-muted); font-size: 0.58rem; opacity: 0.75; }
+.impression-control { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.55rem; }
+.impression-button {
+    min-height: 52px; border: 1px solid var(--panel-border); border-radius: var(--radius-sm);
+    background: rgba(0,0,0,0.24); color: var(--text-secondary); padding: 0.55rem 0.35rem;
+    font: inherit; font-size: 0.78rem; font-weight: 800; cursor: pointer;
+}
+.impression-button span { display: block; font-size: 1.15rem; margin-bottom: 0.18rem; }
+.impression-button:hover { border-color: rgba(255,255,255,0.32); color: var(--text-main); }
+.impression-button:focus-visible { outline: 3px solid var(--roast-light); outline-offset: 2px; }
+.impression-button[aria-pressed="true"] { color: white; border-color: transparent; box-shadow: 0 0 0 2px rgba(255,255,255,0.16); }
+.impression-button[data-impression="enjoyed"][aria-pressed="true"] { background: #2f6f4e; }
+.impression-button[data-impression="meh"][aria-pressed="true"] { background: #6b5b3e; }
+.impression-button[data-impression="not-for-me"][aria-pressed="true"] { background: #7f3f3f; }
+.bean-impression, .detail-impression {
+    display: inline-flex; align-items: center; width: fit-content; border-radius: 999px;
+    padding: 0.28rem 0.6rem; font-size: 0.64rem; font-weight: 800;
+}
+.detail-impression { margin: 0.35rem 0 0.2rem; font-size: 0.72rem; }
+.impression-enjoyed { color: var(--success-text); background: var(--success-bg); }
+.impression-meh { color: var(--warning-text); background: var(--warning-bg); }
+.impression-not-for-me { color: var(--error-text); background: var(--error-bg); }
 .batch-card {
     display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: center;
     background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: var(--radius-md);

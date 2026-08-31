@@ -1,5 +1,5 @@
-import { el, renderEmpty } from "./dom.js?v=1.9.4";
-import { localDateKey, maintenanceDueState, maintenancePresetsFor, parseDateKey } from "./machine-config.js?v=1.9.4";
+import { el, renderEmpty } from "./dom.js?v=1.10.0";
+import { localDateKey, maintenanceDueState, maintenancePresetsFor, parseDateKey } from "./machine-config.js?v=1.10.0";
 
 export const renderMaintenanceView = ({ machineId, records, onDelete, onQuickAction }) => {
     const list = document.getElementById("maintenance-list");

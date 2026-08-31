@@ -1,4 +1,4 @@
-import { el, renderEmptyAction } from "./dom.js?v=1.9.4";
+import { el, renderEmptyAction } from "./dom.js?v=1.10.0";
 
 const roastColor = (level = "Medium") => ({
     Light: "#f59e0b",
@@ -15,16 +15,35 @@ const roastGlow = (level = "Medium") => ({
 
 const imageSource = (bean) => bean?.imageUrl || bean?.image || null;
 
+const IMPRESSION_META = {
+    enjoyed: { label: "😊 Enjoyed", rank: 3 },
+    meh: { label: "😐 Meh", rank: 2 },
+    "not-for-me": { label: "🙅 Not for me", rank: 1 }
+};
+
+export const resolveBeanImpression = (bean = {}) => {
+    if (IMPRESSION_META[bean.impression]) return bean.impression;
+    const legacyRating = Number(bean.rating) || 0;
+    if (legacyRating >= 4) return "enjoyed";
+    if (legacyRating === 3) return "meh";
+    if (legacyRating > 0) return "not-for-me";
+    return "";
+};
+
+export const beanImpressionLabel = (bean = {}) => IMPRESSION_META[resolveBeanImpression(bean)]?.label || "";
+
 const filterBeans = (beans, activeFilters) => beans.filter(bean => {
     if (activeFilters.size === 0) return true;
-    const searchable = [bean.roastLevel, bean.origin, bean.roaster, ...(bean.tags || [])]
+    const searchable = [bean.roastLevel, bean.origin, bean.roaster, beanImpressionLabel(bean), ...(bean.tags || [])]
         .map(value => (value || "").toLowerCase());
     return [...activeFilters].every(filter => searchable.includes(filter.toLowerCase()));
 });
 
 const sortBeans = (beans, currentSort) => beans.sort((a, b) => {
     if (currentSort === "name") return (a.name || "").localeCompare(b.name || "");
-    if (currentSort === "rating") return (b.rating || 0) - (a.rating || 0);
+    if (currentSort === "impression") {
+        return (IMPRESSION_META[resolveBeanImpression(b)]?.rank || 0) - (IMPRESSION_META[resolveBeanImpression(a)]?.rank || 0);
+    }
     return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
 });
 
@@ -62,8 +81,10 @@ export const renderBeanCollection = ({ beans, activeFilters, currentSort, onAdd,
         card.appendChild(thumb);
 
         const body = el("div", "bean-card-body");
-        body.append(el("div", "roaster-name", (bean.roaster || "Unknown") + (bean.rating ? " ★" + bean.rating : "")));
+        body.append(el("div", "roaster-name", bean.roaster || "Unknown roaster"));
         body.append(el("div", "bean-card-name", bean.name || "Untitled"));
+        const impression = resolveBeanImpression(bean);
+        if (impression) body.append(el("div", `bean-impression impression-${impression}`, beanImpressionLabel(bean)));
         const tags = el("div", "bean-card-tags");
         (bean.tags || []).slice(0, 2).forEach(tag => tags.appendChild(el("span", "tag-pill", "#" + tag)));
         body.appendChild(tags);

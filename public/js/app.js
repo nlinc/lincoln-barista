@@ -3,8 +3,8 @@
  * Modularized and Optimized for Mobile. v1.3.5 - UI Logic Refinement.
  */
 
-import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.9.4";
-import { chartOptions, renderAnalyticsMetrics, renderPatternList } from "./analytics-view.js?v=1.9.4";
+import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.10.0";
+import { chartOptions, renderAnalyticsMetrics, renderPatternList } from "./analytics-view.js?v=1.10.0";
 import {
     archiveBean,
     createBean,
@@ -13,7 +13,7 @@ import {
     fetchBeansForUser,
     updateBean,
     uploadBeanPhoto
-} from "./bean-repository.js?v=1.9.4";
+} from "./bean-repository.js?v=1.10.0";
 import {
     chooseCurrentRecipe,
     renderBeanAge,
@@ -23,19 +23,19 @@ import {
     renderGlobalStats as renderGlobalStatsView,
     renderMachineBadge,
     renderShotHistory
-} from "./bean-detail-view.js?v=1.9.4";
-import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.9.4";
-import { renderBeanCollection } from "./collection-view.js?v=1.9.4";
-import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.9.4";
-import { renderMaintenanceView } from "./maintenance-view.js?v=1.9.4";
-import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.9.4";
-import { navigate } from "./router.js?v=1.9.4";
-import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.9.4";
-import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference } from "./tuning-view.js?v=1.9.4";
-import { getBrewAdvice } from "./brew-advice.js?v=1.9.4";
-import { summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.9.4";
-import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.9.4";
-import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.9.4";
+} from "./bean-detail-view.js?v=1.10.0";
+import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.10.0";
+import { renderBeanCollection, resolveBeanImpression } from "./collection-view.js?v=1.10.0";
+import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.10.0";
+import { renderMaintenanceView } from "./maintenance-view.js?v=1.10.0";
+import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.10.0";
+import { navigate } from "./router.js?v=1.10.0";
+import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.10.0";
+import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference } from "./tuning-view.js?v=1.10.0";
+import { getBrewAdvice } from "./brew-advice.js?v=1.10.0";
+import { summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.10.0";
+import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.10.0";
+import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.10.0";
 import {
     createDefaultUserProfile,
     localDateKey,
@@ -45,7 +45,7 @@ import {
     normalizeUserProfile,
     presetDueDate,
     recordMachineId
-} from "./machine-config.js?v=1.9.4";
+} from "./machine-config.js?v=1.10.0";
 
 // App State
 let currentUser = null;
@@ -288,14 +288,14 @@ const app = {
             const beanId = id || createBeanId();
             const data = {
                 uid: currentUser.uid,
-                roaster: document.getElementById('input-roaster').value,
-                roasterLocation: document.getElementById('input-roaster-location').value,
-                name: document.getElementById('input-name').value,
-                origin: document.getElementById('input-origin').value,
+                roaster: document.getElementById('input-roaster').value.trim(),
+                roasterLocation: document.getElementById('input-roaster-location').value.trim(),
+                name: document.getElementById('input-name').value.trim(),
+                origin: document.getElementById('input-origin').value.trim(),
                 roastLevel: document.getElementById('input-roast-level').value,
                 tenBeanWeight: document.getElementById('input-ten-bean-weight').value.trim(),
                 tags: currentEditingTags,
-                rating: parseInt(document.getElementById('input-bean-rating').value) || 0,
+                impression: document.getElementById('input-bean-impression').value || null,
                 updatedAt: new Date()
             };
 
@@ -344,7 +344,9 @@ const app = {
             preview.classList.remove('hidden');
             document.getElementById('btn-remove-image').classList.remove('hidden');
         } else app.removeImage();
-        app.setBeanRating(b.rating || 0);
+        app.setBeanImpression(resolveBeanImpression(b));
+        app.renderBeanSuggestions();
+        document.getElementById('bean-extra-details').open = Boolean(b.origin || b.roasterLocation || b.tenBeanWeight || b.tags?.length || imageSrc);
         document.getElementById('btn-delete-bean').classList.remove('hidden');
         document.getElementById('btn-save-bean').innerText = "Update Profile";
         app.router('edit-bean');
@@ -501,9 +503,27 @@ const app = {
         document.getElementById('bean-form-header').innerText = "New Profile";
         document.getElementById('btn-delete-bean').classList.add('hidden');
         document.getElementById('btn-save-bean').innerText = "Save Profile";
-        currentEditingTags = []; currentEditingImagePath = null; app.renderEditingTags(); app.removeImage(); app.setBeanRating(0);
+        currentEditingTags = []; currentEditingImagePath = null; app.renderEditingTags(); app.removeImage(); app.setBeanImpression('');
+        app.renderBeanSuggestions();
+        document.getElementById('bean-extra-details').open = false;
     },
-    setBeanRating: (n) => { haptic('light'); document.getElementById('input-bean-rating').value = n; document.querySelectorAll('.bean-star').forEach((el, i) => el.classList.toggle('selected', i < n)); },
+    setBeanImpression: (value, userInitiated = false) => {
+        if (userInitiated) haptic('light');
+        const input = document.getElementById('input-bean-impression');
+        input.value = userInitiated && input.value === value ? '' : value;
+        document.querySelectorAll('.impression-button').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.impression === input.value)));
+    },
+    renderBeanSuggestions: () => {
+        const renderOptions = (id, values) => {
+            const list = document.getElementById(id);
+            const options = [...new Set(values.map(value => (value || '').trim()).filter(Boolean))]
+                .sort((a, b) => a.localeCompare(b))
+                .map(value => { const option = document.createElement('option'); option.value = value; return option; });
+            list.replaceChildren(...options);
+        };
+        renderOptions('roaster-suggestions', beans.map(bean => bean.roaster));
+        renderOptions('roaster-location-suggestions', beans.map(bean => bean.roasterLocation));
+    },
     renderEditingTags: () => {
         const container = document.getElementById('editing-tags-container');
         container.replaceChildren();
@@ -1116,7 +1136,7 @@ on("btn-open-maintenance", "click", () => app.openMaintenance()); on("btn-save-m
 on("input-sort-beans", "change", (e) => app.setSort(e.target.value)); on("fab-add-bean", "click", () => { app.resetBeanForm(); app.router("edit-bean"); }); on("fab-log-shot", "click", () => app.openLogShot());
 on("input-bean-image", "change", (e) => app.handleImageUpload(e)); on("btn-remove-image", "click", () => app.removeImage()); on("btn-add-tag", "click", () => app.addTag());
 on("input-new-tag", "keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); app.addTag(); } });
-document.querySelectorAll(".bean-star").forEach(s => s.onclick = () => app.setBeanRating(parseInt(s.dataset.rating)));
+document.querySelectorAll(".impression-button").forEach(button => button.onclick = () => app.setBeanImpression(button.dataset.impression, true));
 on("btn-save-bean", "click", () => app.saveBean()); on("btn-cancel-bean", "click", () => app.router("list")); on("btn-delete-bean", "click", () => app.deleteBean());
 on("btn-edit-active-bean", "click", () => app.editActiveBean()); on("btn-update-roast-date", "click", () => app.promptNewDate());
 on("btn-open-detail-tuning", "click", () => app.openTuning());
