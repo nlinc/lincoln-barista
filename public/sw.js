@@ -2,27 +2,30 @@ const CACHE_NAME = "lincoln-barista-__BUILD_COMMIT__";
 const APP_SHELL = [
     "/",
     "/index.html",
-    "/style.css?v=1.10.0",
-    "/js/app.js?v=1.10.0",
-    "/js/analytics-view.js?v=1.10.0",
-    "/js/auth-repository.js?v=1.10.0",
-    "/js/bean-detail-view.js?v=1.10.0",
-    "/js/bean-repository.js?v=1.10.0",
-    "/js/collection-view.js?v=1.10.0",
-    "/js/dom.js?v=1.10.0",
-    "/js/brew-advice.js?v=1.10.0",
-    "/js/shot-analytics.js?v=1.10.0",
-    "/js/elizabeth-tuning.js?v=1.10.0",
-    "/js/bianca-tuning.js?v=1.10.0",
-    "/js/firebase-client.js?v=1.10.0",
-    "/js/machine-config.js?v=1.10.0",
-    "/js/maintenance-repository.js?v=1.10.0",
-    "/js/maintenance-view.js?v=1.10.0",
-    "/js/profile-repository.js?v=1.10.0",
-    "/js/router.js?v=1.10.0",
-    "/js/shot-repository.js?v=1.10.0",
-    "/js/tuning-view.js?v=1.10.0",
-    "/js/firebase-config.js?v=1.10.0",
+    "/style.css?v=1.11.0",
+    "/js/app.js?v=1.11.0",
+    "/js/bean-catalog-view.js?v=1.11.0",
+    "/js/care-status.js?v=1.11.0",
+    "/js/tuning-session.js?v=1.11.0",
+    "/js/analytics-view.js?v=1.11.0",
+    "/js/auth-repository.js?v=1.11.0",
+    "/js/bean-detail-view.js?v=1.11.0",
+    "/js/bean-repository.js?v=1.11.0",
+    "/js/collection-view.js?v=1.11.0",
+    "/js/dom.js?v=1.11.0",
+    "/js/brew-advice.js?v=1.11.0",
+    "/js/shot-analytics.js?v=1.11.0",
+    "/js/elizabeth-tuning.js?v=1.11.0",
+    "/js/bianca-tuning.js?v=1.11.0",
+    "/js/firebase-client.js?v=1.11.0",
+    "/js/machine-config.js?v=1.11.0",
+    "/js/maintenance-repository.js?v=1.11.0",
+    "/js/maintenance-view.js?v=1.11.0",
+    "/js/profile-repository.js?v=1.11.0",
+    "/js/router.js?v=1.11.0",
+    "/js/shot-repository.js?v=1.11.0",
+    "/js/tuning-view.js?v=1.11.0",
+    "/js/firebase-config.js?v=1.11.0",
     "/manifest.json",
     "/icon.svg"
 ];
@@ -38,10 +41,9 @@ self.addEventListener("activate", event => {
             .then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))))
             .then(() => self.clients.claim())
             .then(() => self.clients.matchAll({ type: "window" }))
-            .then(clients => Promise.all(clients.map(client => {
+            .then(clients => clients.forEach(client => {
                 client.postMessage({ type: "APP_UPDATE_READY", build: "__BUILD_COMMIT__" });
-                return client.navigate(client.url);
-            })))
+            }))
     );
 });
 

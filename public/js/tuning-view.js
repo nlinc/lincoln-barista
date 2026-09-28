@@ -1,6 +1,6 @@
-import { el } from "./dom.js?v=1.10.0";
-import { BIANCA_ADVANCED_PARAMETERS, BIANCA_SOURCES, explainBiancaFlow } from "./bianca-tuning.js?v=1.10.0";
-import { ELIZABETH_ADVANCED_PARAMETERS, ELIZABETH_SOURCES, explainPreinfusionMode } from "./elizabeth-tuning.js?v=1.10.0";
+import { el } from "./dom.js?v=1.11.0";
+import { BIANCA_ADVANCED_PARAMETERS, BIANCA_SOURCES, explainBiancaFlow } from "./bianca-tuning.js?v=1.11.0";
+import { ELIZABETH_ADVANCED_PARAMETERS, ELIZABETH_SOURCES, explainPreinfusionMode } from "./elizabeth-tuning.js?v=1.11.0";
 
 const renderParameters = (targetId, parameters) => {
     document.getElementById(targetId).replaceChildren(...parameters.map(parameter => {
@@ -19,6 +19,27 @@ const renderSources = (targetId, sources) => {
         link.append(el("span", "tuning-source-title", source.title), el("span", "tuning-source-quality", source.quality));
         return link;
     }));
+};
+
+export const renderTuningStart = ({ prefix, beans, selectedBean, latestShot, machineName }) => {
+    const picker = document.getElementById(`${prefix}-bean`);
+    picker.replaceChildren(...beans.map(bean => {
+        const option = document.createElement("option");
+        option.value = bean.id;
+        option.textContent = [bean.roaster, bean.name].filter(Boolean).join(" · ") || "Unnamed bean";
+        return option;
+    }));
+    picker.value = selectedBean?.id || "";
+    document.getElementById(`${prefix}-bean-empty`).classList.toggle("hidden", beans.length > 0);
+    document.getElementById(`${prefix}-log-shot`).disabled = !selectedBean;
+
+    const context = document.getElementById(`${prefix}-recent-shot`);
+    if (!selectedBean) context.textContent = "Add a bean to your collection to build and log a first shot.";
+    else if (!latestShot) context.textContent = `No ${machineName} shot logged for this bean yet. Start with the guide below, then record what actually happened.`;
+    else {
+        const parts = [latestShot.dose && `${latestShot.dose}g in`, latestShot.yield && `${latestShot.yield}g out`, latestShot.time && `${latestShot.time}s`, latestShot.taste && `${latestShot.taste} taste`].filter(Boolean);
+        context.textContent = `Latest ${machineName} shot: ${parts.join(" · ") || "saved without measurements"}. Choose what happened below to plan one change.`;
+    }
 };
 
 const renderPlan = ({ targetId, kicker, metrics: metricValues, summary, warnings, actions: actionValues }) => {

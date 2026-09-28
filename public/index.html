@@ -19,14 +19,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"></noscript>
-    <link rel="stylesheet" href="style.css?v=1.10.0">
+    <link rel="stylesheet" href="style.css?v=1.11.0">
 </head>
 <body>
 
     <div id="top-bar">
         <div class="app-brand">
             <div class="app-logo">Lincoln <span>Barista <small>Platinum</small></span></div>
-            <div class="build-chip">v1.10.0 · <code data-build-commit>__BUILD_COMMIT__</code></div>
+            <div class="build-chip">v1.11.0 · <code data-build-commit>__BUILD_COMMIT__</code></div>
         </div>
         <div class="top-actions">
             <button class="icon-btn" id="btn-open-tuning" type="button" aria-label="Open machine tuning lab" title="Machine tuning">🎛️</button>
@@ -74,9 +74,21 @@
 
     <!-- VIEW: LIST -->
     <div id="view-list" class="view">
+        <section id="care-home-card" class="card care-home-card hidden" aria-labelledby="care-home-title">
+            <div class="care-home-heading">
+                <div>
+                    <div class="field-kicker">A little care, often</div>
+                    <h2 id="care-home-title" class="section-title">Machine care</h2>
+                    <p id="care-home-summary" class="care-home-summary" role="status">Checking your care history…</p>
+                </div>
+                <button id="care-home-open" class="btn-secondary small-btn" type="button">All care →</button>
+            </div>
+            <div id="care-home-list" class="care-home-list"></div>
+        </section>
         <div id="global-stats-card" class="card hidden">
             <div id="global-stats-content"></div>
         </div>
+        <button class="btn btn-secondary guided-tuning-entry" id="btn-guided-tuning" type="button">Dial in a bean · Guided tuning →</button>
 
         <div class="section-toolbar">
             <h2 class="section-title">My Collection</h2>
@@ -97,9 +109,15 @@
         <h2 id="bean-form-header" class="view-heading">New Profile</h2>
         <input type="hidden" id="input-bean-id">
         
-        <p class="bean-form-intro">Save the basics now. You can add tasting notes, location, and a photo only when they are useful.</p>
+        <p class="bean-form-intro">Your coffee library is private to your sign-in. Roasters and past coffees are suggested from your saved profiles, including archived ones.</p>
 
         <div class="card bean-basics-card">
+            <div id="bean-repeat" class="form-group" hidden>
+                <label for="input-repeat-bean">Bought this coffee again?</label>
+                <select id="input-repeat-bean"><option value="">Choose a past coffee…</option></select>
+                <button class="btn btn-secondary compact-action" id="btn-reuse-bean" type="button">Use past details</button>
+                <div class="field-help">Copies the coffee details. Add this bag's roast date and photo separately; your past rating and shots stay with the old profile.</div>
+            </div>
             <div class="form-group">
                 <label for="input-name">Coffee name <span class="required-marker">Required</span></label>
                 <input type="text" id="input-name" placeholder="Geometry, Sweet Shop..." autocomplete="off" required>
@@ -110,6 +128,7 @@
                 <input type="text" id="input-roaster" list="roaster-suggestions" placeholder="Onyx, Square Mile..." autocomplete="off">
                 <datalist id="roaster-suggestions"></datalist>
             </div>
+            <div id="bean-match-hint" class="field-help" role="status" hidden></div>
 
             <div class="form-grid two-col">
                 <div class="form-group">
@@ -388,7 +407,16 @@
 
         <div id="bianca-tuning-version-warning" class="status-strip hidden"></div>
         <div class="card tuning-controls-card">
-            <div class="section-label">Build the next shot</div>
+            <div class="section-label">Start with a bean</div>
+            <div class="form-group">
+                <label for="bianca-tuning-bean">Bean to tune</label>
+                <select id="bianca-tuning-bean"></select>
+            </div>
+            <p id="bianca-tuning-bean-empty" class="hidden">Your collection has no active beans yet.</p>
+            <p id="bianca-tuning-recent-shot" aria-live="polite"></p>
+        </div>
+        <div class="card tuning-controls-card">
+            <div class="section-label">Plan one next shot</div>
             <div class="form-grid three-col">
                 <div class="form-group">
                     <label for="bianca-tuning-roast">Roast style</label>
@@ -420,6 +448,12 @@
             <div class="tuning-profile-context" id="bianca-tuning-profile-context"></div>
         </div>
         <div id="bianca-tuning-plan"></div>
+        <div class="view-actions">
+            <button class="btn btn-primary" id="bianca-tuning-log-shot" type="button">Pull shot and log actual results →</button>
+        </div>
+
+        <details class="maintenance-disclosure card">
+            <summary>Machine reference and advanced controls</summary>
 
         <div class="card tuning-truth-card">
             <div class="field-kicker">Flow is not fixed pressure</div>
@@ -475,6 +509,7 @@
         <div class="view-actions">
             <button class="btn btn-secondary" id="btn-bianca-tuning-open-settings" type="button">Edit My Bianca Profile</button>
         </div>
+        </details>
     </div>
 
     <!-- VIEW: ANALYTICS -->
@@ -535,7 +570,17 @@
         <div id="tuning-version-warning" class="status-strip hidden"></div>
 
         <div class="card tuning-controls-card">
-            <div class="section-label">Build the next shot</div>
+            <div class="section-label">Start with a bean</div>
+            <div class="form-group">
+                <label for="tuning-bean">Bean to tune</label>
+                <select id="tuning-bean"></select>
+            </div>
+            <p id="tuning-bean-empty" class="hidden">Your collection has no active beans yet.</p>
+            <p id="tuning-recent-shot" aria-live="polite"></p>
+        </div>
+
+        <div class="card tuning-controls-card">
+            <div class="section-label">Plan one next shot</div>
             <div class="form-grid three-col">
                 <div class="form-group">
                     <label for="tuning-roast">Roast style</label>
@@ -568,6 +613,12 @@
         </div>
 
         <div id="tuning-plan"></div>
+        <div class="view-actions">
+            <button class="btn btn-primary" id="tuning-log-shot" type="button">Pull shot and log actual results →</button>
+        </div>
+
+        <details class="maintenance-disclosure card">
+            <summary>Machine reference and advanced controls</summary>
 
         <div class="card tuning-truth-card">
             <div class="field-kicker">What P1 and P2 really save</div>
@@ -629,6 +680,7 @@
         <div class="view-actions">
             <button class="btn btn-secondary" id="btn-tuning-open-settings" type="button">Edit My Machine Profile</button>
         </div>
+        </details>
     </div>
 
     <!-- VIEW: MAINTENANCE -->
@@ -891,7 +943,7 @@
         </div>
 
         <div class="build-info">
-            Lincoln Barista 1.10.0 • Build <code data-build-commit>__BUILD_COMMIT__</code>
+            Lincoln Barista 1.11.0 • Build <code data-build-commit>__BUILD_COMMIT__</code>
         </div>
     </div>
 
@@ -900,6 +952,6 @@
     <button class="fab hidden" id="fab-log-shot" type="button" aria-label="Log Shot">☕</button>
 
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.10.0"></script>
+    <script type="module" src="js/app.js?v=1.11.0"></script>
 </body>
 </html>

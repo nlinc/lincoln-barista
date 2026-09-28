@@ -1,4 +1,4 @@
-import { getBrewAdvice } from "./brew-advice.js?v=1.10.0";
+import { getBrewAdvice } from "./brew-advice.js?v=1.11.0";
 
 const DAY_MS = 86400000;
 

@@ -3,8 +3,8 @@
  * Modularized and Optimized for Mobile. v1.3.5 - UI Logic Refinement.
  */
 
-import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.10.0";
-import { chartOptions, renderAnalyticsMetrics, renderPatternList } from "./analytics-view.js?v=1.10.0";
+import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.11.0";
+import { chartOptions, renderAnalyticsMetrics, renderPatternList } from "./analytics-view.js?v=1.11.0";
 import {
     archiveBean,
     createBean,
@@ -13,7 +13,7 @@ import {
     fetchBeansForUser,
     updateBean,
     uploadBeanPhoto
-} from "./bean-repository.js?v=1.10.0";
+} from "./bean-repository.js?v=1.11.0";
 import {
     chooseCurrentRecipe,
     renderBeanAge,
@@ -23,19 +23,21 @@ import {
     renderGlobalStats as renderGlobalStatsView,
     renderMachineBadge,
     renderShotHistory
-} from "./bean-detail-view.js?v=1.10.0";
-import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.10.0";
-import { renderBeanCollection, resolveBeanImpression } from "./collection-view.js?v=1.10.0";
-import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.10.0";
-import { renderMaintenanceView } from "./maintenance-view.js?v=1.10.0";
-import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.10.0";
-import { navigate } from "./router.js?v=1.10.0";
-import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.10.0";
-import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference } from "./tuning-view.js?v=1.10.0";
-import { getBrewAdvice } from "./brew-advice.js?v=1.10.0";
-import { summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.10.0";
-import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.10.0";
-import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.10.0";
+} from "./bean-detail-view.js?v=1.11.0";
+import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.11.0";
+import { renderBeanCollection, resolveBeanImpression } from "./collection-view.js?v=1.11.0";
+import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.11.0";
+import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.11.0";
+import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.11.0";
+import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.11.0";
+import { navigate } from "./router.js?v=1.11.0";
+import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.11.0";
+import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.11.0";
+import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.11.0";
+import { getBrewAdvice } from "./brew-advice.js?v=1.11.0";
+import { summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.11.0";
+import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.11.0";
+import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.11.0";
 import {
     createDefaultUserProfile,
     localDateKey,
@@ -45,11 +47,12 @@ import {
     normalizeUserProfile,
     presetDueDate,
     recordMachineId
-} from "./machine-config.js?v=1.10.0";
+} from "./machine-config.js?v=1.11.0";
 
 // App State
 let currentUser = null;
 let beans = [];
+let catalogBeans = [];
 let activeFilters = new Set();
 let currentSort = 'newest';
 let currentActiveBean = null;
@@ -72,6 +75,10 @@ let legacyMigrationStarted = false;
 let historyExpanded = false;
 let beanFetchSequence = 0;
 let maintenanceRecords = [];
+let maintenanceLoaded = false;
+let maintenanceLoadError = false;
+let maintenanceLoadPromise = null;
+const maintenancePending = new Set();
 let settingsTemperatureUnit = 'F';
 let machineSelectionRequired = true;
 
@@ -178,7 +185,10 @@ const syncKeyboardInset = () => {
 
 const app = {
     // --- ROUTING ---
-    router: navigate,
+    router: (view, addToHistory) => {
+        navigate(view, addToHistory);
+        if (view === 'list' && currentUser) app.renderCareHome();
+    },
 
     // --- AUTH ---
     login: async () => { haptic('medium'); try { await signInWithGoogle(); } catch(e) { alert(e.message); } },
@@ -200,6 +210,7 @@ const app = {
         app.router('list');
         app.renderBeanList();
         app.renderGlobalStats();
+        app.renderCareHome();
     },
     applyMachineUi: () => {
         const isBianca = activeMachineId() === "bianca";
@@ -233,13 +244,39 @@ const app = {
         allLogsCache = allLogsCache.filter(log => log.id !== logId);
         logsCache = logsCache.filter(log => log.id !== logId);
     },
-    fetchMaintenance: async () => {
-        maintenanceRecords = (await fetchMaintenanceForUser(currentUser.uid))
-            .sort((a, b) => maintenanceTime(b) - maintenanceTime(a));
-        return maintenanceRecords;
+    fetchMaintenance: () => {
+        if (maintenanceLoadPromise) return maintenanceLoadPromise;
+        const uid = currentUser.uid;
+        const request = fetchMaintenanceForUser(uid).then(records => {
+            if (currentUser?.uid !== uid) return [];
+            maintenanceRecords = records.sort((a, b) => maintenanceTime(b) - maintenanceTime(a));
+            maintenanceLoaded = true;
+            maintenanceLoadError = false;
+            app.renderCareHome();
+            return maintenanceRecords;
+        }).catch(error => {
+            if (currentUser?.uid !== uid) return [];
+            maintenanceLoadError = true;
+            app.renderCareHome();
+            throw error;
+        }).finally(() => { if (maintenanceLoadPromise === request) maintenanceLoadPromise = null; });
+        maintenanceLoadPromise = request;
+        return request;
+    },
+    renderCareHome: () => {
+        renderCareHome({
+            machineId: activeMachineId(),
+            records: activeMaintenanceRecords(),
+            loaded: maintenanceLoaded,
+            error: maintenanceLoadError,
+            pending: maintenancePending,
+            onQuickAction: (preset, button) => app.saveMaintenancePreset(preset, button),
+            onOpen: () => app.openMaintenance()
+        });
     },
     fetchBeans: async () => {
         const container = document.getElementById('bean-list-container');
+        const uid = currentUser.uid;
         const fetchSequence = ++beanFetchSequence;
         if (container) renderEmpty(container, "Syncing collection...");
         const slowTimer = window.setTimeout(() => {
@@ -248,10 +285,15 @@ const app = {
             }
         }, 4500);
         try {
-            beans = (await fetchBeansForUser(currentUser.uid)).filter(bean => bean.archived !== true);
+            const fetchedBeans = await fetchBeansForUser(uid);
+            if (currentUser?.uid !== uid || fetchSequence !== beanFetchSequence) return;
+            catalogBeans = fetchedBeans;
+            beans = catalogBeans.filter(bean => bean.archived !== true);
             hideStatus();
             app.renderBeanList();
             app.renderGlobalStats();
+            if (document.body.dataset.view === 'tuning') app.selectTuningBean('tuning', 'elizabeth');
+            if (document.body.dataset.view === 'bianca-tuning') app.selectTuningBean('bianca-tuning', 'bianca');
             if (!legacyMigrationStarted && beans.some(bean => isDataUrl(bean.image) && !bean.imageUrl)) {
                 legacyMigrationStarted = true;
                 runWhenIdle(() => app.migrateLegacyImages());
@@ -278,9 +320,11 @@ const app = {
     setSort: (value) => { currentSort = value; app.renderBeanList(); },
 
     saveBean: async () => {
-        haptic('medium');
         const btn = document.getElementById('btn-save-bean');
+        if (btn.disabled) return;
+        haptic('medium');
         const originalText = btn.innerText;
+        btn.disabled = true;
         btn.innerText = "Processing...";
         try {
             const id = document.getElementById('input-bean-id').value;
@@ -288,9 +332,9 @@ const app = {
             const beanId = id || createBeanId();
             const data = {
                 uid: currentUser.uid,
-                roaster: document.getElementById('input-roaster').value.trim(),
-                roasterLocation: document.getElementById('input-roaster-location').value.trim(),
-                name: document.getElementById('input-name').value.trim(),
+                roaster: cleanCatalogText(document.getElementById('input-roaster').value),
+                roasterLocation: cleanCatalogText(document.getElementById('input-roaster-location').value),
+                name: cleanCatalogText(document.getElementById('input-name').value),
                 origin: document.getElementById('input-origin').value.trim(),
                 roastLevel: document.getElementById('input-roast-level').value,
                 tenBeanWeight: document.getElementById('input-ten-bean-weight').value.trim(),
@@ -306,11 +350,12 @@ const app = {
             const imageFields = await app.prepareBeanImageFields(beanId, existingBean);
             
             if(id) await updateBean(beanId, { ...data, ...imageFields, currentRoastDate: manualRoastDate });
-            else await createBean(beanId, { ...data, ...imageFields, currentRoastDate: manualRoastDate || new Date().toISOString().split('T')[0], createdAt: new Date() });
+            else await createBean(beanId, { ...data, ...imageFields, currentRoastDate: manualRoastDate, createdAt: new Date() });
             
             await app.fetchBeans();
             app.router('list');
-        } catch(e) { alert(e.message); btn.innerText = originalText; }
+        } catch(e) { alert(e.message); }
+        finally { btn.disabled = false; btn.innerText = originalText; }
     },
 
     deleteBean: async () => {
@@ -498,13 +543,14 @@ const app = {
     removeImage: () => { currentEditingImage = null; currentEditingImagePath = null; document.getElementById('edit-image-preview').classList.add('hidden'); document.getElementById('btn-remove-image').classList.add('hidden'); },
     resetBeanForm: () => {
         ['input-bean-id', 'input-roaster', 'input-roaster-location', 'input-name', 'input-origin', 'input-ten-bean-weight'].forEach(id => { document.getElementById(id).value = ''; });
-        document.getElementById('input-roast-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('input-roast-date').value = '';
         document.getElementById('input-roast-level').value = 'Medium';
         document.getElementById('bean-form-header').innerText = "New Profile";
         document.getElementById('btn-delete-bean').classList.add('hidden');
         document.getElementById('btn-save-bean').innerText = "Save Profile";
         currentEditingTags = []; currentEditingImagePath = null; app.renderEditingTags(); app.removeImage(); app.setBeanImpression('');
         app.renderBeanSuggestions();
+        app.updateBeanMatchHint();
         document.getElementById('bean-extra-details').open = false;
     },
     setBeanImpression: (value, userInitiated = false) => {
@@ -514,15 +560,33 @@ const app = {
         document.querySelectorAll('.impression-button').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.impression === input.value)));
     },
     renderBeanSuggestions: () => {
-        const renderOptions = (id, values) => {
-            const list = document.getElementById(id);
-            const options = [...new Set(values.map(value => (value || '').trim()).filter(Boolean))]
-                .sort((a, b) => a.localeCompare(b))
-                .map(value => { const option = document.createElement('option'); option.value = value; return option; });
-            list.replaceChildren(...options);
-        };
-        renderOptions('roaster-suggestions', beans.map(bean => bean.roaster));
-        renderOptions('roaster-location-suggestions', beans.map(bean => bean.roasterLocation));
+        renderBeanCatalog(catalogBeans);
+        app.updateBeanMatchHint();
+    },
+    updateBeanMatchHint: () => renderBeanMatchHint(
+        catalogBeans,
+        document.getElementById('input-roaster').value,
+        document.getElementById('input-name').value,
+        document.getElementById('input-bean-id').value
+    ),
+    reuseBeanDetails: () => {
+        const bean = catalogBeans.find(item => item.id === document.getElementById('input-repeat-bean').value);
+        if (!bean) return;
+        const details = reusableBeanDetails(bean);
+        for (const [field, value] of Object.entries({
+            'input-name': details.name,
+            'input-roaster': details.roaster,
+            'input-roaster-location': details.roasterLocation,
+            'input-origin': details.origin,
+            'input-roast-level': details.roastLevel,
+            'input-ten-bean-weight': details.tenBeanWeight
+        })) document.getElementById(field).value = value;
+        currentEditingTags = details.tags;
+        app.renderEditingTags();
+        if (details.origin || details.roasterLocation || details.tenBeanWeight || details.tags.length) {
+            document.getElementById('bean-extra-details').open = true;
+        }
+        app.updateBeanMatchHint();
     },
     renderEditingTags: () => {
         const container = document.getElementById('editing-tags-container');
@@ -787,6 +851,7 @@ const app = {
         document.querySelectorAll('[data-bianca-temperature-unit]').forEach(label => { label.textContent = unit; });
     },
     saveProfile: async () => {
+        const previousMachineId = activeMachineId();
         const b1 = { infusion: parseInt(document.getElementById('profile-b1-infusion').value) || 0, bloom: parseInt(document.getElementById('profile-b1-bloom').value) || 0, brew: parseInt(document.getElementById('profile-b1-brew').value) || 0 };
         const b2 = { infusion: parseInt(document.getElementById('profile-b2-infusion').value) || 0, bloom: parseInt(document.getElementById('profile-b2-bloom').value) || 0, brew: parseInt(document.getElementById('profile-b2-brew').value) || 0 };
         const temperatureUnit = document.getElementById('profile-temperature-unit').value === "C" ? "C" : "F";
@@ -815,18 +880,71 @@ const app = {
         userProfile = { machineId: document.getElementById('profile-machine-id').value === "bianca" ? "bianca" : "elizabeth", machineName: document.getElementById('profile-machine-name').value, defaultDose: parseFloat(document.getElementById('profile-default-dose').value) || 18, finerDirection: document.getElementById('profile-finer-direction').value, b1, b2, elizabeth, bianca };
         await saveUserProfile(currentUser.uid, userProfile);
         machineSelectionRequired = false;
+        if (previousMachineId !== activeMachineId()) {
+            currentRecipeShot = null;
+            logsCache = currentActiveBean ? app.logsForBean(currentActiveBean.id) : [];
+        }
         app.applyMachineUi();
+        app.renderGlobalStats();
+        app.renderCareHome();
         app.router('list');
     },
-    openTuning: () => {
+    openTuning: async () => {
         if (activeMachineId() === "bianca") return app.openBiancaTuning();
-        const roast = String(currentActiveBean?.roastLevel || "medium").toLowerCase();
-        document.getElementById('tuning-roast').value = ["light", "medium", "dark"].includes(roast) ? roast : "medium";
-        document.getElementById('tuning-symptom').value = "starting";
-        document.getElementById('tuning-pressure').value = userProfile.elizabeth?.observedPressure || "";
+        const fromDetail = document.body.dataset.view === 'detail';
         app.renderTuningReference();
-        app.renderTuningPlan();
         app.router('tuning');
+        document.getElementById('tuning-recent-shot').textContent = "Loading recent shot…";
+        let historyFailed = false;
+        try { await app.fetchAllLogs(); } catch (error) { console.error("Tuning history unavailable:", error); historyFailed = true; }
+        app.selectTuningBean('tuning', 'elizabeth', fromDetail ? currentActiveBean?.id : null);
+        if (historyFailed) document.getElementById('tuning-recent-shot').textContent = 'Recent shot history is unavailable. You can still use a starting plan and log a new shot.';
+    },
+    selectTuningBean: (prefix, machineId, preferredBeanId = null) => {
+        const available = tuningBeans(beans);
+        const picker = document.getElementById(`${prefix}-bean`);
+        const preferredId = preferredBeanId || picker.value || currentActiveBean?.id;
+        const selectedBean = available.find(bean => bean.id === preferredId) || available[0] || null;
+        const latestShot = selectedBean ? latestTuningShot(allLogsCache, selectedBean.id, machineId) : null;
+        renderTuningStart({ prefix, beans: available, selectedBean, latestShot, machineName: machineId === 'bianca' ? 'Bianca' : 'Elizabeth' });
+        document.getElementById(`${prefix}-roast`).value = tuningRoast(selectedBean);
+        document.getElementById(`${prefix}-symptom`).value = 'starting';
+        document.getElementById(`${prefix}-pressure`).value = '';
+        if (machineId === 'bianca') app.renderBiancaTuningPlan();
+        else app.renderTuningPlan();
+    },
+    logTuningShot: async (prefix) => {
+        const selectedBean = beans.find(bean => bean.id === document.getElementById(`${prefix}-bean`).value && !bean.archived);
+        if (!selectedBean) return;
+        currentActiveBean = selectedBean;
+        await app.loadBeanDetail(selectedBean.id);
+        const savedRecipe = currentRecipeShot;
+        currentRecipeShot = null;
+        const latestShot = latestTuningShot(allLogsCache, selectedBean.id, activeMachineId());
+        const starting = document.getElementById(`${prefix}-symptom`).value === 'starting';
+        const context = {
+            roast: document.getElementById(`${prefix}-roast`).value,
+            dose: !starting && latestShot?.dose ? latestShot.dose : userProfile.defaultDose,
+            machineVersion: activeMachineProfile().machineVersion,
+            temperatureUnit: activeMachineProfile().temperatureUnit
+        };
+        const plan = prefix === 'bianca-tuning'
+            ? diagnoseBiancaShot(context)
+            : diagnoseElizabethShot(context);
+        app.openLogShot();
+        currentRecipeShot = savedRecipe;
+        document.getElementById('input-shot-dose').value = context.dose;
+        document.getElementById('input-shot-time').value = '';
+        document.getElementById('input-shot-pressure').value = '';
+        document.getElementById('input-shot-first-drop').value = '';
+        document.getElementById('input-shot-taste').value = '';
+        app.renderExtractionPreview();
+        if (prefix !== 'tuning' || activeMachineProfile().machineVersion !== 'elizabeth3') {
+            document.getElementById('input-shot-yield').placeholder = plan.baseline.yield;
+            const hint = document.getElementById('shot-yield-hint');
+            hint.textContent = `Tuning target: ${plan.baseline.dose}g in → ${plan.baseline.yield}g out. Confirm the actual dose and enter the actual yield and time after brewing.`;
+            hint.classList.remove('hidden');
+        }
     },
     renderTuningReference: () => {
         const elizabeth = normalizeElizabethProfile(userProfile.elizabeth);
@@ -835,25 +953,34 @@ const app = {
     },
     renderTuningPlan: () => {
         const elizabeth = normalizeElizabethProfile(userProfile.elizabeth);
+        if (elizabeth.machineVersion === 'elizabeth3') {
+            document.getElementById('tuning-plan').replaceChildren(el('div', 'status-strip status-warning', 'Elizabeth3 uses Pagaia profiles. Choose a bean and log a shot, then use its machine manual to plan the next profile.'));
+            return;
+        }
+        const latestShot = latestTuningShot(allLogsCache, document.getElementById('tuning-bean').value, 'elizabeth');
+        const starting = document.getElementById('tuning-symptom').value === 'starting';
         const advice = diagnoseElizabethShot({
             roast: document.getElementById('tuning-roast').value,
             symptom: document.getElementById('tuning-symptom').value,
             pressure: document.getElementById('tuning-pressure').value,
-            dose: userProfile.defaultDose,
-            startingGrind: currentRecipeShot?.grind || logsCache[0]?.grind,
+            dose: !starting && latestShot?.dose ? latestShot.dose : userProfile.defaultDose,
+            yield: !starting ? latestShot?.yield : undefined,
+            time: !starting ? latestShot?.time : undefined,
+            startingGrind: latestShot?.grind,
             machineVersion: elizabeth.machineVersion,
             temperatureUnit: elizabeth.temperatureUnit
         });
         renderElizabethPlan(advice);
     },
-    openBiancaTuning: () => {
-        const roast = String(currentActiveBean?.roastLevel || "medium").toLowerCase();
-        document.getElementById('bianca-tuning-roast').value = ["light", "medium", "dark"].includes(roast) ? roast : "medium";
-        document.getElementById('bianca-tuning-symptom').value = "starting";
-        document.getElementById('bianca-tuning-pressure').value = userProfile.bianca?.observedPressure || "";
+    openBiancaTuning: async () => {
+        const fromDetail = document.body.dataset.view === 'detail';
         app.renderBiancaTuningReference();
-        app.renderBiancaTuningPlan();
         app.router('bianca-tuning');
+        document.getElementById('bianca-tuning-recent-shot').textContent = "Loading recent shot…";
+        let historyFailed = false;
+        try { await app.fetchAllLogs(); } catch (error) { console.error("Tuning history unavailable:", error); historyFailed = true; }
+        app.selectTuningBean('bianca-tuning', 'bianca', fromDetail ? currentActiveBean?.id : null);
+        if (historyFailed) document.getElementById('bianca-tuning-recent-shot').textContent = 'Recent shot history is unavailable. You can still use a starting plan and log a new shot.';
     },
     renderBiancaTuningReference: () => {
         const bianca = normalizeBiancaProfile(userProfile.bianca);
@@ -861,11 +988,15 @@ const app = {
     },
     renderBiancaTuningPlan: () => {
         const bianca = normalizeBiancaProfile(userProfile.bianca);
+        const latestShot = latestTuningShot(allLogsCache, document.getElementById('bianca-tuning-bean').value, 'bianca');
+        const starting = document.getElementById('bianca-tuning-symptom').value === 'starting';
         const advice = diagnoseBiancaShot({
             roast: document.getElementById('bianca-tuning-roast').value,
             symptom: document.getElementById('bianca-tuning-symptom').value,
             pressure: document.getElementById('bianca-tuning-pressure').value,
-            dose: userProfile.defaultDose,
+            dose: !starting && latestShot?.dose ? latestShot.dose : userProfile.defaultDose,
+            yield: !starting ? latestShot?.yield : undefined,
+            time: !starting ? latestShot?.time : undefined,
             machineVersion: bianca.machineVersion,
             temperatureUnit: bianca.temperatureUnit
         });
@@ -894,12 +1025,16 @@ const app = {
         renderMaintenanceView({
             machineId: activeMachineId(),
             records: activeMaintenanceRecords(),
+            pending: maintenancePending,
             onDelete: recordId => app.deleteMaintenance(recordId),
             onQuickAction: (preset, button) => app.saveMaintenancePreset(preset, button)
         });
     },
     saveMaintenancePreset: async (preset, button) => {
+        if (!maintenanceLoaded || maintenancePending.has(preset.type)) return;
         const completedDate = localDateKey();
+        if (activeMaintenanceRecords().some(record => record.type === preset.type && record.completedDate === completedDate)) return;
+        maintenancePending.add(preset.type);
         const data = {
             uid: currentUser.uid,
             machineId: activeMachineId(),
@@ -910,16 +1045,21 @@ const app = {
             createdAt: new Date()
         };
         button.disabled = true;
-        button.textContent = "Logging...";
+        button.textContent = "Logging…";
+        app.renderCareHome();
+        app.renderMaintenance();
         try {
             const createdId = await createMaintenanceRecord(data);
             maintenanceRecords.push({ id: createdId, ...data });
             maintenanceRecords.sort((a, b) => maintenanceTime(b) - maintenanceTime(a));
+            maintenancePending.delete(preset.type);
+            app.renderCareHome();
             app.renderMaintenance();
             haptic('medium');
         } catch (error) {
-            button.disabled = false;
-            button.textContent = preset.action;
+            maintenancePending.delete(preset.type);
+            app.renderCareHome();
+            app.renderMaintenance();
             alert(error.message);
         }
     },
@@ -928,6 +1068,7 @@ const app = {
         const completedDate = document.getElementById('maintenance-completed-date').value;
         const nextDueDate = document.getElementById('maintenance-next-date').value;
         if (!completedDate) return alert("Choose the date this service was completed.");
+        if (completedDate > localDateKey()) return alert("A completed service cannot be in the future.");
         if (nextDueDate && nextDueDate < completedDate) return alert("Next due date must be after the completed date.");
         const data = {
             uid: currentUser.uid,
@@ -946,6 +1087,7 @@ const app = {
             maintenanceRecords.sort((a, b) => maintenanceTime(b) - maintenanceTime(a));
             document.getElementById('maintenance-next-date').value = '';
             document.getElementById('maintenance-notes').value = '';
+            app.renderCareHome();
             app.renderMaintenance();
             haptic('medium');
         } catch (error) {
@@ -960,6 +1102,7 @@ const app = {
         try {
             await deleteMaintenanceRecord(recordId);
             maintenanceRecords = maintenanceRecords.filter(record => record.id !== recordId);
+            app.renderCareHome();
             app.renderMaintenance();
         } catch (error) {
             alert(error.message);
@@ -1119,14 +1262,26 @@ if ("serviceWorker" in navigator) {
     });
 }
 observeAuthState(async u => {
-    if (!u) { app.router('login'); return; }
     currentUser = u;
+    beans = [];
+    catalogBeans = [];
+    currentActiveBean = null;
+    currentRecipeShot = null;
+    logsCache = [];
+    maintenanceRecords = [];
+    maintenanceLoaded = false;
+    maintenanceLoadError = false;
+    maintenanceLoadPromise = null;
+    maintenancePending.clear();
+    if (!u) { app.router('login'); return; }
     allLogsCache = [];
     allLogsLoaded = false;
     logsLoadPromise = null;
     await app.fetchProfile();
     app.applyMachineUi();
     app.router(machineSelectionRequired ? 'machine-select' : 'list');
+    app.renderCareHome();
+    app.fetchMaintenance().catch(console.error);
     app.fetchAllLogs().then(() => app.renderGlobalStats()).catch(console.error);
     app.fetchBeans();
 });
@@ -1135,11 +1290,14 @@ on("btn-select-elizabeth", "click", () => app.selectMachine("elizabeth")); on("b
 on("btn-open-maintenance", "click", () => app.openMaintenance()); on("btn-save-maintenance", "click", () => app.saveMaintenance());
 on("input-sort-beans", "change", (e) => app.setSort(e.target.value)); on("fab-add-bean", "click", () => { app.resetBeanForm(); app.router("edit-bean"); }); on("fab-log-shot", "click", () => app.openLogShot());
 on("input-bean-image", "change", (e) => app.handleImageUpload(e)); on("btn-remove-image", "click", () => app.removeImage()); on("btn-add-tag", "click", () => app.addTag());
+on("btn-reuse-bean", "click", () => app.reuseBeanDetails());
+on("input-name", "input", () => app.updateBeanMatchHint()); on("input-roaster", "input", () => app.updateBeanMatchHint());
 on("input-new-tag", "keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); app.addTag(); } });
 document.querySelectorAll(".impression-button").forEach(button => button.onclick = () => app.setBeanImpression(button.dataset.impression, true));
 on("btn-save-bean", "click", () => app.saveBean()); on("btn-cancel-bean", "click", () => app.router("list")); on("btn-delete-bean", "click", () => app.deleteBean());
 on("btn-edit-active-bean", "click", () => app.editActiveBean()); on("btn-update-roast-date", "click", () => app.promptNewDate());
 on("btn-open-detail-tuning", "click", () => app.openTuning());
+on("btn-guided-tuning", "click", () => app.openTuning());
 on("btn-open-detail-analytics", "click", () => app.openAnalytics("current", "detail"));
 on("btn-analytics-current", "click", () => app.openAnalytics("current"));
 on("btn-analytics-all", "click", () => app.openAnalytics("all"));
@@ -1154,6 +1312,10 @@ on("profile-bianca-temperature-unit", "change", event => app.updateBiancaTempera
 on("profile-machine-id", "change", event => app.updateMachineSettingsFields(event.target.value));
 on("tuning-roast", "change", () => app.renderTuningPlan()); on("tuning-symptom", "change", () => app.renderTuningPlan()); on("tuning-pressure", "input", () => app.renderTuningPlan());
 on("bianca-tuning-roast", "change", () => app.renderBiancaTuningPlan()); on("bianca-tuning-symptom", "change", () => app.renderBiancaTuningPlan()); on("bianca-tuning-pressure", "input", () => app.renderBiancaTuningPlan());
+on("tuning-bean", "change", () => app.selectTuningBean('tuning', 'elizabeth'));
+on("bianca-tuning-bean", "change", () => app.selectTuningBean('bianca-tuning', 'bianca'));
+on("tuning-log-shot", "click", () => app.logTuningShot('tuning'));
+on("bianca-tuning-log-shot", "click", () => app.logTuningShot('bianca-tuning'));
 on("btn-save-shot", "click", () => app.saveShot()); on("btn-cancel-shot", "click", () => app.router("detail")); on("btn-cancel-shot-top", "click", () => app.router("detail")); on("btn-delete-shot", "click", () => app.deleteShot());
 on("btn-save-profile", "click", () => app.saveProfile()); on("btn-export-data", "click", () => app.exportData()); on("btn-open-analytics", "click", () => app.openAnalytics("all", "list"));
 on("btn-tuning-open-settings", "click", () => app.openSettings());
@@ -1161,5 +1323,8 @@ on("btn-bianca-tuning-open-settings", "click", () => app.openSettings());
 on("btn-refresh-app", "click", () => window.location.reload());
 window.visualViewport?.addEventListener("resize", syncKeyboardInset);
 window.visualViewport?.addEventListener("scroll", syncKeyboardInset);
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && currentUser) app.renderCareHome();
+});
 syncKeyboardInset();
 window.addEventListener('popstate', (e) => { if (e.state?.view) app.router(e.state.view, false); });

@@ -1,14 +1,68 @@
-import { el, renderEmpty } from "./dom.js?v=1.10.0";
-import { localDateKey, maintenanceDueState, maintenancePresetsFor, parseDateKey } from "./machine-config.js?v=1.10.0";
+import { el, renderEmpty } from "./dom.js?v=1.11.0";
+import { localDateKey, maintenanceDueState, maintenancePresetsFor, parseDateKey } from "./machine-config.js?v=1.11.0";
+import { careChecklist, latestCareRecords } from "./care-status.js?v=1.11.0";
 
-export const renderMaintenanceView = ({ machineId, records, onDelete, onQuickAction }) => {
+export const renderCareHome = ({ machineId, records, loaded, error, pending = new Set(), onQuickAction, onOpen }) => {
+    const card = document.getElementById("care-home-card");
+    const summary = document.getElementById("care-home-summary");
+    const list = document.getElementById("care-home-list");
+    if (!card) return;
+    card.classList.toggle("hidden", !machineId);
+    const open = document.getElementById("care-home-open");
+    if (open) {
+        open.textContent = error ? "Retry care sync" : "All care →";
+        open.onclick = onOpen;
+    }
+    if (error) {
+        summary.textContent = "Care history could not sync.";
+        list.replaceChildren();
+        return;
+    }
+    if (!loaded) {
+        summary.textContent = "Checking your care history…";
+        list.replaceChildren();
+        return;
+    }
+    const tasks = careChecklist(machineId, records);
+    const due = tasks.filter(task => task.state === "due").sort((a, b) => {
+        if (a.nextDueDate && b.nextDueDate) return a.nextDueDate.localeCompare(b.nextDueDate);
+        return a.nextDueDate ? -1 : b.nextDueDate ? 1 : 0;
+    });
+    const untracked = tasks.filter(task => task.state === "untracked");
+    const done = tasks.filter(task => task.state === "done").length;
+    summary.textContent = [
+        due.length ? `${due.length} ready` : "Daily and scheduled care caught up",
+        untracked.length ? `${untracked.length} to start tracking` : "",
+        `${done} done today`
+    ].filter(Boolean).join(" · ");
+    const visible = [...due, ...untracked].slice(0, 3);
+    list.replaceChildren(...visible.map(({ preset, label }) => {
+        const row = el("div", "care-home-row");
+        const copy = el("div", "care-home-copy");
+        copy.append(el("strong", "", preset.title), el("span", "", `${preset.cadence} · ${label}`));
+        const button = el("button", "btn-secondary small-btn care-home-button", "Mark done");
+        button.type = "button";
+        button.setAttribute("aria-label", `Mark ${preset.title} done`);
+        button.disabled = pending.has(preset.type);
+        if (button.disabled) button.textContent = "Logging…";
+        button.addEventListener("click", () => onQuickAction(preset, button));
+        row.append(copy, button);
+        return row;
+    }));
+    if (due.length + untracked.length > visible.length) {
+        list.append(el("p", "care-home-empty", `See all ${due.length + untracked.length} care tasks in Machine care.`));
+    } else if (!visible.length) {
+        const note = el("p", "care-home-empty", "Your daily and weekly care is up to date.");
+        list.append(note);
+    }
+};
+
+export const renderMaintenanceView = ({ machineId, records, pending = new Set(), onDelete, onQuickAction }) => {
     const list = document.getElementById("maintenance-list");
     const summary = document.getElementById("maintenance-summary");
     const quickActions = document.getElementById("maintenance-quick-actions");
-    const latestByType = new Map();
-    records.forEach(record => {
-        if (!latestByType.has(record.type)) latestByType.set(record.type, record);
-    });
+    const latestByType = latestCareRecords(records);
+    const checklist = new Map(careChecklist(machineId, records).map(item => [item.preset.type, item]));
 
     const activeReminders = [...latestByType.values()].filter(record => record.nextDueDate);
     const overdue = activeReminders.filter(record => maintenanceDueState(record.nextDueDate).tone === "overdue").length;
@@ -44,9 +98,12 @@ export const renderMaintenanceView = ({ machineId, records, onDelete, onQuickAct
             const due = latest.nextDueDate ? ` • ${maintenanceDueState(latest.nextDueDate).label}` : "";
             copy.appendChild(el("div", "maintenance-quick-last", lastDone + due));
         }
-        const button = el("button", `btn maintenance-quick-button${completedToday ? " is-done" : ""}`, completedToday ? "Done today ✓" : preset.action);
+        const care = checklist.get(preset.type);
+        if (care && care.state !== "done") copy.appendChild(el("div", `maintenance-quick-state care-${care.state}`, care.label));
+        const saving = pending.has(preset.type);
+        const button = el("button", `btn maintenance-quick-button${completedToday ? " is-done" : ""}`, saving ? "Logging…" : completedToday ? "Done today ✓" : preset.action);
         button.type = "button";
-        button.disabled = completedToday;
+        button.disabled = completedToday || saving;
         button.addEventListener("click", () => onQuickAction(preset, button));
         card.append(icon, copy, button);
         return card;

@@ -1,9 +1,9 @@
-import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.10.0";
-import { getBrewAdvice } from "./brew-advice.js?v=1.10.0";
-import { el, renderEmptyAction } from "./dom.js?v=1.10.0";
-import { diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.10.0";
-import { validateShot } from "./shot-analytics.js?v=1.10.0";
-import { beanImpressionLabel, resolveBeanImpression } from "./collection-view.js?v=1.10.0";
+import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.11.0";
+import { getBrewAdvice } from "./brew-advice.js?v=1.11.0";
+import { el, renderEmptyAction } from "./dom.js?v=1.11.0";
+import { diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.11.0";
+import { validateShot } from "./shot-analytics.js?v=1.11.0";
+import { beanImpressionLabel, resolveBeanImpression } from "./collection-view.js?v=1.11.0";
 
 const ratioFor = (shot) => {
     const dose = parseFloat(shot?.dose);

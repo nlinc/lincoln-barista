@@ -13,6 +13,9 @@ This repo is a small Firebase/static PWA for tracking espresso beans, brew logs,
 - Firebase initialization: `public/js/firebase-client.js`.
 - Firebase persistence boundaries: `public/js/*-repository.js`.
 - Feature presentation modules: `public/js/*-view.js`.
+- Private coffee library suggestions and repeat-profile helpers: `public/js/bean-catalog-view.js` (derived from owned beans, including archives; no shared catalog collection).
+- Home care checklist and latest-record selection: `public/js/care-status.js`.
+- Bean and machine scoping for guided tuning: `public/js/tuning-session.js`.
 - Shared DOM and navigation helpers: `public/js/dom.js` and `public/js/router.js`.
 - Brew advice rules: `public/js/brew-advice.js`.
 - Elizabeth machine profiles and tuning rules: `public/js/elizabeth-tuning.js`.
@@ -41,6 +44,7 @@ npm test
 - Keep Firebase browser imports as CDN ES module imports unless the project is intentionally migrated to a bundler.
 - Keep the release query string synchronized across `index.html`, every local ES-module import, and the service-worker app shell so an update cannot mix incompatible cached modules. Keep document navigations network-first while caching static assets stale-while-revalidate.
 - Keep the current release and deploy-stamped commit visible in the app header, and preserve the service-worker update banner with its explicit refresh action.
+- Service-worker activation must never navigate open clients automatically; unfinished forms wait for the user's refresh action.
 - Do not remove CSS sections just because a class appears unused. Many classes are toggled dynamically from `public/js/app.js`.
 - Check the key screens visually after UI changes: login, collection list, bean form, bean detail, shot log, analytics, and settings.
 - Keep mobile layout intact. The app is intended to work well on phones.
@@ -62,6 +66,8 @@ npm test
 - Elizabeth tuning must stay version-aware, default temperature display to Fahrenheit, treat programmed doses as timed auto-stops, and keep chassis/OPV work behind explicit safety warnings.
 - Bianca tuning must distinguish V1/V2 from V3, start with paddle fully open and automation off, treat flow and pressure as interacting measurements, and reserve pump/PID changes for advanced guidance.
 - Bean cards, log rows, global stats, and analytics are rendered dynamically.
+- Blank roast dates stay unknown. Reusing a past coffee copies descriptive details only, leaving the new bag's date, image, impression, and shots separate.
+- Guided tuning keeps intended targets separate from measured shot results and scopes history to the selected bean and machine.
 - The floating add/log buttons are route-aware.
 - The app uses Google sign-in and routes by hash/history state.
 - CSV export should work from Settings without requiring extra dependencies.

@@ -790,3 +790,26 @@ input.visually-hidden {
     }
     body[data-view="log-shot"] #top-bar { display: none !important; }
 }
+
+/* Home care checklist */
+.guided-tuning-entry { width: 100%; margin-bottom: 1.2rem; }
+.care-home-card { margin-bottom: 1.2rem; padding: 1.2rem; }
+.care-home-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.care-home-heading .section-title { margin: 0.2rem 0 0; }
+.care-home-heading > button { flex: 0 0 auto; }
+.care-home-summary { color: var(--text-secondary); font-size: 0.8rem; margin: 0.35rem 0 0; }
+.care-home-list { display: grid; gap: 0.55rem; margin-top: 0.9rem; }
+.care-home-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; background: rgba(255,255,255,0.04); border: 1px solid var(--panel-border); border-radius: var(--radius-sm); padding: 0.65rem 0.75rem; }
+.care-home-copy { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.care-home-copy strong { font-size: 0.86rem; }
+.care-home-copy span, .care-home-empty { color: var(--text-muted); font-size: 0.72rem; line-height: 1.4; }
+.care-home-empty { margin: 0; }
+.care-home-button { flex: 0 0 auto; min-height: 40px; }
+.maintenance-quick-state { color: var(--warning-text); font-size: 0.72rem; font-weight: 800; margin-top: 0.3rem; }
+.maintenance-quick-state.care-upcoming { color: var(--text-muted); }
+@media (max-width: 600px) {
+    .care-home-heading { align-items: center; }
+    .care-home-heading > button { max-width: 100px; }
+    .care-home-row { align-items: stretch; }
+    .care-home-button { align-self: center; }
+}
