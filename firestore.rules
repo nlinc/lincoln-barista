@@ -47,7 +47,7 @@ service cloud.firestore {
     }
 
     function optionalNumber(data, field) {
-      return !(field in data) || data[field] is int || data[field] is float || data[field] == null;
+      return !(field in data) || data[field] is number || data[field] == null;
     }
 
     function validElizabethProfile(data) {
@@ -89,14 +89,47 @@ service cloud.firestore {
       );
     }
 
+    function validStartingSetup(data) {
+      let fields = ["grinderName", "baselineGrind", "doseMin", "doseMax", "headspace", "ratio", "referenceVolume", "ownedBasketIds", "calibrations"];
+      let baskets = ["stock-elizabeth", "stock-bianca", "pullman-15", "pullman-17", "pullman-19"];
+      return data is map && data.keys().hasOnly(fields) &&
+        data.grinderName is string && data.grinderName.size() <= 80 && data.baselineGrind is string && data.baselineGrind.size() <= 30 &&
+        data.doseMin >= 5 && data.doseMax <= 30 && data.doseMax >= data.doseMin &&
+        data.headspace >= 0.5 && data.headspace <= 10 &&
+        (data.ratio == null || (data.ratio >= 1 && data.ratio <= 4)) &&
+        (data.referenceVolume == null || (data.referenceVolume >= 20 && data.referenceVolume <= 50)) &&
+        data.ownedBasketIds is list && data.ownedBasketIds.size() <= 4 && data.ownedBasketIds.hasOnly(baskets) &&
+        data.calibrations is map && data.calibrations.keys().hasOnly(baskets) &&
+        data.calibrations.size() <= 4;
+    }
+
+    function validStartingPoints(data) {
+      let profiles = data.get("startingPoints", {});
+      let elizabeth = profiles.get("elizabeth", {});
+      let bianca = profiles.get("bianca", {});
+      return profiles is map && profiles.keys().hasOnly(["elizabeth", "bianca"]) &&
+        (!("elizabeth" in profiles) || validStartingSetup(elizabeth)) &&
+        (!("bianca" in profiles) || validStartingSetup(bianca));
+    }
+
+    function validStartingMeasurement(data) {
+      return !("startingMeasurement" in data) || (data.startingMeasurement is map &&
+        data.startingMeasurement.keys().hasOnly(["volume", "roast", "process"]) &&
+        data.startingMeasurement.keys().hasAll(["volume", "roast", "process"]) &&
+        (data.startingMeasurement.volume == null || (data.startingMeasurement.volume is number && data.startingMeasurement.volume >= 20 && data.startingMeasurement.volume <= 50)) &&
+        data.startingMeasurement.roast in ["light", "medium", "dark"] &&
+        data.startingMeasurement.process in ["unknown", "washed", "natural", "honey", "experimental"]);
+    }
+
     function validProfile(data) {
-      return data.keys().hasOnly(["machineId", "machineName", "defaultDose", "finerDirection", "b1", "b2", "elizabeth", "bianca"]) &&
+      return data.keys().hasOnly(["machineId", "machineName", "defaultDose", "finerDirection", "b1", "b2", "elizabeth", "bianca", "startingPoints"]) &&
         (!("machineId" in data) || data.machineId == "elizabeth" || data.machineId == "bianca") &&
         optionalString(data, "machineName") &&
         (!("finerDirection" in data) || data.finerDirection == "lower" || data.finerDirection == "higher") &&
-        (!("defaultDose" in data) || data.defaultDose is int || data.defaultDose is float) &&
+        (!("defaultDose" in data) || data.defaultDose is number) &&
         (!("b1" in data) || data.b1 is map) &&
         (!("b2" in data) || data.b2 is map) &&
+        validStartingPoints(data) &&
         validElizabethProfile(data) &&
         validBiancaProfile(data);
     }
@@ -105,7 +138,7 @@ service cloud.firestore {
       return data.keys().hasOnly([
           "uid", "roaster", "roasterLocation", "name", "origin", "roastLevel",
           "tenBeanWeight", "tags", "rating", "impression", "image", "imageUrl", "imagePath", "currentRoastDate",
-          "createdAt", "updatedAt", "archived", "archivedAt"
+          "createdAt", "updatedAt", "archived", "archivedAt", "startingMeasurement"
         ]) &&
         data.keys().hasAll(["uid", "name"]) &&
         data.uid is string &&
@@ -121,6 +154,7 @@ service cloud.firestore {
         optionalString(data, "imageUrl") &&
         optionalString(data, "imagePath") &&
         (!("archived" in data) || data.archived is bool) &&
+        validStartingMeasurement(data) &&
         validTags(data) &&
         validRating(data) &&
         validImpression(data) &&

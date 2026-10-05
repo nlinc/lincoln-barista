@@ -1,3 +1,5 @@
+import { normalizeStartingSetup } from "./starting-point.js?v=1.12.0";
+
 const ELIZABETH_DEFAULTS = {
     machineVersion: "classic-v3",
     firmware: "",
@@ -76,6 +78,10 @@ export const normalizeUserProfile = (data = {}) => ({
     machineName: data.machineName || (data.machineId === "bianca" ? "Lelit Bianca" : "Lelit Elizabeth"),
     defaultDose: parseFloat(data.defaultDose) || 18,
     finerDirection: data.finerDirection === "higher" ? "higher" : "lower",
+    startingPoints: {
+        elizabeth: normalizeStartingSetup(data.startingPoints?.elizabeth, "elizabeth"),
+        bianca: normalizeStartingSetup(data.startingPoints?.bianca, "bianca")
+    },
     b1: data.b1 || { infusion: data.infusion || 3, bloom: 2, brew: 25 },
     b2: data.b2 || { infusion: 5, bloom: 7, brew: 28 },
     elizabeth: normalizeElizabethProfile(data.elizabeth),

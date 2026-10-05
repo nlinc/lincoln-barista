@@ -19,14 +19,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"></noscript>
-    <link rel="stylesheet" href="style.css?v=1.11.0">
+    <link rel="stylesheet" href="style.css?v=1.12.0">
 </head>
 <body>
 
     <div id="top-bar">
         <div class="app-brand">
             <div class="app-logo">Lincoln <span>Barista <small>Platinum</small></span></div>
-            <div class="build-chip">v1.11.0 · <code data-build-commit>__BUILD_COMMIT__</code></div>
+            <div class="build-chip">v1.12.0 · <code data-build-commit>__BUILD_COMMIT__</code></div>
         </div>
         <div class="top-actions">
             <button class="icon-btn" id="btn-open-tuning" type="button" aria-label="Open machine tuning lab" title="Machine tuning">🎛️</button>
@@ -88,6 +88,7 @@
         <div id="global-stats-card" class="card hidden">
             <div id="global-stats-content"></div>
         </div>
+        <button class="btn btn-secondary guided-tuning-entry" id="btn-new-starting-point" type="button">New Bean Starting Point →</button>
         <button class="btn btn-secondary guided-tuning-entry" id="btn-guided-tuning" type="button">Dial in a bean · Guided tuning →</button>
 
         <div class="section-toolbar">
@@ -219,6 +220,7 @@
             
             <div class="detail-actions">
                 <button class="btn-secondary small-btn" id="btn-edit-active-bean" type="button">Edit Profile</button>
+                <button class="btn-secondary small-btn" id="btn-detail-starting-point" type="button">Starting Point</button>
                 <button class="btn-secondary small-btn" id="btn-open-detail-tuning" type="button">Tune Machine</button>
                 <button class="btn-secondary small-btn" id="btn-open-detail-analytics" type="button">Analytics</button>
             </div>
@@ -943,8 +945,49 @@
         </div>
 
         <div class="build-info">
-            Lincoln Barista 1.11.0 • Build <code data-build-commit>__BUILD_COMMIT__</code>
+            Lincoln Barista 1.12.0 • Build <code data-build-commit>__BUILD_COMMIT__</code>
         </div>
+    </div>
+
+    <!-- VIEW: NEW BEAN STARTING POINT -->
+    <div id="view-starting-point" class="view">
+        <button class="btn btn-secondary back-btn" id="btn-starting-back" type="button">← Back to collection</button>
+        <div class="field-kicker">A first recipe for a new coffee</div>
+        <h1 class="large-heading">New Bean Starting Point</h1>
+        <p id="starting-machine-context" class="subtle-note"></p>
+        <form id="starting-form">
+            <div class="card">
+                <div class="form-group"><label for="starting-bean">Bean</label><select id="starting-bean"></select></div>
+                <div class="form-grid two-col">
+                    <div class="form-group"><label for="starting-roast">Roast style</label><select id="starting-roast"><option value="light">Light</option><option value="medium">Medium</option><option value="dark">Dark</option></select></div>
+                    <div class="form-group"><label for="starting-process">Process (optional)</label><select id="starting-process"><option value="unknown">Unknown</option><option value="washed">Washed</option><option value="natural">Natural</option><option value="honey">Honey</option><option value="experimental">Experimental / other</option></select></div>
+                </div>
+                <div class="form-group"><label for="starting-volume">Put 18.0g of whole beans in your Falcon tube. What volume do they reach?</label><input id="starting-volume" type="number" inputmode="decimal" min="20" max="50" step="0.1" placeholder="e.g. 48 mL (optional)"><p class="subtle-note">Use the same dry 50 mL tube and settling method each time. Read the average top level; do not compress the beans. If they overflow, leave this blank.</p></div>
+                <div class="form-group"><label for="starting-basket">Basket choice</label><select id="starting-basket"></select></div>
+                <button id="starting-save-measurement" class="btn btn-secondary" type="button">Save bean measurement</button>
+            </div>
+            <details id="starting-setup-details" class="card starting-setup">
+                <summary>Your setup · baskets &amp; preferences</summary>
+                <div class="form-grid two-col">
+                    <div class="form-group"><label for="starting-grinder">Grinder</label><input id="starting-grinder" maxlength="80" placeholder="Your grinder model"></div>
+                    <div class="form-group"><label for="starting-grind">Known espresso baseline</label><input id="starting-grind" maxlength="30" placeholder="Setting on this grinder"></div>
+                    <div class="form-group"><label for="starting-dose-min">Preferred minimum dose (g)</label><input id="starting-dose-min" type="number" min="5" max="30" step="0.1" required></div>
+                    <div class="form-group"><label for="starting-dose-max">Preferred maximum dose (g)</label><input id="starting-dose-max" type="number" min="5" max="30" step="0.1" required></div>
+                    <div class="form-group"><label for="starting-headspace">Desired dry headspace (mm)</label><input id="starting-headspace" type="number" min="0.5" max="10" step="0.1" required></div>
+                    <div class="form-group"><label for="starting-ratio">Normal ratio (1:X, optional)</label><input id="starting-ratio" type="number" min="1" max="4" step="0.1" placeholder="Use roast baseline"></div>
+                    <div class="form-group"><label for="starting-reference-volume">Baseline coffee: 18g Falcon volume (mL)</label><input id="starting-reference-volume" type="number" min="20" max="50" step="0.1" placeholder="40 assumed until measured"></div>
+                </div>
+                <p class="subtle-note">Preferences are saved separately for each machine. Auto chooses only baskets you select below. Confirm the capacity engraved on your stock basket. Headspace is your preference, not a universal optimum.</p>
+                <div id="starting-owned-baskets"></div>
+                <button id="starting-save-setup" class="btn btn-secondary" type="button">Save this machine’s setup</button>
+            </details>
+            <button class="btn" type="submit">Calculate starting point</button>
+        </form>
+        <p id="starting-save-status" class="subtle-note" role="status"></p>
+        <div id="starting-result" aria-live="polite"></div>
+        <div class="view-actions"><button id="starting-log-shot" class="btn" type="button">Pull first shot &amp; log actual results →</button></div>
+        <p class="subtle-note">Use the first shot’s taste and flow with Guided tuning. Click offsets need evidence from your grinder; whole-bean density cannot predict them.</p>
+        <p class="subtle-note">Background: <a href="https://www.baristahustle.com/espresso-headspace/" target="_blank" rel="noopener noreferrer">Headspace and dose</a> · <a href="https://store.pullman.coffee/product/filtration876-basket-15-17g/" target="_blank" rel="noopener noreferrer">Pullman basket capacities</a>. The Falcon dose heuristic is experimental.</p>
     </div>
 
     <!-- Global Floating Buttons -->
@@ -952,6 +995,6 @@
     <button class="fab hidden" id="fab-log-shot" type="button" aria-label="Log Shot">☕</button>
 
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.11.0"></script>
+    <script type="module" src="js/app.js?v=1.12.0"></script>
 </body>
 </html>

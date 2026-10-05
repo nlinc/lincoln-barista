@@ -3,8 +3,8 @@
  * Modularized and Optimized for Mobile. v1.3.5 - UI Logic Refinement.
  */
 
-import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.11.0";
-import { chartOptions, renderAnalyticsMetrics, renderPatternList } from "./analytics-view.js?v=1.11.0";
+import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.12.0";
+import { chartOptions, renderAnalyticsMetrics, renderPatternList } from "./analytics-view.js?v=1.12.0";
 import {
     archiveBean,
     createBean,
@@ -13,7 +13,7 @@ import {
     fetchBeansForUser,
     updateBean,
     uploadBeanPhoto
-} from "./bean-repository.js?v=1.11.0";
+} from "./bean-repository.js?v=1.12.0";
 import {
     chooseCurrentRecipe,
     renderBeanAge,
@@ -23,21 +23,21 @@ import {
     renderGlobalStats as renderGlobalStatsView,
     renderMachineBadge,
     renderShotHistory
-} from "./bean-detail-view.js?v=1.11.0";
-import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.11.0";
-import { renderBeanCollection, resolveBeanImpression } from "./collection-view.js?v=1.11.0";
-import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.11.0";
-import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.11.0";
-import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.11.0";
-import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.11.0";
-import { navigate } from "./router.js?v=1.11.0";
-import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.11.0";
-import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.11.0";
-import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.11.0";
-import { getBrewAdvice } from "./brew-advice.js?v=1.11.0";
-import { summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.11.0";
-import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.11.0";
-import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.11.0";
+} from "./bean-detail-view.js?v=1.12.0";
+import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.12.0";
+import { renderBeanCollection, resolveBeanImpression } from "./collection-view.js?v=1.12.0";
+import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.12.0";
+import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.12.0";
+import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.12.0";
+import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.12.0";
+import { navigate } from "./router.js?v=1.12.0";
+import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.12.0";
+import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.12.0";
+import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.12.0";
+import { getBrewAdvice } from "./brew-advice.js?v=1.12.0";
+import { summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.12.0";
+import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.12.0";
+import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.12.0";
 import {
     createDefaultUserProfile,
     localDateKey,
@@ -47,7 +47,10 @@ import {
     normalizeUserProfile,
     presetDueDate,
     recordMachineId
-} from "./machine-config.js?v=1.11.0";
+} from "./machine-config.js?v=1.12.0";
+
+import { calculateStartingPoint } from "./starting-point.js?v=1.12.0";
+import { readStartingSetup, renderStartingBasketOptions, renderStartingBeans, renderStartingResult, renderStartingSetup } from "./starting-point-view.js?v=1.12.0";
 
 // App State
 let currentUser = null;
@@ -81,6 +84,7 @@ let maintenanceLoadPromise = null;
 const maintenancePending = new Set();
 let settingsTemperatureUnit = 'F';
 let machineSelectionRequired = true;
+let startingPlan = null;
 
 // --- UTILS ---
 const haptic = (type = 'light') => {
@@ -292,6 +296,10 @@ const app = {
             hideStatus();
             app.renderBeanList();
             app.renderGlobalStats();
+            if (document.body.dataset.view === 'starting-point') {
+                renderStartingBeans(beans, document.getElementById('starting-bean').value);
+                app.selectStartingBean();
+            }
             if (document.body.dataset.view === 'tuning') app.selectTuningBean('tuning', 'elizabeth');
             if (document.body.dataset.view === 'bianca-tuning') app.selectTuningBean('bianca-tuning', 'bianca');
             if (!legacyMigrationStarted && beans.some(bean => isDataUrl(bean.image) && !bean.imageUrl)) {
@@ -877,7 +885,7 @@ const app = {
             lowFlowStart: document.getElementById('profile-bianca-low-start').value,
             lowFlowFinal: document.getElementById('profile-bianca-low-final').value
         });
-        userProfile = { machineId: document.getElementById('profile-machine-id').value === "bianca" ? "bianca" : "elizabeth", machineName: document.getElementById('profile-machine-name').value, defaultDose: parseFloat(document.getElementById('profile-default-dose').value) || 18, finerDirection: document.getElementById('profile-finer-direction').value, b1, b2, elizabeth, bianca };
+        userProfile = { ...userProfile, machineId: document.getElementById('profile-machine-id').value === "bianca" ? "bianca" : "elizabeth", machineName: document.getElementById('profile-machine-name').value, defaultDose: parseFloat(document.getElementById('profile-default-dose').value) || 18, finerDirection: document.getElementById('profile-finer-direction').value, b1, b2, elizabeth, bianca };
         await saveUserProfile(currentUser.uid, userProfile);
         machineSelectionRequired = false;
         if (previousMachineId !== activeMachineId()) {
@@ -888,6 +896,101 @@ const app = {
         app.renderGlobalStats();
         app.renderCareHome();
         app.router('list');
+    },
+    openStartingPoint: () => {
+        const fromDetail = document.body.dataset.view === 'detail';
+        renderStartingBeans(beans, fromDetail ? currentActiveBean?.id : document.getElementById('starting-bean').value);
+        renderStartingSetup(userProfile.startingPoints?.[activeMachineId()], activeMachineId());
+        document.getElementById('starting-machine-context').textContent = `${userProfile.machineName} · ${activeMachineProfile().machineVersion} · default dose ${userProfile.defaultDose}g`;
+        document.getElementById('starting-save-status').textContent = '';
+        app.selectStartingBean();
+        app.router('starting-point');
+    },
+    selectStartingBean: () => {
+        const bean = beans.find(item => item.id === document.getElementById('starting-bean').value && !item.archived);
+        const measurement = bean?.startingMeasurement;
+        document.getElementById('starting-roast').value = measurement?.roast || tuningRoast(bean);
+        document.getElementById('starting-process').value = measurement?.process || 'unknown';
+        document.getElementById('starting-volume').value = measurement?.volume ?? '';
+        document.getElementById('starting-save-measurement').disabled = !bean;
+        document.getElementById('starting-save-status').textContent = '';
+        app.renderStartingPoint();
+    },
+    renderStartingPoint: () => {
+        const { setup, error } = readStartingSetup(activeMachineId());
+        renderStartingBasketOptions(setup, activeMachineId());
+        const validationError = error || (!document.getElementById('starting-form').checkValidity() ? 'Check the input ranges and complete the required setup fields.' : null);
+        startingPlan = validationError ? { error: validationError } : calculateStartingPoint({
+            setup,
+            machineId: activeMachineId(),
+            machine: activeMachineProfile(),
+            defaultDose: userProfile.defaultDose,
+            volume: document.getElementById('starting-volume').value,
+            roast: document.getElementById('starting-roast').value,
+            process: document.getElementById('starting-process').value,
+            basketId: document.getElementById('starting-basket').value
+        });
+        renderStartingResult(startingPlan, !!document.getElementById('starting-bean').value);
+    },
+    saveStartingSetup: async () => {
+        if (!document.getElementById('starting-form').reportValidity()) return;
+        const { setup, error } = readStartingSetup(activeMachineId());
+        const status = document.getElementById('starting-save-status');
+        if (error) { status.textContent = error; return; }
+        const button = document.getElementById('starting-save-setup');
+        button.disabled = true;
+        const next = { ...userProfile, startingPoints: { ...userProfile.startingPoints, [activeMachineId()]: setup } };
+        try {
+            await saveUserProfile(currentUser.uid, next);
+            userProfile = next;
+            status.textContent = 'Setup saved for this machine.';
+            app.renderStartingPoint();
+        } catch (error) { status.textContent = 'Setup could not be saved. Your inputs are still here; try again.'; }
+        finally { button.disabled = false; }
+    },
+    saveStartingMeasurement: async () => {
+        const bean = beans.find(item => item.id === document.getElementById('starting-bean').value && !item.archived);
+        if (!bean || !document.getElementById('starting-volume').reportValidity()) return;
+        const volume = document.getElementById('starting-volume').value;
+        const measurement = { volume: volume === '' ? null : Number(volume), roast: document.getElementById('starting-roast').value, process: document.getElementById('starting-process').value };
+        const button = document.getElementById('starting-save-measurement');
+        button.disabled = true;
+        const status = document.getElementById('starting-save-status');
+        try {
+            await updateBean(bean.id, { startingMeasurement: measurement, updatedAt: new Date() });
+            bean.startingMeasurement = measurement;
+            const catalogBean = catalogBeans.find(item => item.id === bean.id);
+            if (catalogBean) catalogBean.startingMeasurement = measurement;
+            status.textContent = 'Measurement saved for this bag.';
+        } catch (error) { status.textContent = 'Measurement could not be saved. Your inputs are still here; try again.'; }
+        finally { button.disabled = false; }
+    },
+    logStartingShot: async () => {
+        if (!document.getElementById('starting-form').reportValidity()) return;
+        app.renderStartingPoint();
+        const plan = startingPlan;
+        const bean = beans.find(item => item.id === document.getElementById('starting-bean').value && !item.archived);
+        if (!bean || plan.error || !plan.canLog) return;
+        const button = document.getElementById('starting-log-shot');
+        button.disabled = true;
+        try {
+            await app.loadBeanDetail(bean.id);
+            const savedRecipe = currentRecipeShot;
+            currentRecipeShot = null;
+            app.openLogShot();
+            currentRecipeShot = savedRecipe;
+            document.getElementById('input-shot-dose').value = plan.dose;
+            document.getElementById('input-shot-yield').value = '';
+            document.getElementById('input-shot-yield').placeholder = plan.yield;
+            document.getElementById('input-shot-time').value = '';
+            document.getElementById('input-shot-pressure').value = '';
+            document.getElementById('input-shot-grind').value = readStartingSetup(activeMachineId()).setup.baselineGrind;
+            document.getElementById('input-shot-temperature').value = plan.temperature;
+            document.getElementById('shot-yield-hint').textContent = `Starting target: ${plan.dose}g in → ${plan.yield}g out, ${plan.time}, ${plan.basket.name}. Enter actual yield and time after brewing.`;
+            document.getElementById('shot-yield-hint').classList.remove('hidden');
+            app.renderExtractionPreview();
+        } catch (error) { document.getElementById('starting-save-status').textContent = 'Shot form could not be opened. Try again.'; }
+        finally { button.disabled = false; }
     },
     openTuning: async () => {
         if (activeMachineId() === "bianca") return app.openBiancaTuning();
@@ -1263,6 +1366,8 @@ if ("serviceWorker" in navigator) {
 }
 observeAuthState(async u => {
     currentUser = u;
+    userProfile = createDefaultUserProfile();
+    startingPlan = null;
     beans = [];
     catalogBeans = [];
     currentActiveBean = null;
@@ -1297,6 +1402,22 @@ document.querySelectorAll(".impression-button").forEach(button => button.onclick
 on("btn-save-bean", "click", () => app.saveBean()); on("btn-cancel-bean", "click", () => app.router("list")); on("btn-delete-bean", "click", () => app.deleteBean());
 on("btn-edit-active-bean", "click", () => app.editActiveBean()); on("btn-update-roast-date", "click", () => app.promptNewDate());
 on("btn-open-detail-tuning", "click", () => app.openTuning());
+on("btn-new-starting-point", "click", () => app.openStartingPoint());
+on("btn-detail-starting-point", "click", () => app.openStartingPoint());
+on("btn-starting-back", "click", () => app.router('list'));
+on("starting-bean", "change", () => app.selectStartingBean());
+document.getElementById('starting-form').addEventListener('invalid', event => {
+    let details = event.target.closest('details');
+    while (details) {
+        details.open = true;
+        details = details.parentElement.closest('details');
+    }
+}, true);
+on("starting-form", "submit", event => { event.preventDefault(); app.renderStartingPoint(); });
+on("starting-form", "change", () => app.renderStartingPoint());
+on("starting-save-setup", "click", () => app.saveStartingSetup());
+on("starting-save-measurement", "click", () => app.saveStartingMeasurement());
+on("starting-log-shot", "click", () => app.logStartingShot());
 on("btn-guided-tuning", "click", () => app.openTuning());
 on("btn-open-detail-analytics", "click", () => app.openAnalytics("current", "detail"));
 on("btn-analytics-current", "click", () => app.openAnalytics("current"));

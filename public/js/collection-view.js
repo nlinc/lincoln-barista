@@ -1,4 +1,4 @@
-import { el, renderEmptyAction } from "./dom.js?v=1.11.0";
+import { el, renderEmptyAction } from "./dom.js?v=1.12.0";
 
 const roastColor = (level = "Medium") => ({
     Light: "#f59e0b",

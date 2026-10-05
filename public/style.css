@@ -315,6 +315,7 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
 #view-log-shot label,
 #view-settings label,
 #view-maintenance label,
+#view-starting-point .form-group label,
 .form-label,
 .section-label {
     display: block; color: var(--text-muted); font-size: 0.72rem; font-weight: 850;
@@ -326,6 +327,8 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
 #view-log-shot select,
 #view-settings input:not([type="checkbox"]),
 #view-settings select,
+#view-starting-point input:not([type="checkbox"]),
+#view-starting-point select,
 #view-tuning input,
 #view-tuning select,
 #view-bianca-tuning input,
@@ -344,6 +347,8 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
 #view-log-shot select:focus,
 #view-settings input:focus,
 #view-settings select:focus,
+#view-starting-point input:focus,
+#view-starting-point select:focus,
 #view-tuning input:focus,
 #view-tuning select:focus,
 #view-bianca-tuning input:focus,
@@ -813,3 +818,25 @@ input.visually-hidden {
     .care-home-row { align-items: stretch; }
     .care-home-button { align-self: center; }
 }
+
+/* New bean starting point */
+.starting-setup summary { cursor: pointer; font-weight: 700; }
+.starting-setup[open] > .form-grid { margin-top: 1.25rem; }
+.starting-basket-row { border-top: 1px solid var(--panel-border); padding: 1rem 0; }
+.starting-basket-label { display: flex; align-items: center; gap: 0.75rem; }
+.starting-basket-label input { width: 1.2rem; height: 1.2rem; flex-shrink: 0; }
+.starting-calibration { margin-top: 0.75rem; }
+.starting-calibration summary { color: var(--text-muted); font-size: 0.85rem; }
+.starting-calibration .form-grid { margin-top: 1rem; }
+.starting-result-card { margin-top: 1.25rem; }
+.starting-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.starting-metrics dt { color: var(--text-muted); font-size: 0.8rem; }
+.starting-metrics dd { margin: 0.3rem 0 0; font-weight: 700; overflow-wrap: anywhere; }
+.starting-metrics > div:last-child { grid-column: 1 / -1; }
+.starting-result-card p { line-height: 1.5; }
+@media (max-width: 480px) {
+    .starting-calibration .form-grid { grid-template-columns: 1fr; }
+}
+
+#view-starting-point a { color: var(--accent-amber); }
+#view-starting-point .starting-basket-label { font-size: 0.9rem; color: var(--text-main); }

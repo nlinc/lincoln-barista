@@ -1,6 +1,6 @@
 import { collection, deleteField, doc, getDocs, query, setDoc, updateDoc, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { deleteObject, getDownloadURL, ref as storageRef, uploadString } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { db, storage } from "./firebase-client.js?v=1.11.0";
+import { db, storage } from "./firebase-client.js?v=1.12.0";
 
 export const fetchBeansForUser = async (uid) => {
     const snapshot = await getDocs(query(collection(db, "beans"), where("uid", "==", uid)));

@@ -17,6 +17,7 @@ This repo is a small Firebase/static PWA for tracking espresso beans, brew logs,
 - Home care checklist and latest-record selection: `public/js/care-status.js`.
 - Bean and machine scoping for guided tuning: `public/js/tuning-session.js`.
 - Shared DOM and navigation helpers: `public/js/dom.js` and `public/js/router.js`.
+- New bean dose/basket heuristics and calibration: `public/js/starting-point.js`; presentation: `public/js/starting-point-view.js`. Setup is saved per machine in `user_profiles.startingPoints`; fixed 18g Falcon measurements belong to the individual bag in `beans.startingMeasurement`.
 - Brew advice rules: `public/js/brew-advice.js`.
 - Elizabeth machine profiles and tuning rules: `public/js/elizabeth-tuning.js`.
 - Bianca machine profiles and flow-tuning rules: `public/js/bianca-tuning.js`.
@@ -67,6 +68,7 @@ npm test
 - Bianca tuning must distinguish V1/V2 from V3, start with paddle fully open and automation off, treat flow and pressure as interacting measurements, and reserve pump/PID changes for advanced guidance.
 - Bean cards, log rows, global stats, and analytics are rendered dynamically.
 - Blank roast dates stay unknown. Reusing a past coffee copies descriptive details only, leaving the new bag's date, image, impression, and shots separate.
+- Starting-point bulk density is a whole-bean proxy, not tamped density. Numeric headspace requires a measured baseline and basket calibration; never prescribe click offsets from density alone or record recipe targets as measured shots.
 - Guided tuning keeps intended targets separate from measured shot results and scopes history to the selected bean and machine.
 - The floating add/log buttons are route-aware.
 - The app uses Google sign-in and routes by hash/history state.
