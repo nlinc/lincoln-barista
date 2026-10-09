@@ -1,4 +1,4 @@
-import { el } from "./dom.js?v=1.12.0";
+import { el } from "./dom.js?v=1.13.0";
 
 export const cleanCatalogText = (value) => String(value || "").trim().replace(/\s+/g, " ");
 const catalogKey = (value) => cleanCatalogText(value).toLocaleLowerCase();

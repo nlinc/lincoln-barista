@@ -41,13 +41,13 @@ describe("UI smoke guardrails", () => {
     });
 
     it("keeps cache-busted app assets on the current release", () => {
-        assert.match(html, /style\.css\?v=1\.12\.0/);
-        assert.match(html, /js\/app\.js\?v=1\.12\.0/);
+        assert.match(html, /style\.css\?v=1\.13\.0/);
+        assert.match(html, /js\/app\.js\?v=1\.13\.0/);
         for (const [name, source] of clientModules) {
             const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            assert.match(serviceWorker, new RegExp(`/js/${escapedName}\\?v=1\\.12\\.0`), `${name} must be cached`);
+            assert.match(serviceWorker, new RegExp(`/js/${escapedName}\\?v=1\\.13\\.0`), `${name} must be cached`);
             for (const match of source.matchAll(/from\s+["']\.\/([^"']+\.js)(\?v=[^"']+)?["']/g)) {
-                assert.equal(match[2], "?v=1.12.0", `${name} must version its ${match[1]} import`);
+                assert.equal(match[2], "?v=1.13.0", `${name} must version its ${match[1]} import`);
             }
         }
     });
@@ -55,7 +55,7 @@ describe("UI smoke guardrails", () => {
     it("keeps Firebase persistence behind repository modules", () => {
         assert.doesNotMatch(appJs, /gstatic\.com\/firebasejs|\bcollection\(|\bgetDocs\(|\bsetDoc\(|\bupdateDoc\(|\bdeleteDoc\(/);
         for (const name of ["auth-repository.js", "bean-repository.js", "maintenance-repository.js", "profile-repository.js", "shot-repository.js"]) {
-            assert.match(appJs, new RegExp(name.replace(".", "\\.") + "\\?v=1\\.12\\.0"));
+            assert.match(appJs, new RegExp(name.replace(".", "\\.") + "\\?v=1\\.13\\.0"));
         }
         assert.match(beanRepositoryJs, /collection\(db, "beans"\)/);
         assert.match(maintenanceRepositoryJs, /collection\(db, "maintenance_records"\)/);
@@ -194,7 +194,7 @@ describe("UI smoke guardrails", () => {
     it("provides useful feedback during a slow collection sync", () => {
         assert.match(appJs, /Still syncing… The first load can take a few seconds\./);
         assert.match(appJs, /window\.clearTimeout\(slowTimer\)/);
-        assert.match(beanDetailViewJs, /Common Grinds/);
+        assert.doesNotMatch(html, /id="global-stats-card"/);
     });
 
     it("uses local install assets and registers an offline shell", () => {
@@ -252,7 +252,7 @@ describe("UI smoke guardrails", () => {
     });
 
     it("shows and deploy-stamps the running commit", () => {
-        assert.match(html, /class="build-chip">v1\.12\.0 · <code data-build-commit>__BUILD_COMMIT__</);
+        assert.match(html, /class="build-chip">v1\.13\.0 · <code data-build-commit>__BUILD_COMMIT__</);
         assert.match(appJs, /querySelectorAll\("\[data-build-commit\]"\)/);
         assert.match(serviceWorker, /lincoln-barista-__BUILD_COMMIT__/);
         assert.match(mergeWorkflow, /Stamp build commit/);
@@ -273,6 +273,16 @@ describe("UI smoke guardrails", () => {
     it("keeps the settings route wired to the header action", () => {
         assert.match(appJs, /on\("btn-open-settings", "click", \(\) => app\.openSettings\(\)\)/);
         assert.match(appJs, /openSettings:\s*\(\) =>/);
+    });
+
+    it("keeps baskets in Settings with one setup editor and one save action", () => {
+        const settings = html.slice(html.indexOf('id="view-settings"'), html.indexOf('id="view-starting-point"'));
+        assert.match(settings, /id="gear-form"/);
+        assert.match(settings, /My Baskets/);
+        assert.match(settings, /id="starting-owned-baskets"/);
+        assert.match(settings, /id="btn-save-profile"[^>]*>Save Settings</);
+        assert.equal([...html.matchAll(/id="starting-owned-baskets"/g)].length, 1);
+        assert.doesNotMatch(html, /id="starting-save-setup"|id="btn-guided-tuning"/);
     });
 
     it("uses explicit Google authentication for production deploys", () => {

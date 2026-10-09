@@ -1,9 +1,7 @@
-import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.12.0";
-import { getBrewAdvice } from "./brew-advice.js?v=1.12.0";
-import { el, renderEmptyAction } from "./dom.js?v=1.12.0";
-import { diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.12.0";
-import { validateShot } from "./shot-analytics.js?v=1.12.0";
-import { beanImpressionLabel, resolveBeanImpression } from "./collection-view.js?v=1.12.0";
+import { getBrewAdvice } from "./brew-advice.js?v=1.13.0";
+import { el, renderEmptyAction } from "./dom.js?v=1.13.0";
+import { validateShot } from "./shot-analytics.js?v=1.13.0";
+import { beanImpressionLabel, resolveBeanImpression } from "./collection-view.js?v=1.13.0";
 
 const ratioFor = (shot) => {
     const dose = parseFloat(shot?.dose);
@@ -80,7 +78,7 @@ export const renderCurrentRecipe = (recipe) => {
     consoleElement.classList.remove("hidden");
 };
 
-export const renderShotHistory = ({ activeProfile, bean, expanded, logs, machineId, onEdit, onLog, onToggle }) => {
+export const renderShotHistory = ({ bean, expanded, logs, onEdit, onLog, onToggle }) => {
     const container = document.getElementById("history-container");
     if (!logs.length) {
         renderEmptyAction(container, "No logs", "Log your first extraction.", "Log Shot", onLog);
@@ -103,18 +101,6 @@ export const renderShotHistory = ({ activeProfile, bean, expanded, logs, machine
         }
         const validation = validateShot(log);
         const advice = validation.valid ? getBrewAdvice(log, bean?.roastLevel) : { status: "slow", text: "Incomplete legacy shot data" };
-        const observedSymptom = log.channelingObserved ? "channeling" : log.taste;
-        const tuningContext = {
-            roast: bean?.roastLevel,
-            symptom: observedSymptom,
-            dose: log.dose,
-            yield: log.yield,
-            time: log.time,
-            pressure: log.pressureObserved,
-            machineVersion: activeProfile.machineVersion,
-            temperatureUnit: activeProfile.temperatureUnit
-        };
-        const tuningAdvice = observedSymptom ? (machineId === "bianca" ? diagnoseBiancaShot(tuningContext) : diagnoseElizabethShot(tuningContext)) : null;
         const ratio = ratioFor(log)?.toFixed(1) || "—";
         const row = el("div", "log-row ext-" + advice.status);
         row.tabIndex = 0;
@@ -128,7 +114,9 @@ export const renderShotHistory = ({ activeProfile, bean, expanded, logs, machine
         const ratioColumn = el("div", "metric-col right");
         ratioColumn.append(el("div", "metric-value", "1:" + ratio), el("div", "recipe-label", log.dose + "g -> " + log.yield + "g"));
         metrics.append(time, grind, ratioColumn);
-        const adviceText = tuningAdvice?.actions[0] ? advice.text + " • Next: " + tuningAdvice.actions[0] : advice.text;
+        const tasteLabels = { balanced: "Balanced", sour: "Sour / sharp", bitter: "Bitter / dry", astringent: "Astringent", hollow: "Weak / hollow", channeling: "Sour + bitter / channeling" };
+        const taste = log.channelingObserved ? "channeling" : log.taste;
+        const adviceText = validation.valid && tasteLabels[taste] ? `Taste: ${tasteLabels[taste]}` : advice.text;
         row.append(metrics, el("div", "advice-text", adviceText));
         const edit = () => onEdit(log.id);
         row.addEventListener("click", edit);
@@ -168,20 +156,6 @@ export const renderDialInSummary = (logs) => {
         row.appendChild(count);
         return row;
     }));
-};
-
-export const renderGlobalStats = (logs) => {
-    const card = document.getElementById("global-stats-card");
-    if (!logs.length) { card.classList.add("hidden"); return; }
-    const grinds = {};
-    logs.forEach(log => { if (log.grind) grinds[log.grind] = (grinds[log.grind] || 0) + 1; });
-    const top = Object.entries(grinds).sort((a, b) => b[1] - a[1]).slice(0, 2);
-    const total = el("div", "stat-item");
-    total.append(el("strong", "", logs.length), el("span", "", "Total Logs"));
-    const common = el("div", "stat-item");
-    common.append(el("strong", "", top.map(item => item[0]).join(", ") || "None"), el("span", "", "Common Grinds"));
-    document.getElementById("global-stats-content").replaceChildren(total, common);
-    card.classList.remove("hidden");
 };
 
 export const renderMachineBadge = ({ b1, machineId, machineName, machineVersion }) => {

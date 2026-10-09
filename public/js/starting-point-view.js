@@ -1,5 +1,5 @@
-import { el } from "./dom.js?v=1.12.0";
-import { STARTING_BASKETS, normalizeStartingSetup } from "./starting-point.js?v=1.12.0";
+import { el } from "./dom.js?v=1.13.0";
+import { STARTING_BASKETS, normalizeStartingSetup } from "./starting-point.js?v=1.13.0";
 
 export const renderStartingBeans = (beans, selectedId) => {
     const picker = document.getElementById("starting-bean");
@@ -20,17 +20,20 @@ export const renderStartingSetup = (value, machineId) => {
     }
     const container = document.getElementById("starting-owned-baskets");
     container.replaceChildren();
+    const calibrationDetails = el("details", "starting-calibration secondary-disclosure");
+    calibrationDetails.appendChild(el("summary", "", "Basket calibration (advanced)"));
     STARTING_BASKETS.filter(basket => !basket.machineId || basket.machineId === machineId).forEach(basket => {
-        const row = el("div", "starting-basket-row");
-        row.dataset.basketId = basket.id;
         const label = el("label", "starting-basket-label");
         const checkbox = el("input");
         checkbox.type = "checkbox";
         checkbox.checked = setup.ownedBasketIds.includes(basket.id);
         checkbox.dataset.ownedBasket = basket.id;
         label.append(checkbox, document.createTextNode(basket.name));
+        container.appendChild(label);
+        const row = el("div", "starting-basket-row");
+        row.dataset.basketId = basket.id;
         const details = el("details", "starting-calibration");
-        details.appendChild(el("summary", "", "Optional basket calibration"));
+        details.appendChild(el("summary", "", basket.name));
         const grid = el("div", "form-grid three-col");
         for (const [field, title, min, max] of [["referenceDose", "Reference dose (g)", 5, 30], ["puckDepth", "Tamped puck depth (mm)", 1, 35], ["clearance", "Floor to screen (mm)", 1, 40]]) {
             const group = el("div", "form-group");
@@ -49,10 +52,10 @@ export const renderStartingSetup = (value, machineId) => {
             grid.appendChild(group);
         }
         details.append(grid, el("p", "subtle-note", "Measure with the baseline coffee whose 18g Falcon volume you entered above. Floor-to-screen clearance must account for the shower screw and any puck screen. Recalibrate when those change."));
-        row.append(label, details);
-        container.appendChild(row);
+        row.appendChild(details);
+        calibrationDetails.appendChild(row);
     });
-    renderStartingBasketOptions(setup, machineId);
+    container.appendChild(calibrationDetails);
 };
 
 export const readStartingSetup = (machineId) => {
@@ -96,12 +99,11 @@ export const renderStartingResult = (plan, hasBean) => {
         return;
     }
     const card = el("div", "card starting-result-card");
-    card.append(el("div", "field-kicker", "First shot · then dial from reality"), el("h2", "section-title", `Use ${plan.basket.name}`));
+    card.append(el("div", "field-kicker", "First-shot targets"), el("h2", "section-title", `Use ${plan.basket.name}`));
     const metrics = el("dl", "starting-metrics");
     for (const [label, value] of [
         ["Starting dose", `${plan.dose.toFixed(1)}g`],
         ["Starting yield", `${plan.yield.toFixed(1)}g · 1:${plan.ratio}`],
-        ["Estimated headspace", plan.headspace === null ? "Needs calibration" : `≈ ${plan.headspace.toFixed(1)} mm · proxy`],
         ["Temperature", `${plan.temperature}°${plan.temperatureUnit}`],
         ["Target time", plan.time],
         ["Grind starting point", plan.grind],
@@ -111,9 +113,12 @@ export const renderStartingResult = (plan, hasBean) => {
         item.append(el("dt", "", label), el("dd", "", value));
         metrics.appendChild(item);
     }
-    card.append(metrics, el("h3", "", "Why this starting point"));
-    plan.reasons.forEach(reason => card.appendChild(el("p", "", reason)));
-    plan.notes.forEach(note => card.appendChild(el("p", "subtle-note", note)));
+    const explanation = el("details", "secondary-disclosure");
+    explanation.append(el("summary", "", "Recipe assumptions & headspace"), el("p", "subtle-note", plan.headspace === null ? "A numeric headspace estimate needs basket calibration." : `Estimated headspace: ≈ ${plan.headspace.toFixed(1)} mm · proxy, verify physically.`));
+    plan.reasons.forEach(reason => explanation.appendChild(el("p", "", reason)));
+    plan.notes.forEach(note => explanation.appendChild(el("p", "subtle-note", note)));
+    card.append(metrics, explanation);
+    if (!plan.canLog) card.appendChild(el("p", "status-strip status-warning", "Estimated puck contact: reduce dose or choose a larger basket before brewing."));
     if (!hasBean) card.appendChild(el("p", "subtle-note", "Add an active bean to log this starting point."));
     target.replaceChildren(card);
 };

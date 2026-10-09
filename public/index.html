@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Lincoln Barista Platinum</title>
+    <title>Lincoln Barista</title>
     
     <!-- PWA & Mobile Meta -->
     <link rel="manifest" href="manifest.json">
@@ -19,21 +19,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"></noscript>
-    <link rel="stylesheet" href="style.css?v=1.12.0">
+    <link rel="stylesheet" href="style.css?v=1.13.0">
 </head>
 <body>
 
     <div id="top-bar">
         <div class="app-brand">
-            <div class="app-logo">Lincoln <span>Barista <small>Platinum</small></span></div>
-            <div class="build-chip">v1.12.0 · <code data-build-commit>__BUILD_COMMIT__</code></div>
+            <div class="app-logo">Lincoln <span>Barista</span></div>
+            <div class="build-chip">v1.13.0 · <code data-build-commit>__BUILD_COMMIT__</code></div>
         </div>
         <div class="top-actions">
-            <button class="icon-btn" id="btn-open-tuning" type="button" aria-label="Open machine tuning lab" title="Machine tuning">🎛️</button>
-            <button class="icon-btn" id="btn-open-analytics" type="button" aria-label="Open analytics" title="Analytics">📊</button>
-            <button class="icon-btn" id="btn-open-maintenance" type="button" aria-label="Open machine care" title="Machine care">🔧</button>
-            <button class="icon-btn" id="btn-open-settings" type="button" aria-label="Open settings" title="Settings">⚙️</button>
-            <button class="logout-btn" id="btn-logout" type="button">Logout</button>
+            <button class="btn-secondary small-btn header-nav" type="button" data-route="list">Beans</button>
+            <button class="btn-secondary small-btn header-nav" id="btn-open-settings" type="button">Settings</button>
         </div>
     </div>
 
@@ -74,25 +71,8 @@
 
     <!-- VIEW: LIST -->
     <div id="view-list" class="view">
-        <section id="care-home-card" class="card care-home-card hidden" aria-labelledby="care-home-title">
-            <div class="care-home-heading">
-                <div>
-                    <div class="field-kicker">A little care, often</div>
-                    <h2 id="care-home-title" class="section-title">Machine care</h2>
-                    <p id="care-home-summary" class="care-home-summary" role="status">Checking your care history…</p>
-                </div>
-                <button id="care-home-open" class="btn-secondary small-btn" type="button">All care →</button>
-            </div>
-            <div id="care-home-list" class="care-home-list"></div>
-        </section>
-        <div id="global-stats-card" class="card hidden">
-            <div id="global-stats-content"></div>
-        </div>
-        <button class="btn btn-secondary guided-tuning-entry" id="btn-new-starting-point" type="button">New Bean Starting Point →</button>
-        <button class="btn btn-secondary guided-tuning-entry" id="btn-guided-tuning" type="button">Dial in a bean · Guided tuning →</button>
-
         <div class="section-toolbar">
-            <h2 class="section-title">My Collection</h2>
+            <h2 class="section-title">My Beans</h2>
             <select id="input-sort-beans" class="sort-select" aria-label="Sort collection">
                 <option value="newest">Recent</option>
                 <option value="name">A-Z</option>
@@ -103,22 +83,28 @@
         <div id="collection-status" class="status-strip hidden"></div>
         <div id="filter-bar" class="filter-bar"></div>
         <div id="bean-list-container"></div>
+
+        <section id="care-home-card" class="card care-home-card hidden" aria-labelledby="care-home-title">
+            <div class="care-home-heading">
+                <div>
+                    <h2 id="care-home-title" class="section-title">Machine care</h2>
+                    <p id="care-home-summary" class="care-home-summary" role="status">Checking your care history…</p>
+                </div>
+                <button id="care-home-open" class="btn-secondary small-btn" type="button">All care →</button>
+            </div>
+            <div id="care-home-list" class="care-home-list"></div>
+        </section>
+
     </div>
 
     <!-- VIEW: EDIT BEAN -->
     <div id="view-edit-bean" class="view">
-        <h2 id="bean-form-header" class="view-heading">New Profile</h2>
+        <h2 id="bean-form-header" class="view-heading">Add Bean</h2>
         <input type="hidden" id="input-bean-id">
         
-        <p class="bean-form-intro">Your coffee library is private to your sign-in. Roasters and past coffees are suggested from your saved profiles, including archived ones.</p>
+        <p class="bean-form-intro">Add a bag of coffee to start logging shots.</p>
 
         <div class="card bean-basics-card">
-            <div id="bean-repeat" class="form-group" hidden>
-                <label for="input-repeat-bean">Bought this coffee again?</label>
-                <select id="input-repeat-bean"><option value="">Choose a past coffee…</option></select>
-                <button class="btn btn-secondary compact-action" id="btn-reuse-bean" type="button">Use past details</button>
-                <div class="field-help">Copies the coffee details. Add this bag's roast date and photo separately; your past rating and shots stay with the old profile.</div>
-            </div>
             <div class="form-group">
                 <label for="input-name">Coffee name <span class="required-marker">Required</span></label>
                 <input type="text" id="input-name" placeholder="Geometry, Sweet Shop..." autocomplete="off" required>
@@ -156,6 +142,14 @@
                 </div>
                 <input type="hidden" id="input-bean-impression" value="">
             </fieldset>
+            <details id="bean-repeat" class="form-group secondary-disclosure" hidden>
+                <summary>Use a past coffee</summary>
+                <label for="input-repeat-bean">Past coffee</label>
+                <select id="input-repeat-bean"><option value="">Choose a past coffee…</option></select>
+                <button class="btn btn-secondary compact-action" id="btn-reuse-bean" type="button">Use past details</button>
+                <div class="field-help">Copies the coffee details. Add this bag's roast date and photo separately; your past rating and shots stay with the old profile.</div>
+            </details>
+
         </div>
 
         <details id="bean-extra-details" class="card bean-extra-details">
@@ -201,7 +195,7 @@
         </details>
 
         <div class="view-actions">
-            <button class="btn" id="btn-save-bean" type="button">Save Profile</button>
+            <button class="btn" id="btn-save-bean" type="button">Save Bean</button>
             <button class="btn btn-secondary stack-action" id="btn-cancel-bean" type="button">Cancel</button>
             <button class="btn btn-danger hidden danger-action" id="btn-delete-bean" type="button">Archive Bean</button>
         </div>
@@ -219,16 +213,21 @@
             <div id="detail-age" class="detail-age"></div>
             
             <div class="detail-actions">
-                <button class="btn-secondary small-btn" id="btn-edit-active-bean" type="button">Edit Profile</button>
-                <button class="btn-secondary small-btn" id="btn-detail-starting-point" type="button">Starting Point</button>
-                <button class="btn-secondary small-btn" id="btn-open-detail-tuning" type="button">Tune Machine</button>
-                <button class="btn-secondary small-btn" id="btn-open-detail-analytics" type="button">Analytics</button>
+                <button class="btn-secondary small-btn" id="btn-edit-active-bean" type="button">Edit Bean</button>
+                <details class="bean-tools">
+                    <summary>More tools</summary>
+                    <div class="secondary-tools">
+                        <button class="btn-secondary small-btn" id="btn-detail-starting-point" type="button">First-shot recipe</button>
+                        <button class="btn-secondary small-btn" id="btn-open-detail-tuning" type="button">Dial in next shot</button>
+                        <button class="btn-secondary small-btn" id="btn-open-detail-analytics" type="button">Shot trends</button>
+                    </div>
+                </details>
             </div>
         </div>
 
         <div id="dial-in-console" class="console-card hidden">
             <div class="console-header">
-                <div class="console-title">Current Dial-In Recipe</div>
+                <div class="console-title">Current Recipe</div>
                 <div id="recipe-status" class="console-status">Ready</div>
             </div>
 
@@ -264,8 +263,13 @@
             <div id="stale-warning-container" class="hidden"></div>
         </div>
         
-        <div class="card">
-            <div class="field-kicker field-kicker-center">Dial-In Efficiency</div>
+        <div class="section-stack extraction-section">
+            <div class="field-kicker section-kicker">Shot History</div>
+            <div id="history-container"></div>
+        </div>
+
+        <details class="card secondary-disclosure">
+            <summary>Shot summary</summary>
             <table class="summary-table">
                 <thead>
                     <tr>
@@ -277,12 +281,7 @@
                 </thead>
                 <tbody id="dial-in-table-body"></tbody>
             </table>
-        </div>
-
-        <div class="section-stack extraction-section">
-            <div class="field-kicker section-kicker">Extraction Logs</div>
-            <div id="history-container"></div>
-        </div>
+        </details>
     </div>
 
     <!-- VIEW: LOG SHOT -->
@@ -291,7 +290,7 @@
             <button class="btn-secondary mobile-back-btn" id="btn-cancel-shot-top" type="button" aria-label="Back to bean">←</button>
             <div>
                 <div class="field-kicker mobile-header-kicker">New shot</div>
-                <h2 id="log-shot-title" class="large-heading">Log Extraction</h2>
+                <h2 id="log-shot-title" class="large-heading">Log Shot</h2>
                 <div id="log-bean-name" class="mobile-header-context"></div>
             </div>
         </div>
@@ -324,6 +323,21 @@
                 </div>
             </div>
 
+                        <div class="form-group">
+                            <label for="input-shot-taste">Taste result</label>
+                            <select id="input-shot-taste">
+                                <option value="">Not assessed</option>
+                                <option value="balanced">Balanced / save it</option>
+                                <option value="sour">Sour / sharp</option>
+                                <option value="bitter">Bitter / dry</option>
+                                <option value="astringent">Astringent</option>
+                                <option value="hollow">Weak / hollow</option>
+                                <option value="channeling">Sour + bitter / channeling</option>
+                            </select>
+                        </div>
+            <details class="shot-observations">
+                <summary>Machine observations (optional)</summary>
+                <div class="shot-observation-fields">
             <div class="shot-time-presets">
                 <span class="shot-time-presets-label">Set time from profile</span>
                 <div class="mini-actions">
@@ -332,9 +346,7 @@
                 </div>
             </div>
 
-            <details class="shot-observations">
-                <summary>Tuning observations (optional)</summary>
-                <div class="shot-observation-fields">
+
                     <div class="form-grid two-col">
                         <div class="form-group">
                             <label for="input-shot-profile">Machine profile</label>
@@ -348,18 +360,7 @@
                                 <option value="bianca-bloom" data-machine-option="bianca">Bianca · Bloom</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label for="input-shot-taste">Taste result</label>
-                            <select id="input-shot-taste">
-                                <option value="">Not assessed</option>
-                                <option value="balanced">Balanced / save it</option>
-                                <option value="sour">Sour / sharp</option>
-                                <option value="bitter">Bitter / dry</option>
-                                <option value="astringent">Astringent</option>
-                                <option value="hollow">Weak / hollow</option>
-                                <option value="channeling">Sour + bitter / channeling</option>
-                            </select>
-                        </div>
+
                     </div>
                     <div class="form-grid three-col">
                         <div class="form-group">
@@ -402,7 +403,7 @@
         <div class="tuning-heading">
             <div>
                 <div class="field-kicker">Lelit Bianca PL162T-120</div>
-                <h2 class="large-heading">Flow Tuning Lab</h2>
+                <h2 class="large-heading">Dial In Next Shot</h2>
             </div>
             <div id="bianca-tuning-machine-chip" class="machine-name-chip"></div>
         </div>
@@ -517,7 +518,7 @@
     <!-- VIEW: ANALYTICS -->
     <div id="view-analytics" class="view">
         <button class="btn-secondary back-btn" id="btn-back-analytics" type="button">← Collection</button>
-        <h2 class="view-heading">Visual Trends</h2>
+        <h2 class="view-heading">Shot Trends</h2>
 
         <div class="analytics-scope" role="group" aria-label="Analytics scope">
             <button class="btn-secondary small-btn scope-btn active" id="btn-analytics-current" type="button">Current Bean</button>
@@ -564,7 +565,7 @@
         <div class="tuning-heading">
             <div>
                 <div class="field-kicker">Lelit Elizabeth PL92T</div>
-                <h2 class="large-heading">Tuning Lab</h2>
+                <h2 class="large-heading">Dial In Next Shot</h2>
             </div>
             <div id="tuning-machine-chip" class="machine-name-chip"></div>
         </div>
@@ -767,108 +768,144 @@
     <!-- VIEW: SETTINGS -->
     <div id="view-settings" class="view">
         <button class="btn-secondary back-btn" type="button" data-route="list">← Back</button>
-        <h2 class="large-heading">Profile & Gear</h2>
+        <h2 class="large-heading">Settings</h2>
 
-        <div class="card">
-            <div class="section-label">Machine Profile</div>
+        <div class="form-group">
+            <label for="profile-machine-id">Active machine</label>
+            <select id="profile-machine-id">
+                <option value="elizabeth">Lelit Elizabeth PL92T</option>
+                <option value="bianca">Lelit Bianca PL162T-120</option>
+            </select>
+        </div>
 
-            <div class="form-group">
-                <label for="profile-machine-id">Active machine</label>
-                <select id="profile-machine-id">
-                    <option value="elizabeth">Lelit Elizabeth PL92T</option>
-                    <option value="bianca">Lelit Bianca PL162T-120</option>
-                </select>
-            </div>
-            
+        <form id="gear-form" class="card starting-setup">
+            <h3 class="section-title">My Baskets</h3>
+            <p class="subtle-note">Check the baskets you own for this machine, then Save Settings.</p>
+            <div id="starting-owned-baskets"></div>
+            <details id="starting-setup-details" class="secondary-disclosure">
+                <summary>Grinder &amp; recipe preferences</summary>
+                <div class="form-grid two-col">
+                    <div class="form-group"><label for="starting-grinder">Grinder</label><input id="starting-grinder" maxlength="80" placeholder="Your grinder model"></div>
+                    <div class="form-group"><label for="starting-grind">Known espresso baseline</label><input id="starting-grind" maxlength="30" placeholder="Setting on this grinder"></div>
+                    <div class="form-group"><label for="starting-dose-min">Preferred minimum dose (g)</label><input id="starting-dose-min" type="number" min="5" max="30" step="0.1" required></div>
+                    <div class="form-group"><label for="starting-dose-max">Preferred maximum dose (g)</label><input id="starting-dose-max" type="number" min="5" max="30" step="0.1" required></div>
+                    <div class="form-group"><label for="starting-headspace">Desired dry headspace (mm)</label><input id="starting-headspace" type="number" min="0.5" max="10" step="0.1" required></div>
+                    <div class="form-group"><label for="starting-ratio">Normal ratio (1:X, optional)</label><input id="starting-ratio" type="number" min="1" max="4" step="0.1" placeholder="Use roast baseline"></div>
+                    <div class="form-group"><label for="starting-reference-volume">Baseline coffee: 18g Falcon volume (mL)</label><input id="starting-reference-volume" type="number" min="20" max="50" step="0.1" placeholder="40 assumed until measured"></div>
+                </div>
+                <p class="subtle-note">Preferences are saved separately for each machine. Auto chooses only your checked baskets. Confirm the capacity engraved on your stock basket. Headspace is your preference, not a universal optimum.</p>
+            </details>
+        </form>
+
+        <div class="view-actions">
+            <button class="btn" id="btn-save-profile" type="button">Save Settings</button>
+        </div>
+
+        <p id="settings-save-status" class="subtle-note" role="status"></p>
+        <details class="card secondary-disclosure">
+            <summary>Machine settings</summary>
+
             <div class="form-group">
                 <label for="profile-machine-name">Machine Name</label>
                 <input type="text" id="profile-machine-name" placeholder="Lelit Elizabeth">
             </div>
 
-            <div id="settings-elizabeth-fields">
-            <div class="form-grid two-col">
-                <div class="form-group">
-                    <label for="profile-machine-version">Elizabeth generation</label>
-                    <select id="profile-machine-version">
-                        <option value="classic-v3">Classic PL92T V3 / Software 5.05+</option>
-                        <option value="classic-early">Early classic PL92T</option>
-                        <option value="elizabeth3">Elizabeth3 PL92T3 / Pagaia</option>
-                        <option value="unknown">Not sure yet</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="profile-firmware">Firmware shown at startup</label>
-                    <input type="text" id="profile-firmware" maxlength="20" placeholder="5.05, 5.07…">
-                </div>
-            </div>
-
-            <div class="form-grid three-col">
-                <div class="form-group">
-                    <label for="profile-temperature-unit">Temperature display</label>
-                    <select id="profile-temperature-unit">
-                        <option value="F">Fahrenheit (default)</option>
-                        <option value="C">Celsius</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="profile-brew-temperature">Brew setpoint (°<span data-temperature-unit>F</span>)</label>
-                    <input type="number" id="profile-brew-temperature" min="175" max="230" step="1" placeholder="200">
-                </div>
-                <div class="form-group">
-                    <label for="profile-steam-temperature">Steam setpoint (°<span data-temperature-unit>F</span>)</label>
-                    <input type="number" id="profile-steam-temperature" min="239" max="293" step="1" placeholder="275">
-                </div>
-            </div>
-            <div class="form-grid two-col">
-                <div class="form-group">
-                    <label for="profile-observed-pressure">Normal-shot gauge (bar)</label>
-                    <input type="number" id="profile-observed-pressure" min="0" max="16" step="0.1" placeholder="9.0">
-                </div>
-            </div>
-
             <div class="form-group">
-                <label for="profile-preinfusion-mode">Pre-infusion control</label>
-                <select id="profile-preinfusion-mode">
-                    <option value="auto">EVS 1 / follows steam-boiler state</option>
-                    <option value="steam">Steam pre-infusion</option>
-                    <option value="bloom">Bloom forced / steam boiler off</option>
-                    <option value="none">No pre-infusion</option>
+                <label for="profile-default-dose">Default Dose (g)</label>
+                <input type="number" id="profile-default-dose" step="0.1" placeholder="18.0">
+            </div>
+
+            <div class="form-group grinder-direction-field">
+                <label for="profile-finer-direction">On your grinder, finer means</label>
+                <select id="profile-finer-direction">
+                    <option value="lower">A lower number</option>
+                    <option value="higher">A higher number</option>
                 </select>
             </div>
+            <div id="settings-elizabeth-fields">
+                <div class="form-grid two-col">
+                    <div class="form-group">
+                        <label for="profile-machine-version">Elizabeth generation</label>
+                        <select id="profile-machine-version">
+                            <option value="classic-v3">Classic PL92T V3 / Software 5.05+</option>
+                            <option value="classic-early">Early classic PL92T</option>
+                            <option value="elizabeth3">Elizabeth3 PL92T3 / Pagaia</option>
+                            <option value="unknown">Not sure yet</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-firmware">Firmware shown at startup</label>
+                        <input type="text" id="profile-firmware" maxlength="20" placeholder="5.05, 5.07…">
+                    </div>
+                </div>
 
-            <div class="section-label profile-label">P1 · Classic / Dark Starting Profile</div>
-            <div class="form-grid three-col">
-                <div class="form-group">
-                    <label for="profile-b1-infusion">Initial wet (s)</label>
-                    <input type="number" id="profile-b1-infusion" placeholder="3">
+                <div class="form-grid three-col">
+                    <div class="form-group">
+                        <label for="profile-temperature-unit">Temperature display</label>
+                        <select id="profile-temperature-unit">
+                            <option value="F">Fahrenheit (default)</option>
+                            <option value="C">Celsius</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-brew-temperature">Brew setpoint (°<span data-temperature-unit>F</span>)</label>
+                        <input type="number" id="profile-brew-temperature" min="175" max="230" step="1" placeholder="200">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-steam-temperature">Steam setpoint (°<span data-temperature-unit>F</span>)</label>
+                        <input type="number" id="profile-steam-temperature" min="239" max="293" step="1" placeholder="275">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="profile-b1-bloom">Gentle/hold (s)</label>
-                    <input type="number" id="profile-b1-bloom" placeholder="2">
+                <div class="form-grid two-col">
+                    <div class="form-group">
+                        <label for="profile-observed-pressure">Normal-shot gauge (bar)</label>
+                        <input type="number" id="profile-observed-pressure" min="0" max="16" step="0.1" placeholder="9.0">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="profile-b1-brew">Full pressure (s)</label>
-                    <input type="number" id="profile-b1-brew" placeholder="25">
-                </div>
-            </div>
 
-            <div class="section-label profile-label">P2 · Modern / Light Starting Profile</div>
-            <div class="form-grid three-col">
                 <div class="form-group">
-                    <label for="profile-b2-infusion">Initial wet (s)</label>
-                    <input type="number" id="profile-b2-infusion" placeholder="5">
+                    <label for="profile-preinfusion-mode">Pre-infusion control</label>
+                    <select id="profile-preinfusion-mode">
+                        <option value="auto">EVS 1 / follows steam-boiler state</option>
+                        <option value="steam">Steam pre-infusion</option>
+                        <option value="bloom">Bloom forced / steam boiler off</option>
+                        <option value="none">No pre-infusion</option>
+                    </select>
                 </div>
-                <div class="form-group">
-                    <label for="profile-b2-bloom">Gentle/hold (s)</label>
-                    <input type="number" id="profile-b2-bloom" placeholder="7">
+
+                <div class="section-label profile-label">P1 · Classic / Dark Starting Profile</div>
+                <div class="form-grid three-col">
+                    <div class="form-group">
+                        <label for="profile-b1-infusion">Initial wet (s)</label>
+                        <input type="number" id="profile-b1-infusion" placeholder="3">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-b1-bloom">Gentle/hold (s)</label>
+                        <input type="number" id="profile-b1-bloom" placeholder="2">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-b1-brew">Full pressure (s)</label>
+                        <input type="number" id="profile-b1-brew" placeholder="25">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="profile-b2-brew">Full pressure (s)</label>
-                    <input type="number" id="profile-b2-brew" placeholder="28">
+
+                <div class="section-label profile-label">P2 · Modern / Light Starting Profile</div>
+                <div class="form-grid three-col">
+                    <div class="form-group">
+                        <label for="profile-b2-infusion">Initial wet (s)</label>
+                        <input type="number" id="profile-b2-infusion" placeholder="5">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-b2-bloom">Gentle/hold (s)</label>
+                        <input type="number" id="profile-b2-bloom" placeholder="7">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-b2-brew">Full pressure (s)</label>
+                        <input type="number" id="profile-b2-brew" placeholder="28">
+                    </div>
                 </div>
-            </div>
-            
-            <div class="subtle-note">P1 total: <span id="profile-b1-total-display">30</span>s • P2 total: <span id="profile-b2-total-display">40</span>s. Initial wet + hold is the LCC total pre-infusion; the timed auto-stop includes every phase.</div>
+
+                <div class="subtle-note">P1 total: <span id="profile-b1-total-display">30</span>s • P2 total: <span id="profile-b2-total-display">40</span>s. Initial wet + hold is the LCC total pre-infusion; the timed auto-stop includes every phase.</div>
             </div>
 
             <div id="settings-bianca-fields" class="hidden">
@@ -923,37 +960,31 @@
                 </div>
                 <div class="subtle-note">Set 0 for OFF. Test automation with the paddle fully open so manual restriction does not hide the programmed phases.</div>
             </div>
+        </details>
 
-            <div class="form-group">
-                <label for="profile-default-dose">Default Dose (g)</label>
-                <input type="number" id="profile-default-dose" step="0.1" placeholder="18.0">
+        <details class="card secondary-disclosure">
+            <summary>Tools &amp; data</summary>
+            <div class="secondary-tools">
+                <button class="btn-secondary small-btn" id="btn-new-starting-point" type="button">First-shot recipe</button>
+                <button class="btn-secondary small-btn" id="btn-open-tuning" type="button">Dial in next shot</button>
+                <button class="btn-secondary small-btn" id="btn-open-analytics" type="button">Shot trends</button>
+                <button class="btn-secondary small-btn" id="btn-open-maintenance" type="button">Machine care</button>
+                <button class="btn-secondary small-btn" id="btn-export-data" type="button">Export Data (CSV)</button>
+                <button class="btn-secondary small-btn" id="btn-logout-settings" type="button">Sign Out</button>
             </div>
-
-            <div class="form-group grinder-direction-field">
-                <label for="profile-finer-direction">On your grinder, finer means</label>
-                <select id="profile-finer-direction">
-                    <option value="lower">A lower number</option>
-                    <option value="higher">A higher number</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="view-actions">
-            <button class="btn" id="btn-save-profile" type="button">Update Profile</button>
-            <button class="btn btn-secondary" id="btn-export-data" type="button">Export Data (CSV)</button>
-            <button class="btn btn-secondary settings-signout" id="btn-logout-settings" type="button">Sign Out</button>
-        </div>
+        </details>
 
         <div class="build-info">
-            Lincoln Barista 1.12.0 • Build <code data-build-commit>__BUILD_COMMIT__</code>
+            Lincoln Barista 1.13.0 • Build <code data-build-commit>__BUILD_COMMIT__</code>
         </div>
     </div>
 
+
     <!-- VIEW: NEW BEAN STARTING POINT -->
     <div id="view-starting-point" class="view">
-        <button class="btn btn-secondary back-btn" id="btn-starting-back" type="button">← Back to collection</button>
+        <button class="btn btn-secondary back-btn" id="btn-starting-back" type="button">← Back</button>
         <div class="field-kicker">A first recipe for a new coffee</div>
-        <h1 class="large-heading">New Bean Starting Point</h1>
+        <h1 class="large-heading">First-shot Recipe</h1>
         <p id="starting-machine-context" class="subtle-note"></p>
         <form id="starting-form">
             <div class="card">
@@ -962,32 +993,24 @@
                     <div class="form-group"><label for="starting-roast">Roast style</label><select id="starting-roast"><option value="light">Light</option><option value="medium">Medium</option><option value="dark">Dark</option></select></div>
                     <div class="form-group"><label for="starting-process">Process (optional)</label><select id="starting-process"><option value="unknown">Unknown</option><option value="washed">Washed</option><option value="natural">Natural</option><option value="honey">Honey</option><option value="experimental">Experimental / other</option></select></div>
                 </div>
+                <div class="form-group"><label for="starting-basket">Basket</label><select id="starting-basket"></select></div>
+                <button id="btn-starting-settings" class="btn-secondary small-btn" type="button">Manage baskets in Settings</button>
+                <details class="secondary-disclosure">
+                    <summary>Optional bean-volume measurement</summary>
                 <div class="form-group"><label for="starting-volume">Put 18.0g of whole beans in your Falcon tube. What volume do they reach?</label><input id="starting-volume" type="number" inputmode="decimal" min="20" max="50" step="0.1" placeholder="e.g. 48 mL (optional)"><p class="subtle-note">Use the same dry 50 mL tube and settling method each time. Read the average top level; do not compress the beans. If they overflow, leave this blank.</p></div>
-                <div class="form-group"><label for="starting-basket">Basket choice</label><select id="starting-basket"></select></div>
                 <button id="starting-save-measurement" class="btn btn-secondary" type="button">Save bean measurement</button>
+                </details>
             </div>
-            <details id="starting-setup-details" class="card starting-setup">
-                <summary>Your setup · baskets &amp; preferences</summary>
-                <div class="form-grid two-col">
-                    <div class="form-group"><label for="starting-grinder">Grinder</label><input id="starting-grinder" maxlength="80" placeholder="Your grinder model"></div>
-                    <div class="form-group"><label for="starting-grind">Known espresso baseline</label><input id="starting-grind" maxlength="30" placeholder="Setting on this grinder"></div>
-                    <div class="form-group"><label for="starting-dose-min">Preferred minimum dose (g)</label><input id="starting-dose-min" type="number" min="5" max="30" step="0.1" required></div>
-                    <div class="form-group"><label for="starting-dose-max">Preferred maximum dose (g)</label><input id="starting-dose-max" type="number" min="5" max="30" step="0.1" required></div>
-                    <div class="form-group"><label for="starting-headspace">Desired dry headspace (mm)</label><input id="starting-headspace" type="number" min="0.5" max="10" step="0.1" required></div>
-                    <div class="form-group"><label for="starting-ratio">Normal ratio (1:X, optional)</label><input id="starting-ratio" type="number" min="1" max="4" step="0.1" placeholder="Use roast baseline"></div>
-                    <div class="form-group"><label for="starting-reference-volume">Baseline coffee: 18g Falcon volume (mL)</label><input id="starting-reference-volume" type="number" min="20" max="50" step="0.1" placeholder="40 assumed until measured"></div>
-                </div>
-                <p class="subtle-note">Preferences are saved separately for each machine. Auto chooses only baskets you select below. Confirm the capacity engraved on your stock basket. Headspace is your preference, not a universal optimum.</p>
-                <div id="starting-owned-baskets"></div>
-                <button id="starting-save-setup" class="btn btn-secondary" type="button">Save this machine’s setup</button>
-            </details>
-            <button class="btn" type="submit">Calculate starting point</button>
+            <button class="btn" type="submit">Update recipe</button>
         </form>
         <p id="starting-save-status" class="subtle-note" role="status"></p>
         <div id="starting-result" aria-live="polite"></div>
         <div class="view-actions"><button id="starting-log-shot" class="btn" type="button">Pull first shot &amp; log actual results →</button></div>
-        <p class="subtle-note">Use the first shot’s taste and flow with Guided tuning. Click offsets need evidence from your grinder; whole-bean density cannot predict them.</p>
+        <details class="secondary-disclosure">
+            <summary>Measurement background &amp; sources</summary>
+        <p class="subtle-note">Use the first shot’s taste and flow to dial in your next shot. Click offsets need evidence from your grinder; whole-bean density cannot predict them.</p>
         <p class="subtle-note">Background: <a href="https://www.baristahustle.com/espresso-headspace/" target="_blank" rel="noopener noreferrer">Headspace and dose</a> · <a href="https://store.pullman.coffee/product/filtration876-basket-15-17g/" target="_blank" rel="noopener noreferrer">Pullman basket capacities</a>. The Falcon dose heuristic is experimental.</p>
+        </details>
     </div>
 
     <!-- Global Floating Buttons -->
@@ -995,6 +1018,6 @@
     <button class="fab hidden" id="fab-log-shot" type="button" aria-label="Log Shot">☕</button>
 
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.12.0"></script>
+    <script type="module" src="js/app.js?v=1.13.0"></script>
 </body>
 </html>

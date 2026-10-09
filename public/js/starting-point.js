@@ -1,5 +1,5 @@
-import { getElizabethBaseline } from "./elizabeth-tuning.js?v=1.12.0";
-import { getBiancaBaseline } from "./bianca-tuning.js?v=1.12.0";
+import { getElizabethBaseline } from "./elizabeth-tuning.js?v=1.13.0";
+import { getBiancaBaseline } from "./bianca-tuning.js?v=1.13.0";
 
 export const STARTING_BASKETS = [
     { id: "stock-elizabeth", name: "Elizabeth stock 14–18g", min: 14, max: 18, machineId: "elizabeth" },
@@ -56,7 +56,7 @@ export const calculateStartingPoint = ({ setup: rawSetup, machineId = "elizabeth
     }
     const owned = STARTING_BASKETS.filter(basket => setup.ownedBasketIds.includes(basket.id));
     const candidates = basketId === "auto" ? owned : owned.filter(basket => basket.id === basketId);
-    if (!candidates.length) return { error: "Select at least one basket you own in Your setup." };
+    if (!candidates.length) return { error: "Select your baskets in Settings → My Baskets." };
     const density = measuredVolume === null ? null : 18 / measuredVolume;
     // A bounded dose heuristic, not a conversion from whole beans to tamped grounds.
     const relativeDensity = measuredVolume === null ? 1 : (setup.referenceVolume || 40) / measuredVolume;

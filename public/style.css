@@ -840,3 +840,32 @@ input.visually-hidden {
 
 #view-starting-point a { color: var(--accent-amber); }
 #view-starting-point .starting-basket-label { font-size: 0.9rem; color: var(--text-main); }
+
+/* Essentials first; optional tools share one disclosure. */
+.header-nav { min-height: 44px; padding: 0.6rem 0.8rem; }
+body[data-view="list"] .header-nav[data-route="list"],
+body[data-view="settings"] #btn-open-settings { border-color: var(--roast-light); color: var(--accent-amber); }
+.secondary-disclosure > summary, .bean-tools > summary { cursor: pointer; font-weight: 600; color: var(--text-secondary); }
+.secondary-disclosure { margin-top: 1rem; }
+.secondary-disclosure[open] > summary { margin-bottom: 1rem; }
+.secondary-tools { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 0.8rem; }
+.bean-tools { text-align: left; }
+.bean-tools .secondary-tools { justify-content: center; }
+#gear-form { scroll-margin-top: 6rem; }
+#gear-form .starting-basket-label { margin: 0; padding: 0.75rem 0; color: var(--text-main); font-size: 0.95rem; cursor: pointer; }
+#view-settings .starting-basket-label input { min-height: 0; accent-color: var(--roast-medium); }
+#gear-form .starting-calibration { margin-top: 0.4rem; }
+#view-settings .build-info { margin: 1.5rem 0; }
+#view-list .care-home-card { margin-top: 1.5rem; }
+#view-starting-point .secondary-disclosure { margin-top: 1.2rem; }
+#view-starting-point .secondary-disclosure[open] > summary { margin-bottom: 1rem; }
+#view-detail > .secondary-disclosure { margin-top: 1.5rem; }
+#view-log-shot .shot-entry-card > .form-group { margin: 1rem 0 0; }
+@media (max-width: 600px) {
+    .top-actions { flex-shrink: 0; }
+    .header-nav { padding: 0.55rem 0.65rem; }
+    .detail-hero { margin-bottom: 1.5rem; }
+    .detail-actions { margin-top: 1rem; }
+    .secondary-tools > button { flex: 1 1 140px; min-height: 44px; }
+    #view-settings #btn-save-profile { max-width: none; }
+}

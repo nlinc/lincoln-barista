@@ -1,5 +1,5 @@
 import { addDoc, collection, deleteDoc, doc, getDocs, query, updateDoc, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { db } from "./firebase-client.js?v=1.12.0";
+import { db } from "./firebase-client.js?v=1.13.0";
 
 export const fetchShotsForUser = async (uid) => {
     const snapshot = await getDocs(query(collection(db, "brew_logs"), where("uid", "==", uid)));
