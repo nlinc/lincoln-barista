@@ -19,14 +19,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"></noscript>
-    <link rel="stylesheet" href="style.css?v=1.14.0">
+    <link rel="stylesheet" href="style.css?v=1.15.0">
 </head>
 <body>
 
     <div id="top-bar">
         <div class="app-brand">
             <div class="app-logo">Lincoln <span>Barista</span></div>
-            <div class="build-chip">v1.14.0 · <code data-build-commit>__BUILD_COMMIT__</code></div>
+            <div class="build-chip">v1.15.0 · <code data-build-commit>__BUILD_COMMIT__</code></div>
         </div>
         <div class="top-actions">
             <button class="btn-secondary small-btn header-nav" type="button" data-route="list">Beans</button>
@@ -93,6 +93,12 @@
         </div>
 
         <div id="collection-status" class="status-strip hidden"></div>
+        <div class="collection-scopes" role="group" aria-label="Bag collection">
+            <button id="btn-current-beans" class="btn-secondary small-btn active" type="button" aria-pressed="true">Current</button>
+            <button id="btn-finished-beans" class="btn-secondary small-btn" type="button" aria-pressed="false">Finished</button>
+        </div>
+        <p id="collection-help" class="field-help">Swipe left or tap ⋯ for bag actions.</p>
+        <div id="collection-feedback" class="collection-feedback" role="status" hidden></div>
         <div id="filter-bar" class="filter-bar"></div>
         <div id="bean-list-container"></div>
         <button id="btn-toggle-beans" class="btn-secondary collection-toggle" type="button" aria-controls="bean-list-container" aria-expanded="false" hidden>Show all beans</button>
@@ -198,7 +204,7 @@
         <div class="view-actions">
             <button class="btn" id="btn-save-bean" type="button">Save Bean</button>
             <button class="btn btn-secondary stack-action" id="btn-cancel-bean" type="button">Cancel</button>
-            <button class="btn btn-danger hidden danger-action" id="btn-delete-bean" type="button">Archive Bean</button>
+            <button class="btn btn-secondary hidden stack-action" id="btn-delete-bean" type="button">Finish bag</button>
         </div>
     </div>
 
@@ -211,10 +217,12 @@
             <div id="detail-roaster" class="detail-roaster"></div>
             <h1 id="detail-name" class="detail-name"></h1>
             <div id="detail-impression" class="detail-impression hidden"></div>
+            <div id="detail-bag-state" class="detail-bag-state hidden">Finished bag · shot history saved</div>
             <div id="detail-age" class="detail-age"></div>
             
             <div class="detail-actions">
                 <button class="btn-secondary small-btn" id="btn-edit-active-bean" type="button">Edit Bean</button>
+                <button class="btn-secondary small-btn hidden" id="btn-detail-new-bag" type="button">New bag of this coffee</button>
                 <details class="bean-tools">
                     <summary>More tools</summary>
                     <div class="secondary-tools">
@@ -257,7 +265,7 @@
 
         <div class="batch-card">
             <div class="batch-info">
-                <div class="field-kicker">Active Batch</div>
+                <div id="detail-batch-label" class="field-kicker">Active Batch</div>
                 <div id="detail-date" class="batch-date"></div>
             </div>
             <button class="btn-secondary small-btn" id="btn-update-roast-date" type="button">Update Date</button>
@@ -976,7 +984,7 @@
         </details>
 
         <div class="build-info">
-            Lincoln Barista 1.14.0 • Build <code data-build-commit>__BUILD_COMMIT__</code>
+            Lincoln Barista 1.15.0 • Build <code data-build-commit>__BUILD_COMMIT__</code>
         </div>
     </div>
 
@@ -1019,6 +1027,6 @@
     <button class="fab hidden" id="fab-log-shot" type="button" aria-label="Log Shot">☕</button>
 
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.14.0"></script>
+    <script type="module" src="js/app.js?v=1.15.0"></script>
 </body>
 </html>

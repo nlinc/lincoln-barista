@@ -3,17 +3,18 @@
  * Modularized and Optimized for Mobile. v1.3.5 - UI Logic Refinement.
  */
 
-import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.14.0";
-import { chartOptions, renderAnalyticsMetrics, renderPatternList } from "./analytics-view.js?v=1.14.0";
+import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.15.0";
+import { chartOptions, renderAnalyticsMetrics, renderPatternList } from "./analytics-view.js?v=1.15.0";
 import {
     archiveBean,
     createBean,
     createBeanId,
     deleteBeanPhoto,
     fetchBeansForUser,
+    restoreBean,
     updateBean,
     uploadBeanPhoto
-} from "./bean-repository.js?v=1.14.0";
+} from "./bean-repository.js?v=1.15.0";
 import {
     chooseCurrentRecipe,
     renderBeanAge,
@@ -22,22 +23,22 @@ import {
     renderDialInSummary as renderDialInSummaryView,
     renderMachineBadge,
     renderShotHistory
-} from "./bean-detail-view.js?v=1.14.0";
-import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.14.0";
-import { renderBeanCollection, resolveBeanImpression } from "./collection-view.js?v=1.14.0";
-import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.14.0";
-import { normalizeBeanRecord, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.14.0";
-import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.14.0";
-import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.14.0";
-import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.14.0";
-import { navigate } from "./router.js?v=1.14.0";
-import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.14.0";
-import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.14.0";
-import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.14.0";
-import { getBrewAdvice } from "./brew-advice.js?v=1.14.0";
-import { summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.14.0";
-import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.14.0";
-import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.14.0";
+} from "./bean-detail-view.js?v=1.15.0";
+import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.15.0";
+import { renderBeanCollection, resolveBeanImpression } from "./collection-view.js?v=1.15.0";
+import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.15.0";
+import { normalizeBeanRecord, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.15.0";
+import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.15.0";
+import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.15.0";
+import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.15.0";
+import { navigate } from "./router.js?v=1.15.0";
+import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.15.0";
+import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.15.0";
+import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.15.0";
+import { getBrewAdvice } from "./brew-advice.js?v=1.15.0";
+import { summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.15.0";
+import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.15.0";
+import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.15.0";
 import {
     createDefaultUserProfile,
     localDateKey,
@@ -47,10 +48,10 @@ import {
     normalizeUserProfile,
     presetDueDate,
     recordMachineId
-} from "./machine-config.js?v=1.14.0";
+} from "./machine-config.js?v=1.15.0";
 
-import { calculateStartingPoint, normalizeStartingSetup } from "./starting-point.js?v=1.14.0";
-import { readStartingSetup, renderStartingBasketOptions, renderStartingBeans, renderStartingResult, renderStartingSetup } from "./starting-point-view.js?v=1.14.0";
+import { calculateStartingPoint, normalizeStartingSetup } from "./starting-point.js?v=1.15.0";
+import { readStartingSetup, renderStartingBasketOptions, renderStartingBeans, renderStartingResult, renderStartingSetup } from "./starting-point-view.js?v=1.15.0";
 
 // App State
 let currentUser = null;
@@ -77,6 +78,9 @@ let analyticsReturnView = 'list';
 let legacyMigrationStarted = false;
 let historyExpanded = false;
 let collectionExpanded = false;
+let collectionScope = 'current';
+let collectionNotice = null;
+const beanActionsPending = new Set();
 let beanFetchSequence = 0;
 let maintenanceRecords = [];
 let maintenanceLoaded = false;
@@ -195,7 +199,8 @@ const app = {
     // --- ROUTING ---
     router: (view, addToHistory) => {
         navigate(view, addToHistory);
-        if (view === 'list' && currentUser) app.renderCareHome();
+        if (view === 'detail' && currentActiveBean?.archived === true) document.getElementById('fab-log-shot').classList.add('hidden');
+        if (view === 'list' && currentUser) { app.renderBeanList(); app.renderCareHome(); }
     },
 
     // --- AUTH ---
@@ -319,17 +324,84 @@ const app = {
 
     renderBeanList: () => {
         renderBeanCollection({
-            beans,
+            beans: catalogBeans,
             activeFilters,
             currentSort,
             expanded: collectionExpanded,
+            scope: collectionScope,
+            pending: beanActionsPending,
+            notice: collectionNotice,
+            onUndo: beanId => app.setBagFinished(beanId, false),
             onAdd: () => { app.resetBeanForm(); app.router("edit-bean"); },
-            onOpen: beanId => app.loadBeanDetail(beanId)
+            onOpen: beanId => app.loadBeanDetail(beanId),
+            onEdit: beanId => app.editBean(beanId),
+            onFinish: beanId => app.setBagFinished(beanId, true),
+            onRestore: beanId => app.setBagFinished(beanId, false),
+            onReuse: beanId => app.newBagFromBean(beanId)
         });
     },
 
     setSort: (value) => { currentSort = value; app.renderBeanList(); },
     toggleBeans: () => { collectionExpanded = !collectionExpanded; app.renderBeanList(); },
+    setCollectionScope: (scope) => { collectionScope = scope; collectionExpanded = false; app.renderBeanList(); },
+
+    setBagFinished: async (beanId, finished) => {
+        const bean = catalogBeans.find(item => item.id === beanId);
+        if (!bean || beanActionsPending.has(beanId) || !currentUser) return;
+        const user = currentUser;
+        beanActionsPending.add(beanId);
+        app.renderBeanList();
+        const formAction = document.getElementById('btn-delete-bean');
+        const formSave = document.getElementById('btn-save-bean');
+        if (document.body.dataset.view === 'edit-bean' && document.getElementById('input-bean-id').value === beanId) {
+            formAction.disabled = true;
+            formSave.disabled = true;
+        }
+        try {
+            const savedFields = await (finished ? archiveBean(beanId) : restoreBean(beanId));
+            if (currentUser !== user) return;
+            const savedBean = catalogBeans.find(item => item.id === beanId);
+            if (savedBean) {
+                Object.assign(savedBean, { archived: finished }, savedFields);
+                if (!finished) delete savedBean.archivedAt;
+            }
+            beans = catalogBeans.filter(item => item.archived !== true);
+            if (currentActiveBean?.id === beanId) {
+                Object.assign(currentActiveBean, { archived: finished }, savedFields);
+                if (!finished) delete currentActiveBean.archivedAt;
+            }
+            collectionNotice = { text: `${bean.name || 'Bag'} ${finished ? 'finished. Shot history saved.' : 'is back in Current.'}`, undoId: finished ? beanId : null };
+            if (!finished) collectionScope = 'current';
+            const view = document.body.dataset.view;
+            if ((view === 'edit-bean' && document.getElementById('input-bean-id').value === beanId) ||
+                (view === 'detail' && currentActiveBean?.id === beanId)) app.router('list');
+            haptic('light');
+        } catch (error) {
+            if (currentUser === user) {
+                collectionNotice = { text: `Couldn’t ${finished ? 'finish' : 'put back'} this bag. Please try again.` };
+                if (document.body.dataset.view === 'edit-bean') alert(collectionNotice.text);
+                console.warn('Bag status save failed:', error);
+            }
+        } finally {
+            beanActionsPending.delete(beanId);
+            formAction.disabled = false;
+            if (document.getElementById('input-bean-id').value === beanId) formSave.disabled = false;
+            if (currentUser === user) app.renderBeanList();
+        }
+    },
+
+    editBean: (beanId) => {
+        currentActiveBean = catalogBeans.find(bean => bean.id === beanId);
+        if (currentActiveBean) app.editActiveBean();
+    },
+
+    newBagFromBean: (beanId) => {
+        const bean = catalogBeans.find(item => item.id === beanId);
+        if (!bean) return;
+        app.resetBeanForm();
+        app.reuseBeanDetails(bean);
+        app.router('edit-bean');
+    },
 
     saveBean: async () => {
         const btn = document.getElementById('btn-save-bean');
@@ -340,7 +412,7 @@ const app = {
         btn.innerText = "Processing...";
         try {
             const id = document.getElementById('input-bean-id').value;
-            const existingBean = id ? beans.find(bean => bean.id === id) : null;
+            const existingBean = id ? catalogBeans.find(bean => bean.id === id) : null;
             const beanId = id || createBeanId();
             const data = {
                 uid: currentUser.uid,
@@ -363,6 +435,7 @@ const app = {
             
             if(id) await updateBean(beanId, { ...data, ...imageFields, currentRoastDate: manualRoastDate });
             else await createBean(beanId, { ...data, ...imageFields, currentRoastDate: manualRoastDate, createdAt: new Date() });
+            if (!id) { collectionScope = 'current'; collectionNotice = null; }
             
             await app.fetchBeans();
             app.router('list');
@@ -371,11 +444,9 @@ const app = {
     },
 
     deleteBean: async () => {
-        if(confirm("Archive this bean? Its shot history will stay available for export and records.")) {
-            await archiveBean(document.getElementById('input-bean-id').value);
-            await app.fetchBeans();
-            app.router('list');
-        }
+        const beanId = document.getElementById('input-bean-id').value;
+        const bean = catalogBeans.find(item => item.id === beanId);
+        if (bean) await app.setBagFinished(beanId, bean.archived !== true);
     },
 
     editActiveBean: () => {
@@ -405,13 +476,14 @@ const app = {
         app.renderBeanSuggestions();
         document.getElementById('bean-extra-details').open = Boolean(b.origin || b.roasterLocation || b.tenBeanWeight || b.tags?.length || imageSrc);
         document.getElementById('btn-delete-bean').classList.remove('hidden');
+        document.getElementById('btn-delete-bean').textContent = b.archived === true ? 'Put back in Current' : 'Finish bag';
         document.getElementById('btn-save-bean').innerText = "Save Bean";
         app.router('edit-bean');
     },
 
     loadBeanDetail: async (id) => {
         try {
-            currentActiveBean = beans.find(b => b.id === id);
+            currentActiveBean = catalogBeans.find(b => b.id === id);
             if(!currentActiveBean) return app.router('list');
 
             const roastDate = currentActiveBean.currentRoastDate || "Unknown";
@@ -462,7 +534,7 @@ const app = {
             expanded: historyExpanded,
             logs: logsCache,
             onEdit: shotId => app.openEditShot(shotId),
-            onLog: () => app.openLogShot(),
+            onLog: () => currentActiveBean?.archived === true ? app.newBagFromBean(currentActiveBean.id) : app.openLogShot(),
             onToggle: () => {
                 historyExpanded = !historyExpanded;
                 app.renderHistory();
@@ -570,8 +642,8 @@ const app = {
         document.getElementById('input-name').value,
         document.getElementById('input-bean-id').value
     ),
-    reuseBeanDetails: () => {
-        const bean = catalogBeans.find(item => item.id === document.getElementById('input-repeat-bean').value);
+    reuseBeanDetails: (sourceBean) => {
+        const bean = sourceBean || catalogBeans.find(item => item.id === document.getElementById('input-repeat-bean').value);
         if (!bean) return;
         const details = reusableBeanDetails(bean);
         for (const [field, value] of Object.entries({
@@ -605,6 +677,7 @@ const app = {
     },
     removeTag: (i) => { currentEditingTags.splice(i, 1); app.renderEditingTags(); },
     openLogShot: () => {
+        if (currentActiveBean?.archived === true) return app.newBagFromBean(currentActiveBean.id);
         haptic('light');
         const machineProfile = activeMachineProfile();
         const isBianca = activeMachineId() === "bianca";
@@ -1241,7 +1314,7 @@ const app = {
         }
     },
     renderAnalytics: (logs) => {
-        const summary = summarizeShotPatterns(logs, beans, { finerDirection: userProfile.finerDirection });
+        const summary = summarizeShotPatterns(logs, catalogBeans, { finerDirection: userProfile.finerDirection });
         const usableLogs = summary.usable;
         const ageEmpty = document.getElementById("age-empty-state");
         const trendEmpty = document.getElementById("trend-empty-state");
@@ -1381,6 +1454,9 @@ observeAuthState(async u => {
     startingPlan = null;
     beans = [];
     collectionExpanded = false;
+    collectionScope = 'current';
+    collectionNotice = null;
+    beanActionsPending.clear();
     catalogBeans = [];
     currentActiveBean = null;
     currentRecipeShot = null;
@@ -1406,9 +1482,11 @@ on("btn-login", "click", () => app.login()); on("btn-open-settings", "click", ()
 on("btn-select-elizabeth", "click", () => app.selectMachine("elizabeth")); on("btn-select-bianca", "click", () => app.selectMachine("bianca"));
 on("btn-open-maintenance", "click", () => app.openMaintenance()); on("btn-save-maintenance", "click", () => app.saveMaintenance());
 on("btn-toggle-beans", "click", () => app.toggleBeans());
+on("btn-current-beans", "click", () => app.setCollectionScope('current')); on("btn-finished-beans", "click", () => app.setCollectionScope('finished'));
 on("input-sort-beans", "change", (e) => app.setSort(e.target.value)); on("fab-add-bean", "click", () => { app.resetBeanForm(); app.router("edit-bean"); }); on("fab-log-shot", "click", () => app.openLogShot());
 on("input-bean-image", "change", (e) => app.handleImageUpload(e)); on("btn-remove-image", "click", () => app.removeImage()); on("btn-add-tag", "click", () => app.addTag());
 on("btn-reuse-bean", "click", () => app.reuseBeanDetails());
+on("btn-detail-new-bag", "click", () => app.newBagFromBean(currentActiveBean?.id));
 on("input-name", "input", () => app.updateBeanMatchHint()); on("input-roaster", "input", () => app.updateBeanMatchHint());
 on("input-new-tag", "keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); app.addTag(); } });
 document.querySelectorAll(".impression-button").forEach(button => button.onclick = () => app.setBeanImpression(button.dataset.impression, true));

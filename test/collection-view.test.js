@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { beanImpressionLabel, collectionPreview, resolveBeanImpression, selectVisibleBeans } from "../public/js/collection-view.js";
+import { beanImpressionLabel, beansForScope, collectionPreview, resolveBeanImpression, selectVisibleBeans, swipeAction } from "../public/js/collection-view.js";
 
 const beans = [
     { id: "1", name: "Zulu", roaster: "North", origin: "Kenya", roastLevel: "Light", impression: "meh", tags: ["berry"], createdAt: { seconds: 1 } },
@@ -9,6 +9,23 @@ const beans = [
 ];
 
 describe("collection view model", () => {
+    it('separates current and finished bags without merging or rewriting their identities', () => {
+        const finished = { id: 'finished', name: 'Alpha', archived: true, imagePath: 'original-photo' };
+        const collection = [...beans, finished];
+        assert.deepEqual(beansForScope(collection).map(bean => bean.id), ['1', '2', '3']);
+        assert.deepEqual(beansForScope(collection, 'finished'), [finished]);
+        assert.equal(beansForScope(collection, 'finished')[0], finished);
+        const justFinished = { id: 'old-bag', archived: true, createdAt: { seconds: 1 }, archivedAt: { seconds: 100 } };
+        const earlierFinished = { id: 'newer-bag', archived: true, createdAt: { seconds: 50 }, archivedAt: { seconds: 60 } };
+        assert.deepEqual(collectionPreview([earlierFinished, justFinished]).beans.map(bean => bean.id), ['old-bag', 'newer-bag']);
+    });
+
+    it('reveals actions on deliberate horizontal swipes and leaves scrolling and small movements alone', () => {
+        assert.equal(swipeAction(-80, 10), 'open');
+        assert.equal(swipeAction(80, 10), 'close');
+        for (const [x, y] of [[-20, 0], [-70, 100], [-60, 45], [0, 100]]) assert.equal(swipeAction(x, y), null);
+    });
+
     it("filters across bean metadata and tags", () => {
         assert.deepEqual(selectVisibleBeans(beans, new Set(["north"])).map(bean => bean.id), ["3", "1"]);
         assert.deepEqual(selectVisibleBeans(beans, new Set(["dark", "chocolate"])).map(bean => bean.id), ["2"]);

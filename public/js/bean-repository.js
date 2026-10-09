@@ -1,7 +1,7 @@
 import { collection, deleteField, doc, getDocs, query, runTransaction, setDoc, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { deleteObject, getDownloadURL, ref as storageRef, uploadString } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { db, storage } from "./firebase-client.js?v=1.14.0";
-import { beanNormalizationPatch, normalizeBeanRecord } from "./bean-record.js?v=1.14.0";
+import { db, storage } from "./firebase-client.js?v=1.15.0";
+import { beanNormalizationPatch, normalizeBeanRecord } from "./bean-record.js?v=1.15.0";
 
 export const fetchBeansForUser = async (uid) => {
     const snapshot = await getDocs(query(collection(db, "beans"), where("uid", "==", uid)));
@@ -22,11 +22,17 @@ export const updateBean = (beanId, data) => runTransaction(db, async transaction
     transaction.update(reference, patch);
 });
 
-export const archiveBean = (beanId) => updateBean(beanId, {
-    archived: true,
-    archivedAt: new Date(),
-    updatedAt: new Date()
-});
+export const archiveBean = async (beanId) => {
+    const fields = { archived: true, archivedAt: new Date(), updatedAt: new Date() };
+    await updateBean(beanId, fields);
+    return fields;
+};
+
+export const restoreBean = async (beanId) => {
+    const fields = { archived: false, updatedAt: new Date() };
+    await updateBean(beanId, { ...fields, archivedAt: deleteField() });
+    return fields;
+};
 
 export const uploadBeanPhoto = async (uid, beanId, dataUrl) => {
     const path = `users/${uid}/beans/${beanId}/bag-${Date.now()}.jpg`;

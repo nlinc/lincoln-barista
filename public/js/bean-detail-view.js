@@ -1,9 +1,9 @@
-import { getBrewAdvice } from "./brew-advice.js?v=1.14.0";
-import { el, renderEmptyAction } from "./dom.js?v=1.14.0";
-import { validateShot } from "./shot-analytics.js?v=1.14.0";
-import { beanImpressionLabel, resolveBeanImpression } from "./collection-view.js?v=1.14.0";
-import { normalizeRoastDate } from "./bean-record.js?v=1.14.0";
-import { localDateKey } from "./machine-config.js?v=1.14.0";
+import { getBrewAdvice } from "./brew-advice.js?v=1.15.0";
+import { el, renderEmptyAction } from "./dom.js?v=1.15.0";
+import { validateShot } from "./shot-analytics.js?v=1.15.0";
+import { beanImpressionLabel, resolveBeanImpression } from "./collection-view.js?v=1.15.0";
+import { normalizeRoastDate } from "./bean-record.js?v=1.15.0";
+import { localDateKey } from "./machine-config.js?v=1.15.0";
 
 const ratioFor = (shot) => {
     const dose = parseFloat(shot?.dose);
@@ -49,6 +49,11 @@ export const renderBeanIdentity = (bean) => {
     impressionElement.textContent = beanImpressionLabel(bean);
     impressionElement.className = impression ? `detail-impression impression-${impression}` : "detail-impression hidden";
     document.getElementById("detail-date").textContent = bean.currentRoastDate || "Unknown";
+    const finished = bean.archived === true;
+    document.getElementById('detail-bag-state').classList.toggle('hidden', !finished);
+    document.getElementById('btn-detail-new-bag').classList.toggle('hidden', !finished);
+    document.getElementById('detail-batch-label').textContent = finished ? 'Finished Batch' : 'Active Batch';
+    for (const id of ['btn-detail-starting-point', 'btn-open-detail-tuning']) document.getElementById(id).classList.toggle('hidden', finished);
 };
 
 export const beanAgeDays = (roastDate, today = localDateKey()) => {
@@ -90,7 +95,7 @@ export const renderCurrentRecipe = (recipe) => {
 export const renderShotHistory = ({ bean, expanded, logs, onEdit, onLog, onToggle }) => {
     const container = document.getElementById("history-container");
     if (!logs.length) {
-        renderEmptyAction(container, "No logs", "Log your first extraction.", "Log Shot", onLog);
+        renderEmptyAction(container, "No logs", bean.archived === true ? "No shots were logged for this bag." : "Log your first extraction.", bean.archived === true ? "New bag" : "Log Shot", onLog);
         return;
     }
     const groups = {};

@@ -890,3 +890,25 @@ body[data-view="settings"] #btn-open-settings { border-color: var(--roast-light)
 @media (min-width: 601px) {
     .care-home-heading .section-title { font-size: 1.7rem; }
 }
+
+/* Finished bags keep their history and stay available for the next purchase. */
+.collection-scopes { display: flex; gap: 0.5rem; margin-top: 0.8rem; }
+.collection-scopes button { min-height: 44px; }
+.collection-scopes button.active { border-color: var(--roast-light); color: var(--accent-amber); }
+#collection-help { margin: 0.6rem 0 1rem; }
+.collection-feedback { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.75rem; border: 1px solid var(--panel-border); border-radius: var(--radius-sm); margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.85rem; }
+.collection-feedback[hidden] { display: none; }
+.collection-feedback button { flex: 0 0 auto; min-height: 44px; }
+.bean-tile { position: relative; min-width: 0; align-self: start; }
+.bean-tile .bean-card { touch-action: pan-y pinch-zoom; }
+.bean-tile .bean-card-body, .collection-preview .bean-tile .bean-card-body { padding-right: 3rem; }
+.bean-actions-toggle { position: absolute; top: 0.3rem; right: 0.2rem; width: 44px; height: 44px; border: 0; border-radius: var(--radius-sm); background: rgba(28,25,23,0.85); color: var(--text-main); font-size: 1.5rem; cursor: pointer; }
+.bean-actions-toggle:focus-visible { outline: 3px solid var(--roast-light); }
+.bean-quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; padding: 0.5rem 0; }
+.bean-quick-actions[hidden] { display: none; }
+.bean-quick-actions button { min-height: 44px; }
+.bean-tile.actions-open .bean-card { border-color: var(--roast-light); transform: none; }
+.detail-bag-state { color: var(--text-muted); font-size: 0.8rem; margin: 0.5rem 0; }
+@media (prefers-reduced-motion: reduce) {
+    .bean-tile .bean-card { transition: none; }
+}
