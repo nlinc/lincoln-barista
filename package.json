@@ -1,10 +1,10 @@
 {
   "name": "lincoln-barista",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "for file in public/js/*.js public/sw.js; do node --check \"$file\" || exit 1; done",
+    "check": "for file in public/js/*.js public/sw.js scripts/*.mjs; do node --check \"$file\" || exit 1; done",
     "test": "node --test"
   }
 }

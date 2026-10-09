@@ -1,9 +1,11 @@
-import { el } from "./dom.js?v=1.13.0";
+import { el } from "./dom.js?v=1.14.0";
 
-export const cleanCatalogText = (value) => String(value || "").trim().replace(/\s+/g, " ");
+import { cleanBeanText, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.14.0";
+
+export const cleanCatalogText = cleanBeanText;
 const catalogKey = (value) => cleanCatalogText(value).toLocaleLowerCase();
 const beanKey = (bean) => `${catalogKey(bean.roaster)}\u0000${catalogKey(bean.name)}`;
-const beanTime = (bean) => bean.updatedAt?.seconds || bean.createdAt?.seconds || 0;
+const beanTime = (bean) => recordTime(bean.updatedAt) || recordTime(bean.createdAt);
 
 export const catalogEntries = (beans) => {
     const seen = new Set();
@@ -38,7 +40,7 @@ export const reusableBeanDetails = (bean) => ({
     origin: cleanCatalogText(bean.origin),
     roastLevel: bean.roastLevel || "Medium",
     tenBeanWeight: bean.tenBeanWeight || "",
-    tags: Array.isArray(bean.tags) ? [...bean.tags] : []
+    tags: normalizeBeanTags(bean.tags)
 });
 
 const replaceOptions = (id, values) => {

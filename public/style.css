@@ -869,3 +869,24 @@ body[data-view="settings"] #btn-open-settings { border-color: var(--roast-light)
     .secondary-tools > button { flex: 1 1 140px; min-height: 44px; }
     #view-settings #btn-save-profile { max-width: none; }
 }
+
+/* Home: care first, with a compact expandable coffee list. */
+#view-list { max-width: 860px; }
+#view-list .care-home-card { margin-top: 0; margin-bottom: 1.5rem; }
+.care-home-heading .section-title { font-size: 1.35rem; }
+.care-machine-label { display: block; color: var(--text-muted); font-size: 0.75rem; margin-top: 0.35rem; }
+.care-home-next { color: var(--text-secondary); font-size: 0.75rem; line-height: 1.5; margin: 0.9rem 0 0; }
+.care-home-next:empty { display: none; }
+.collection-count { display: block; color: var(--text-muted); font-size: 0.75rem; margin-top: 0.35rem; }
+.collection-toggle { display: block; width: 100%; min-height: 44px; margin-top: 1rem; padding: 0.8rem; }
+.collection-toggle[hidden] { display: none; }
+#bean-list-container.collection-preview { grid-template-columns: 1fr; gap: 0.6rem; }
+.collection-preview .bean-card { display: grid; grid-template-columns: 72px minmax(0, 1fr); grid-template-rows: 4px auto; }
+.collection-preview .roast-bar { grid-column: 1 / -1; }
+.collection-preview .bean-card-thumb { grid-row: 2; width: 72px; height: 100%; min-height: 76px; border-bottom: 0; border-right: 1px solid var(--panel-border); }
+.collection-preview .bean-card-body { grid-row: 2; gap: 0.25rem; padding: 0.75rem; }
+.collection-preview .bean-card-tags { display: none; }
+.collection-preview .bean-card:hover { transform: none; }
+@media (min-width: 601px) {
+    .care-home-heading .section-title { font-size: 1.7rem; }
+}

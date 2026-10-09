@@ -1,4 +1,7 @@
-import { el, renderEmptyAction } from "./dom.js?v=1.13.0";
+import { normalizeBeanRecord, recordTime, resolveBeanImpression } from "./bean-record.js?v=1.14.0";
+export { resolveBeanImpression } from "./bean-record.js?v=1.14.0";
+
+import { el, renderEmptyAction } from "./dom.js?v=1.14.0";
 
 const roastColor = (level = "Medium") => ({
     Light: "#f59e0b",
@@ -21,15 +24,6 @@ const IMPRESSION_META = {
     "not-for-me": { label: "🙅 Not for me", rank: 1 }
 };
 
-export const resolveBeanImpression = (bean = {}) => {
-    if (IMPRESSION_META[bean.impression]) return bean.impression;
-    const legacyRating = Number(bean.rating) || 0;
-    if (legacyRating >= 4) return "enjoyed";
-    if (legacyRating === 3) return "meh";
-    if (legacyRating > 0) return "not-for-me";
-    return "";
-};
-
 export const beanImpressionLabel = (bean = {}) => IMPRESSION_META[resolveBeanImpression(bean)]?.label || "";
 
 const filterBeans = (beans, activeFilters) => beans.filter(bean => {
@@ -44,20 +38,32 @@ const sortBeans = (beans, currentSort) => beans.sort((a, b) => {
     if (currentSort === "impression") {
         return (IMPRESSION_META[resolveBeanImpression(b)]?.rank || 0) - (IMPRESSION_META[resolveBeanImpression(a)]?.rank || 0);
     }
-    return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+    return recordTime(b.createdAt) - recordTime(a.createdAt);
 });
 
 export const selectVisibleBeans = (beans, activeFilters = new Set(), currentSort = "newest") => {
-    return sortBeans(filterBeans(beans, activeFilters), currentSort);
+    return sortBeans(filterBeans(beans.map(normalizeBeanRecord), activeFilters), currentSort);
 };
 
-export const renderBeanCollection = ({ beans, activeFilters, currentSort, onAdd, onOpen }) => {
+export const collectionPreview = (beans, activeFilters, currentSort, expanded = false) => {
+    const matching = selectVisibleBeans(beans, activeFilters, currentSort);
+    return { beans: expanded ? matching : matching.slice(0, 3), total: matching.length };
+};
+
+export const renderBeanCollection = ({ beans, activeFilters, currentSort, expanded = false, onAdd, onOpen }) => {
     const container = document.getElementById("bean-list-container");
     if (!container) return;
-    const visibleBeans = selectVisibleBeans(beans, activeFilters, currentSort);
+    const preview = collectionPreview(beans, activeFilters, currentSort, expanded);
+    const visibleBeans = preview.beans;
+    const toggle = document.getElementById("btn-toggle-beans");
+    toggle.hidden = preview.total <= 3;
+    toggle.textContent = expanded ? "Show fewer beans" : `Show all ${preview.total} beans`;
+    toggle.setAttribute("aria-expanded", String(expanded));
+    document.getElementById("collection-count").textContent = preview.total ? `${visibleBeans.length} of ${preview.total}` : "";
+    container.classList.toggle("collection-preview", !expanded);
 
     if (!visibleBeans.length) {
-        renderEmptyAction(container, "No coffee found", "Start a new profile.", "Add Bean", onAdd);
+        renderEmptyAction(container, "No coffee found", "Add a bag to start logging shots.", "Add Bean", onAdd);
         return;
     }
 

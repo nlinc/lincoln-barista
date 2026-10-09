@@ -19,14 +19,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"></noscript>
-    <link rel="stylesheet" href="style.css?v=1.13.0">
+    <link rel="stylesheet" href="style.css?v=1.14.0">
 </head>
 <body>
 
     <div id="top-bar">
         <div class="app-brand">
             <div class="app-logo">Lincoln <span>Barista</span></div>
-            <div class="build-chip">v1.13.0 · <code data-build-commit>__BUILD_COMMIT__</code></div>
+            <div class="build-chip">v1.14.0 · <code data-build-commit>__BUILD_COMMIT__</code></div>
         </div>
         <div class="top-actions">
             <button class="btn-secondary small-btn header-nav" type="button" data-route="list">Beans</button>
@@ -71,8 +71,20 @@
 
     <!-- VIEW: LIST -->
     <div id="view-list" class="view">
+        <section id="care-home-card" class="card care-home-card hidden" aria-labelledby="care-home-title">
+            <div class="care-home-heading">
+                <div>
+                    <h2 id="care-home-title" class="section-title">Machine care <span id="care-home-machine" class="care-machine-label"></span></h2>
+                    <p id="care-home-summary" class="care-home-summary" role="status">Checking your care history…</p>
+                </div>
+                <button id="care-home-open" class="btn-secondary small-btn" type="button">All care →</button>
+            </div>
+            <div id="care-home-list" class="care-home-list"></div>
+            <p id="care-home-next" class="care-home-next"></p>
+        </section>
+
         <div class="section-toolbar">
-            <h2 class="section-title">My Beans</h2>
+            <div><h2 class="section-title">My Beans</h2><span id="collection-count" class="collection-count" role="status"></span></div>
             <select id="input-sort-beans" class="sort-select" aria-label="Sort collection">
                 <option value="newest">Recent</option>
                 <option value="name">A-Z</option>
@@ -83,18 +95,7 @@
         <div id="collection-status" class="status-strip hidden"></div>
         <div id="filter-bar" class="filter-bar"></div>
         <div id="bean-list-container"></div>
-
-        <section id="care-home-card" class="card care-home-card hidden" aria-labelledby="care-home-title">
-            <div class="care-home-heading">
-                <div>
-                    <h2 id="care-home-title" class="section-title">Machine care</h2>
-                    <p id="care-home-summary" class="care-home-summary" role="status">Checking your care history…</p>
-                </div>
-                <button id="care-home-open" class="btn-secondary small-btn" type="button">All care →</button>
-            </div>
-            <div id="care-home-list" class="care-home-list"></div>
-        </section>
-
+        <button id="btn-toggle-beans" class="btn-secondary collection-toggle" type="button" aria-controls="bean-list-container" aria-expanded="false" hidden>Show all beans</button>
     </div>
 
     <!-- VIEW: EDIT BEAN -->
@@ -975,7 +976,7 @@
         </details>
 
         <div class="build-info">
-            Lincoln Barista 1.13.0 • Build <code data-build-commit>__BUILD_COMMIT__</code>
+            Lincoln Barista 1.14.0 • Build <code data-build-commit>__BUILD_COMMIT__</code>
         </div>
     </div>
 
@@ -1018,6 +1019,6 @@
     <button class="fab hidden" id="fab-log-shot" type="button" aria-label="Log Shot">☕</button>
 
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.13.0"></script>
+    <script type="module" src="js/app.js?v=1.14.0"></script>
 </body>
 </html>

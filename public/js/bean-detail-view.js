@@ -1,7 +1,9 @@
-import { getBrewAdvice } from "./brew-advice.js?v=1.13.0";
-import { el, renderEmptyAction } from "./dom.js?v=1.13.0";
-import { validateShot } from "./shot-analytics.js?v=1.13.0";
-import { beanImpressionLabel, resolveBeanImpression } from "./collection-view.js?v=1.13.0";
+import { getBrewAdvice } from "./brew-advice.js?v=1.14.0";
+import { el, renderEmptyAction } from "./dom.js?v=1.14.0";
+import { validateShot } from "./shot-analytics.js?v=1.14.0";
+import { beanImpressionLabel, resolveBeanImpression } from "./collection-view.js?v=1.14.0";
+import { normalizeRoastDate } from "./bean-record.js?v=1.14.0";
+import { localDateKey } from "./machine-config.js?v=1.14.0";
 
 const ratioFor = (shot) => {
     const dose = parseFloat(shot?.dose);
@@ -10,9 +12,10 @@ const ratioFor = (shot) => {
 };
 
 export const chooseCurrentRecipe = (logs, roastLevel) => {
-    if (!logs.length) return null;
-    const latestGood = logs.find(log => getBrewAdvice(log, roastLevel).status === "good" && (!log.taste || log.taste === "balanced"));
-    return { shot: latestGood || logs[0], status: latestGood ? "Dialed" : "Resume" };
+    const complete = logs.filter(log => validateShot(log).valid);
+    if (!complete.length) return null;
+    const latestGood = complete.find(log => getBrewAdvice(log, roastLevel).status === "good" && !log.channelingObserved && (!log.taste || log.taste === "balanced"));
+    return { shot: latestGood || complete[0], status: latestGood ? "Dialed" : "Resume" };
 };
 
 export const summarizeDialIn = (logs) => {
@@ -48,15 +51,21 @@ export const renderBeanIdentity = (bean) => {
     document.getElementById("detail-date").textContent = bean.currentRoastDate || "Unknown";
 };
 
+export const beanAgeDays = (roastDate, today = localDateKey()) => {
+    const start = normalizeRoastDate(roastDate);
+    const end = normalizeRoastDate(today);
+    return start && end ? Math.round((Date.parse(end) - Date.parse(start)) / 86400000) : null;
+};
+
 export const renderBeanAge = (roastDate) => {
     const age = document.getElementById("detail-age");
     const warning = document.getElementById("stale-warning-container");
-    if (!roastDate || roastDate === "Unknown") {
+    const days = beanAgeDays(roastDate);
+    if (days === null || days < 0) {
         age.textContent = "";
         warning.classList.add("hidden");
         return;
     }
-    const days = Math.floor((new Date() - new Date(roastDate)) / 86400000);
     const message = days >= 7 && days <= 21 ? "✨ Peak Flavor Window" : days < 7 ? "⏳ Resting..." : "🫘 Aging";
     age.textContent = `${days} days since roast • ${message}`;
     if (days > 30) {

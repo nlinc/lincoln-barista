@@ -15,6 +15,13 @@ const shot = (age, grind, overrides = {}) => ({
 });
 
 describe("shot analytics", () => {
+    it('rejects numeric prefixes and empty or boolean measured values', () => {
+        for (const dose of ['18oops', '', ' ', null, undefined, true]) {
+            assert.equal(validateShot({ grind: '14', time: '30', dose, yield: '36' }).valid, false);
+        }
+        assert.equal(validateShot({ grind: '14', time: '30', dose: '18.5', yield: '36' }).valid, true);
+    });
+
     it("rejects incomplete or impossible shot values", () => {
         const result = validateShot({ grind: "14", dose: "0", yield: "", time: "-1" });
 

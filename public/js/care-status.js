@@ -1,10 +1,8 @@
-import { localDateKey, maintenancePresetsFor, parseDateKey, presetDueDate } from "./machine-config.js?v=1.13.0";
+import { localDateKey, maintenancePresetsFor, parseDateKey, presetDueDate } from "./machine-config.js?v=1.14.0";
+import { recordTime } from "./bean-record.js?v=1.14.0";
 
 const createdTime = (record) => {
-    const value = record.createdAt;
-    if (typeof value?.toMillis === "function") return value.toMillis();
-    if (typeof value?.seconds === "number") return value.seconds * 1000 + (value.nanoseconds || 0) / 1e6;
-    return value instanceof Date ? value.getTime() : 0;
+    return recordTime(record.createdAt);
 };
 
 export const latestCareRecords = (records) => {
@@ -46,4 +44,15 @@ export const careChecklist = (machineId, records, today = localDateKey()) => {
         }
         return { preset, record, state, label, nextDueDate };
     });
+};
+
+export const homeCareSummary = (machineId, records, today = localDateKey()) => {
+    const tasks = careChecklist(machineId, records, today);
+    const due = tasks.filter(task => task.state === 'due').sort((a, b) => {
+        if (a.nextDueDate && b.nextDueDate) return a.nextDueDate.localeCompare(b.nextDueDate);
+        return a.nextDueDate ? -1 : b.nextDueDate ? 1 : 0;
+    });
+    const untracked = tasks.filter(task => task.state === 'untracked');
+    const upcoming = tasks.filter(task => task.state === 'upcoming').sort((a, b) => a.nextDueDate.localeCompare(b.nextDueDate));
+    return { due, untracked, visible: [...due, ...untracked].slice(0, 3), next: upcoming[0] || null, done: tasks.filter(task => task.state === 'done').length };
 };

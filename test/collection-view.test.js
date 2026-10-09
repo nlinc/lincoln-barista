@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { beanImpressionLabel, resolveBeanImpression, selectVisibleBeans } from "../public/js/collection-view.js";
+import { beanImpressionLabel, collectionPreview, resolveBeanImpression, selectVisibleBeans } from "../public/js/collection-view.js";
 
 const beans = [
     { id: "1", name: "Zulu", roaster: "North", origin: "Kenya", roastLevel: "Light", impression: "meh", tags: ["berry"], createdAt: { seconds: 1 } },
@@ -26,5 +26,14 @@ describe("collection view model", () => {
         assert.equal(resolveBeanImpression({ rating: 3 }), "meh");
         assert.equal(resolveBeanImpression({ rating: 1 }), "not-for-me");
         assert.equal(beanImpressionLabel({ rating: 5 }), "😊 Enjoyed");
+    });
+
+    it('previews three beans after sorting and expands without losing the rest', () => {
+        const collection = [...beans, { id: '4', name: 'Newest', createdAt: new Date('2026-10-09') }];
+        const preview = collectionPreview(collection);
+        assert.equal(preview.total, 4);
+        assert.deepEqual(preview.beans.map(bean => bean.id), ['4', '2', '3']);
+        assert.equal(collectionPreview(collection, new Set(), 'newest', true).beans.length, 4);
+        assert.equal(collectionPreview(collection, new Set(['north'])).total, 2);
     });
 });

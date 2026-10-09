@@ -28,7 +28,7 @@ A personal espresso tracking Progressive Web App (PWA) designed to help dial in 
 2. Open **Settings → My Baskets**, check your stock or Pullman baskets (15–17g, 17–19g, 19–22g), and choose **Save Settings**. The editor saves separately for Elizabeth and Bianca and preserves grinder preferences and calibrations. You do not need a bean measurement to add a basket.
 3. For extra help, open **More tools** on a bean or **Tools & data** in Settings. **First-shot recipe** uses your saved baskets; **Dial in next shot** offers machine-specific guidance; **Shot trends** shows analytics. Settings also contains CSV export and sign-out.
 
-The collection leads with beans, with one-tap machine care below. Bean detail leads with the current recipe and shot history. Repeat-coffee entry, shot summaries, basket calibration, and machine profiles are expandable.
+Home leads with one-tap machine care and three recent beans. **Show all beans** expands the filtered and sorted collection; **Show fewer beans** restores the compact list. Bean detail leads with the current recipe and shot history. Repeat-coffee entry, shot summaries, basket calibration, and machine profiles are expandable.
 
 ## 🛠️ Tech Stack
 
@@ -60,6 +60,12 @@ npm run check
 npm test
 ```
 
+## Data audit and normalization
+
+`node scripts/audit-data.mjs <Firestore snapshot.json> <private output directory>` reads an owner-scoped Firestore REST snapshot and writes an audit report and cleanup plan; it does not contact Firebase or apply writes. Each planned write uses a field mask and the source document's update-time precondition. Retain a fresh private backup, resolve reported conflicts, deploy matching rules, and verify the plan in an emulator before applying it. Never commit account snapshots or cleanup receipts.
+
+Normalization preserves individual bag IDs, shot links, photos, measured results, and recorded timestamps. Old bean stars become the existing three-state impression; explicitly cleared impressions stay clear. Retired stars, five-bean measurements, flavor scales, and original date strings move into a restricted `legacy` map. Historical US dates become ISO calendar dates. Missing old machine labels retain the existing Elizabeth meaning. Matching coffee names are review candidates and are never automatically merged. Bean and shot edits also reconcile legacy fields transactionally.
+
 ## v1.11.0 verification
 
 The release was checked in an isolated local fixture using the real app UI and in-memory repositories. Phone-width review covered login, collection, bean form, bean detail, shot log, analytics, settings, machine care, and both tuning labs. Tested archived coffee reuse, one-tap care completion, switching machines, tuning-to-log, cancellation back to the selected bean, and saving a sample shot. Production user records were not changed by these checks. Node tests cover catalog normalization, safe metadata reuse, care dates and latest-record selection, tuning scoping, and update activation without forced navigation.
@@ -80,3 +86,11 @@ Verification: `npm run check` and all 86 Node tests passed. An isolated browser 
 Reduced the header to Beans and Settings, removed duplicate collection shortcuts and the separate global stats panel, and kept secondary tools behind disclosures. Pullman basket checkboxes are visible when Settings opens and share one save action with machine settings. Saved setup, calibration, and measurements retain their existing Firestore schema; no data migration or rule change is needed. Failed settings saves retain inputs and do not replace the active profile.
 
 Verification: `npm run check` and all 87 Node tests passed. An isolated browser fixture with local repositories exercised basket save/reload, independent machine drafts, calibration preservation, validation, failed-save recovery, bean entry, shot save, blank actual yield/time on recipe handoff, analytics, both tuning flows, and one-tap care. Visual review covered phone-width login, collection, bean form/detail, shot log, analytics, and settings, plus desktop collection and settings. Production records were not used or modified.
+
+## v1.14.0 home and historical-data review
+
+Moved machine care above a three-bean preview, prioritized overdue tasks, showed the next scheduled service, and retained one-tap completion. The full collection expands without changing filters or sorting. Fixed timestamp ordering, calendar-day roast age, explicitly cleared impressions, and incomplete/channeling shot selection for current recipes.
+
+The owner-scoped audit checked 29 bags, 406 shots, and eight care records. It found 27 legacy bean ratings, six beans with retired root fields, 103 shots with retired ratings, two historical roast-date formats, and missing historical machine labels. No coffee-name duplicates or orphan shot references were found. The cleanup plan preserves retired values under `legacy` and never merges or archives bags.
+
+Verification: `npm run check` and all 104 Node tests passed. Phone, narrow-phone, and desktop fixtures covered compact/expanded beans, one-tap care, bean entry/detail, shot logging, analytics, and Settings. The Firestore emulator validated all 357 planned writes and confirmed all 443 records remain editable; wrong-owner access, ownership transfers, invalid legacy fields, and stale preconditions were rejected. Real Firebase browser SDK tests exercised transactional legacy bean and shot edits, repeated saves, cleared impressions, new-bag normalization, and archiving with history preserved. Emulator and UI checks made no production writes.

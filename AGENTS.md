@@ -12,12 +12,14 @@ This repo is a small Firebase/static PWA for tracking espresso beans, brew logs,
 - Main orchestration and event wiring: `public/js/app.js`.
 - Firebase initialization: `public/js/firebase-client.js`.
 - Firebase persistence boundaries: `public/js/*-repository.js`.
+- Bag compatibility and normalization: `public/js/bean-record.js`; historical shot metadata: `public/js/shot-record.js`. Bean and shot edits use transactions to preserve retired values under `legacy` before removing unsupported root fields.
+- Owner-scoped offline data audit and concurrency-protected cleanup plans: `scripts/audit-data.mjs`. Keep source snapshots, plans, and receipts outside the repository; deploy matching rules and validate preservation before applying a plan.
 - Feature presentation modules: `public/js/*-view.js`.
 - Private coffee library suggestions and repeat-profile helpers: `public/js/bean-catalog-view.js` (derived from owned beans, including archives; no shared catalog collection).
 - Home care checklist and latest-record selection: `public/js/care-status.js`.
 - Bean and machine scoping for guided tuning: `public/js/tuning-session.js`.
 - Shared DOM and navigation helpers: `public/js/dom.js` and `public/js/router.js`.
-- Basket ownership, grinder preferences, and calibration have one editor in Settings (My Baskets), saved with the machine profile. First-shot recipes consume that saved setup; optional tools stay behind disclosures and the collection leads with beans.
+- Basket ownership, grinder preferences, and calibration have one editor in Settings (My Baskets), saved with the machine profile. First-shot recipes consume that saved setup; optional tools stay behind disclosures. Home leads with machine care and three recent beans; Show all expands the filtered/sorted collection.
 - New bean dose/basket heuristics and calibration: `public/js/starting-point.js`; presentation: `public/js/starting-point-view.js`. Setup is saved per machine in `user_profiles.startingPoints`; fixed 18g Falcon measurements belong to the individual bag in `beans.startingMeasurement`.
 - Brew advice rules: `public/js/brew-advice.js`.
 - Elizabeth machine profiles and tuning rules: `public/js/elizabeth-tuning.js`.
@@ -61,6 +63,7 @@ npm test
 - Store machine service history in `maintenance_records`; records must remain scoped to the signed-in user's `uid`.
 - Store new bean photos in Firebase Storage under `users/{uid}/beans/{beanId}/...`; keep legacy Firestore `image` data readable but do not create new base64 image fields.
 - Be careful with destructive operations. Beans should be archived with `archived: true` instead of deleted; shot logs can still be deleted after confirmation.
+- Never merge bags by coffee name or infer measured values during normalization. Preserve retired ratings, five-bean measurements, flavor scales, and original date strings under `legacy`; keep bag/shot IDs, photos, results, and recorded timestamps intact. Missing historical machine labels follow the existing Elizabeth fallback.
 
 ## Existing Behavior To Preserve
 

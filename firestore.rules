@@ -134,11 +134,22 @@ service cloud.firestore {
         validBiancaProfile(data);
     }
 
+    function validLegacyBean(data) {
+      let legacy = data.get("legacy", {});
+      let flavor = legacy.get("flavor", {});
+      return legacy is map && legacy.keys().hasOnly(["rating", "roastDate", "currentRoastDate", "fiveBeanWeight", "flavor"]) &&
+        validRating(legacy) && optionalString(legacy, "roastDate") && optionalString(legacy, "currentRoastDate") &&
+        optionalNumberText(legacy, "fiveBeanWeight") && flavor is map &&
+        flavor.keys().hasOnly(["acidity", "sweetness", "body", "bitterness", "finish"]) &&
+        optionalNumberText(flavor, "acidity") && optionalNumberText(flavor, "sweetness") &&
+        optionalNumberText(flavor, "body") && optionalNumberText(flavor, "bitterness") && optionalNumberText(flavor, "finish");
+    }
+
     function validBean(data) {
       return data.keys().hasOnly([
           "uid", "roaster", "roasterLocation", "name", "origin", "roastLevel",
           "tenBeanWeight", "tags", "rating", "impression", "image", "imageUrl", "imagePath", "currentRoastDate",
-          "createdAt", "updatedAt", "archived", "archivedAt", "startingMeasurement"
+          "createdAt", "updatedAt", "archived", "archivedAt", "startingMeasurement", "legacy"
         ]) &&
         data.keys().hasAll(["uid", "name"]) &&
         data.uid is string &&
@@ -154,7 +165,7 @@ service cloud.firestore {
         optionalString(data, "imageUrl") &&
         optionalString(data, "imagePath") &&
         (!("archived" in data) || data.archived is bool) &&
-        validStartingMeasurement(data) &&
+        validStartingMeasurement(data) && validLegacyBean(data) &&
         validTags(data) &&
         validRating(data) &&
         validImpression(data) &&
@@ -163,12 +174,18 @@ service cloud.firestore {
         optionalTimestamp(data, "archivedAt");
     }
 
+    function validLegacyShot(data) {
+      let legacy = data.get("legacy", {});
+      return legacy is map && legacy.keys().hasOnly(["rating", "roastDate"]) &&
+        validRating(legacy) && optionalString(legacy, "roastDate");
+    }
+
     function validBrewLog(data) {
       return data.keys().hasOnly([
           "uid", "beanId", "grind", "time", "dose", "yield", "date", "roastDate",
           "machineId",
           "profileUsed", "taste", "brewTemperature", "pressureObserved",
-          "temperatureUnit", "firstDropSeconds", "channelingObserved"
+          "temperatureUnit", "firstDropSeconds", "channelingObserved", "legacy"
         ]) &&
         data.keys().hasAll(["uid", "beanId", "grind", "date"]) &&
         data.uid is string &&
@@ -187,7 +204,7 @@ service cloud.firestore {
         optionalNumberText(data, "firstDropSeconds") &&
         (!("channelingObserved" in data) || data.channelingObserved is bool) &&
         optionalString(data, "roastDate") &&
-        data.date is timestamp;
+        data.date is timestamp && validLegacyShot(data);
     }
 
     function validMaintenanceRecord(data) {

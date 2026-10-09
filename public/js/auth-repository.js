@@ -1,5 +1,5 @@
 import { onAuthStateChanged, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { auth, googleProvider } from "./firebase-client.js?v=1.13.0";
+import { auth, googleProvider } from "./firebase-client.js?v=1.14.0";
 
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
 

@@ -1,9 +1,10 @@
-import { getBrewAdvice } from "./brew-advice.js?v=1.13.0";
+import { getBrewAdvice } from "./brew-advice.js?v=1.14.0";
 
 const DAY_MS = 86400000;
 
 const toNumber = (value) => {
-    const number = parseFloat(value);
+    if (value === null || value === undefined || typeof value === 'boolean' || String(value).trim() === '') return null;
+    const number = Number(value);
     return Number.isFinite(number) ? number : null;
 };
 

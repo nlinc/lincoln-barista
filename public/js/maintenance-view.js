@@ -1,12 +1,15 @@
-import { el, renderEmpty } from "./dom.js?v=1.13.0";
-import { localDateKey, maintenanceDueState, maintenancePresetsFor, parseDateKey } from "./machine-config.js?v=1.13.0";
-import { careChecklist, latestCareRecords } from "./care-status.js?v=1.13.0";
+import { el, renderEmpty } from "./dom.js?v=1.14.0";
+import { localDateKey, maintenanceDueState, maintenancePresetsFor, parseDateKey } from "./machine-config.js?v=1.14.0";
+import { careChecklist, homeCareSummary, latestCareRecords } from "./care-status.js?v=1.14.0";
 
 export const renderCareHome = ({ machineId, records, loaded, error, pending = new Set(), onQuickAction, onOpen }) => {
     const card = document.getElementById("care-home-card");
     const summary = document.getElementById("care-home-summary");
     const list = document.getElementById("care-home-list");
+    const next = document.getElementById("care-home-next");
     if (!card) return;
+    document.getElementById("care-home-machine").textContent = machineId === 'bianca' ? 'Bianca' : 'Elizabeth';
+    next.textContent = '';
     card.classList.toggle("hidden", !machineId);
     const open = document.getElementById("care-home-open");
     if (open) {
@@ -23,19 +26,13 @@ export const renderCareHome = ({ machineId, records, loaded, error, pending = ne
         list.replaceChildren();
         return;
     }
-    const tasks = careChecklist(machineId, records);
-    const due = tasks.filter(task => task.state === "due").sort((a, b) => {
-        if (a.nextDueDate && b.nextDueDate) return a.nextDueDate.localeCompare(b.nextDueDate);
-        return a.nextDueDate ? -1 : b.nextDueDate ? 1 : 0;
-    });
-    const untracked = tasks.filter(task => task.state === "untracked");
-    const done = tasks.filter(task => task.state === "done").length;
+    const { due, untracked, done, visible, next: upcoming } = homeCareSummary(machineId, records);
     summary.textContent = [
-        due.length ? `${due.length} ready` : "Daily and scheduled care caught up",
+        due.length ? `${due.length} to do` : "Daily and scheduled care caught up",
         untracked.length ? `${untracked.length} to start tracking` : "",
         `${done} done today`
     ].filter(Boolean).join(" · ");
-    const visible = [...due, ...untracked].slice(0, 3);
+    if (upcoming) next.textContent = `Next scheduled: ${upcoming.preset.title} · ${upcoming.label}`;
     list.replaceChildren(...visible.map(({ preset, label }) => {
         const row = el("div", "care-home-row");
         const copy = el("div", "care-home-copy");
