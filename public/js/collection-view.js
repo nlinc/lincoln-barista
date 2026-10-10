@@ -1,7 +1,7 @@
-import { normalizeBeanRecord, recordTime, resolveBeanImpression } from "./bean-record.js?v=1.15.1";
-export { resolveBeanImpression } from "./bean-record.js?v=1.15.1";
+import { normalizeBeanRecord, recordTime, resolveBeanImpression } from "./bean-record.js?v=1.16.0";
+export { resolveBeanImpression } from "./bean-record.js?v=1.16.0";
 
-import { el, renderEmptyAction } from "./dom.js?v=1.15.1";
+import { el, renderEmptyAction } from "./dom.js?v=1.16.0";
 
 const roastColor = (level = "Medium") => ({
     Light: "#f59e0b",
@@ -26,7 +26,12 @@ const IMPRESSION_META = {
 
 export const beanImpressionLabel = (bean = {}) => IMPRESSION_META[resolveBeanImpression(bean)]?.label || "";
 
-const filterBeans = (beans, activeFilters) => beans.filter(bean => {
+const searchText = value => String(value || '').normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase();
+
+const filterBeans = (beans, activeFilters, query = '') => beans.filter(bean => {
+    const words = searchText(query).trim().split(/\s+/).filter(Boolean);
+    const coffee = searchText([bean.name, bean.roaster].filter(Boolean).join(' '));
+    if (!words.every(word => coffee.includes(word))) return false;
     if (activeFilters.size === 0) return true;
     const searchable = [bean.roastLevel, bean.origin, bean.roaster, beanImpressionLabel(bean), ...(bean.tags || [])]
         .map(value => (value || "").toLowerCase());
@@ -42,12 +47,12 @@ const sortBeans = (beans, currentSort) => beans.sort((a, b) => {
     return recentTime(b) - recentTime(a);
 });
 
-export const selectVisibleBeans = (beans, activeFilters = new Set(), currentSort = "newest") => {
-    return sortBeans(filterBeans(beans.map(normalizeBeanRecord), activeFilters), currentSort);
+export const selectVisibleBeans = (beans, activeFilters = new Set(), currentSort = "newest", query = '') => {
+    return sortBeans(filterBeans(beans.map(normalizeBeanRecord), activeFilters, query), currentSort);
 };
 
-export const collectionPreview = (beans, activeFilters, currentSort, expanded = false) => {
-    const matching = selectVisibleBeans(beans, activeFilters, currentSort);
+export const collectionPreview = (beans, activeFilters, currentSort, expanded = false, query = '') => {
+    const matching = selectVisibleBeans(beans, activeFilters, currentSort, query);
     return { beans: expanded ? matching : matching.slice(0, 3), total: matching.length };
 };
 
@@ -58,16 +63,22 @@ export const swipeAction = (deltaX, deltaY) => {
     return deltaX < 0 ? 'open' : 'close';
 };
 
-export const renderBeanCollection = ({ beans, activeFilters, currentSort, expanded = false, scope = 'current', pending = new Set(), notice, onUndo, onAdd, onShowFinished, onOpen, onEdit, onFinish, onRestore, onReuse }) => {
+export const renderBeanCollection = ({ beans, activeFilters, currentSort, expanded = false, scope = 'current', query = '', pending = new Set(), notice, onUndo, onAdd, onShowFinished, onClearSearch, onOpen, onEdit, onFinish, onRestore, onReuse }) => {
     const container = document.getElementById("bean-list-container");
     if (!container) return;
-    const preview = collectionPreview(beansForScope(beans, scope), activeFilters, currentSort, expanded);
+    const preview = collectionPreview(beansForScope(beans, scope), activeFilters, currentSort, expanded, scope === 'finished' ? query : '');
+    const search = document.getElementById('finished-search');
+    document.getElementById('finished-search-controls').hidden = scope !== 'finished';
+    if (search.value !== query) search.value = query;
+    document.getElementById('btn-clear-finished-search').hidden = !query;
     const visibleBeans = preview.beans;
     const toggle = document.getElementById("btn-toggle-beans");
     toggle.hidden = preview.total <= 3;
     toggle.textContent = expanded ? "Show fewer beans" : `Show all ${preview.total} beans`;
     toggle.setAttribute("aria-expanded", String(expanded));
-    document.getElementById("collection-count").textContent = preview.total > 1 ? `${visibleBeans.length} of ${preview.total}` : "";
+    document.getElementById("collection-count").textContent = scope === 'finished' && query.trim()
+        ? `${preview.total} coffee${preview.total === 1 ? '' : 's'} found`
+        : preview.total > 1 ? `${visibleBeans.length} of ${preview.total}` : "";
     document.getElementById('input-sort-beans').hidden = preview.total <= 1;
     container.classList.toggle("collection-preview", !expanded);
     if (document.body.dataset.view === 'list') document.getElementById('fab-add-bean').classList.remove('hidden');
@@ -98,7 +109,11 @@ export const renderBeanCollection = ({ beans, activeFilters, currentSort, expand
         const hasCurrent = beansForScope(beans).length > 0;
         const hasFinished = beansForScope(beans, 'finished').length > 0;
         if (scope === 'finished') {
-            renderEmptyAction(container, 'No finished bags yet', 'Finish a bag when you’re done. Its coffee details and shots stay here.');
+            if (hasFinished) {
+                renderEmptyAction(container, 'No matching coffees', 'Try another coffee name, roaster or filter.', query ? 'Clear search' : null, onClearSearch);
+            } else {
+                renderEmptyAction(container, 'No finished bags yet', 'Finish a bag when you’re done. Its coffee details and shots stay here.');
+            }
         } else if (!hasCurrent && hasFinished) {
             renderEmptyAction(container, 'No current bags', 'Your finished coffees and shot history are saved. Choose a coffee to start a new bag.', 'Choose a past coffee', onShowFinished);
         } else {

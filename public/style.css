@@ -311,6 +311,7 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
 .four-col { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .shot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .form-group { margin-bottom: 1rem; }
+.finished-search-controls label,
 #view-edit-bean label,
 #view-log-shot label,
 #view-settings label,
@@ -321,6 +322,7 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
     display: block; color: var(--text-muted); font-size: 0.72rem; font-weight: 850;
     text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;
 }
+#finished-search,
 #view-edit-bean input:not([type="hidden"]):not([type="file"]),
 #view-edit-bean select,
 #view-log-shot input:not([type="hidden"]):not([type="checkbox"]),
@@ -341,6 +343,7 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
     background: rgba(0,0,0,0.28); color: var(--text-main); padding: 0 0.9rem; font: inherit;
     outline: none; appearance: none;
 }
+#finished-search:focus,
 #view-edit-bean input:focus,
 #view-edit-bean select:focus,
 #view-log-shot input:focus,
@@ -922,3 +925,13 @@ body[data-view="settings"] #btn-open-settings { border-color: var(--roast-light)
 @media (prefers-reduced-motion: reduce) {
     .bean-tile .bean-card { transition: none; }
 }
+
+/* Finished search and accessible shot validation. */
+.finished-search-controls { margin: 1rem 0; }
+.finished-search-controls[hidden], .finished-search-row button[hidden], .field-error[hidden] { display: none; }
+.finished-search-row { display: flex; align-items: center; gap: 0.5rem; }
+.finished-search-row input { min-width: 0; flex: 1; }
+.finished-search-row button { flex: 0 0 auto; min-height: 44px; }
+.field-error { color: var(--error-text); font-size: 0.8rem; line-height: 1.4; margin-top: 0.4rem; }
+#view-log-shot input[aria-invalid="true"] { border-color: var(--error-text); }
+.shot-save-error { grid-column: 1 / -1; margin: 0; }

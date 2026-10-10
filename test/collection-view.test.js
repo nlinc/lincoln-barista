@@ -31,6 +31,16 @@ describe("collection view model", () => {
         assert.deepEqual(selectVisibleBeans(beans, new Set(["dark", "chocolate"])).map(bean => bean.id), ["2"]);
     });
 
+    it('searches coffee names and roasters with case, accent and whitespace tolerance', () => {
+        const collection = [...beans, { id: 'accent', name: 'Café Blend', roaster: 'Nórth Coffee', archived: true }];
+        assert.deepEqual(selectVisibleBeans(collection, new Set(), 'name', '  CAFE   north  ').map(bean => bean.id), ['accent']);
+        assert.deepEqual(selectVisibleBeans(collection, new Set(['light']), 'newest', 'NORTH').map(bean => bean.id), ['1']);
+        assert.equal(collectionPreview(collection, new Set(), 'newest', true, 'unknown coffee').total, 0);
+        assert.equal(collectionPreview(collection, new Set(), 'newest', false, '   ').total, 4);
+        assert.deepEqual(beansForScope(collection, 'finished').map(bean => bean.id), ['accent']);
+        assert.deepEqual(selectVisibleBeans(collection, new Set(), 'newest', '<script>').map(bean => bean.id), []);
+    });
+
     it("supports name, impression, and newest sorting without mutating the source", () => {
         assert.deepEqual(selectVisibleBeans(beans, new Set(), "name").map(bean => bean.name), ["Alpha", "Middle", "Zulu"]);
         assert.deepEqual(selectVisibleBeans(beans, new Set(), "impression").map(bean => bean.impression), ["enjoyed", "meh", "not-for-me"]);

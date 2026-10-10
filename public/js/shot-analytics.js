@@ -1,4 +1,4 @@
-import { getBrewAdvice } from "./brew-advice.js?v=1.15.1";
+import { getBrewAdvice } from "./brew-advice.js?v=1.16.0";
 
 const DAY_MS = 86400000;
 
@@ -81,16 +81,18 @@ export const validateShot = (shot) => {
     const time = toNumber(shot?.time);
     const dose = toNumber(shot?.dose);
     const yieldValue = toNumber(shot?.yield);
-    const errors = [];
+    const fieldErrors = {};
 
-    if (grind === null) errors.push("Enter a valid grind setting.");
-    if (time === null || time <= 0) errors.push("Time must be greater than zero.");
-    if (dose === null || dose <= 0) errors.push("Dose must be greater than zero.");
-    if (yieldValue === null || yieldValue <= 0) errors.push("Yield must be greater than zero.");
+    if (grind === null) fieldErrors.grind = "Enter a valid grind setting.";
+    if (time === null || time <= 0) fieldErrors.time = "Time must be greater than zero.";
+    if (dose === null || dose <= 0) fieldErrors.dose = "Dose must be greater than zero.";
+    if (yieldValue === null || yieldValue <= 0) fieldErrors.yield = "Yield must be greater than zero.";
+    const errors = Object.values(fieldErrors);
 
     return {
         valid: errors.length === 0,
         errors,
+        fieldErrors,
         values: { grind, time, dose, yield: yieldValue }
     };
 };

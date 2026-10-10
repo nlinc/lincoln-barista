@@ -19,6 +19,7 @@ This repo is a small Firebase/static PWA for tracking espresso beans, brew logs,
 - Home care checklist and latest-record selection: `public/js/care-status.js`.
 - Home care tasks use a native disclosure. Default to a compact summary for zero/one current bag and while browsing Finished; keep the user's expand/collapse choice during same-mode rerenders. Sort/count controls disappear when the visible collection has at most one bag.
 - Bag tile actions and Current/Finished collection: `public/js/collection-view.js`. Swipe left reveals actions; the visible menu supports touch, mouse, and keyboard. Finishing is reversible and only sets archive metadata; finished bags remain readable with their shots. New bag reuses descriptive details, while Put back restores the original bag.
+- Finished collection search matches coffee names and roasters locally, independently of Current. Shot validation returns field-keyed errors; `public/js/shot-form-view.js` presents them with accessible descriptions and focus, while repository failures appear by Save.
 - Bean and machine scoping for guided tuning: `public/js/tuning-session.js`.
 - Shared DOM and navigation helpers: `public/js/dom.js` and `public/js/router.js`.
 - Basket ownership, grinder preferences, and calibration have one editor in Settings (My Baskets), saved with the machine profile. First-shot recipes consume that saved setup; optional tools stay behind disclosures. Home leads with machine care and three recent beans; Show all expands the filtered/sorted collection.

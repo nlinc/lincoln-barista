@@ -41,13 +41,13 @@ describe("UI smoke guardrails", () => {
     });
 
     it("keeps cache-busted app assets on the current release", () => {
-        assert.match(html, /style\.css\?v=1\.15\.1/);
-        assert.match(html, /js\/app\.js\?v=1\.15\.1/);
+        assert.match(html, /style\.css\?v=1\.16\.0/);
+        assert.match(html, /js\/app\.js\?v=1\.16\.0/);
         for (const [name, source] of clientModules) {
             const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            assert.match(serviceWorker, new RegExp(`/js/${escapedName}\\?v=1\\.15\\.1`), `${name} must be cached`);
+            assert.match(serviceWorker, new RegExp(`/js/${escapedName}\\?v=1\\.16\\.0`), `${name} must be cached`);
             for (const match of source.matchAll(/from\s+["']\.\/([^"']+\.js)(\?v=[^"']+)?["']/g)) {
-                assert.equal(match[2], "?v=1.15.1", `${name} must version its ${match[1]} import`);
+                assert.equal(match[2], "?v=1.16.0", `${name} must version its ${match[1]} import`);
             }
         }
     });
@@ -55,7 +55,7 @@ describe("UI smoke guardrails", () => {
     it("keeps Firebase persistence behind repository modules", () => {
         assert.doesNotMatch(appJs, /gstatic\.com\/firebasejs|\bcollection\(|\bgetDocs\(|\bsetDoc\(|\bupdateDoc\(|\bdeleteDoc\(/);
         for (const name of ["auth-repository.js", "bean-repository.js", "maintenance-repository.js", "profile-repository.js", "shot-repository.js"]) {
-            assert.match(appJs, new RegExp(name.replace(".", "\\.") + "\\?v=1\\.15\\.1"));
+            assert.match(appJs, new RegExp(name.replace(".", "\\.") + "\\?v=1\\.16\\.0"));
         }
         assert.match(beanRepositoryJs, /collection\(db, "beans"\)/);
         assert.match(maintenanceRepositoryJs, /collection\(db, "maintenance_records"\)/);
@@ -252,7 +252,7 @@ describe("UI smoke guardrails", () => {
     });
 
     it("shows and deploy-stamps the running commit", () => {
-        assert.match(html, /class="build-chip">v1\.15\.1 · <code data-build-commit>__BUILD_COMMIT__</);
+        assert.match(html, /class="build-chip">v1\.16\.0 · <code data-build-commit>__BUILD_COMMIT__</);
         assert.match(appJs, /querySelectorAll\("\[data-build-commit\]"\)/);
         assert.match(serviceWorker, /lincoln-barista-__BUILD_COMMIT__/);
         assert.match(mergeWorkflow, /Stamp build commit/);

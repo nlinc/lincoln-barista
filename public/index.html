@@ -19,14 +19,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"></noscript>
-    <link rel="stylesheet" href="style.css?v=1.15.1">
+    <link rel="stylesheet" href="style.css?v=1.16.0">
 </head>
 <body>
 
     <div id="top-bar">
         <div class="app-brand">
             <div class="app-logo">Lincoln <span>Barista</span></div>
-            <div class="build-chip">v1.15.1 · <code data-build-commit>__BUILD_COMMIT__</code></div>
+            <div class="build-chip">v1.16.0 · <code data-build-commit>__BUILD_COMMIT__</code></div>
         </div>
         <div class="top-actions">
             <button class="btn-secondary small-btn header-nav" type="button" data-route="list">Beans</button>
@@ -102,6 +102,13 @@
         </div>
         <p id="collection-help" class="field-help">Swipe left or tap ⋯ for bag actions.</p>
         <div id="collection-feedback" class="collection-feedback" role="status" hidden></div>
+        <div id="finished-search-controls" class="finished-search-controls" hidden>
+            <label for="finished-search">Search finished coffees</label>
+            <div class="finished-search-row">
+                <input id="finished-search" type="search" placeholder="Coffee name or roaster" autocomplete="off" aria-controls="bean-list-container">
+                <button id="btn-clear-finished-search" class="btn-secondary small-btn" type="button" hidden>Clear</button>
+            </div>
+        </div>
         <div id="filter-bar" class="filter-bar"></div>
         <div id="bean-list-container"></div>
         <button id="btn-toggle-beans" class="btn-secondary collection-toggle" type="button" aria-controls="bean-list-container" aria-expanded="false" hidden>Show all beans</button>
@@ -318,19 +325,23 @@
             <div class="form-grid shot-grid">
                 <div class="form-group">
                     <label for="input-shot-grind">Grind</label>
-                    <input type="number" inputmode="decimal" step="0.1" id="input-shot-grind" placeholder="14.0" class="shot-preview-input">
+                    <input type="number" inputmode="decimal" step="0.1" id="input-shot-grind" placeholder="14.0" class="shot-preview-input" aria-describedby="shot-grind-error">
+                    <div id="shot-grind-error" class="field-error" aria-live="polite" hidden></div>
                 </div>
                 <div class="form-group">
                     <label for="input-shot-time">Time</label>
-                    <input type="number" inputmode="decimal" id="input-shot-time" placeholder="30" class="shot-preview-input">
+                    <input type="number" inputmode="decimal" id="input-shot-time" placeholder="30" class="shot-preview-input" aria-describedby="shot-time-error">
+                    <div id="shot-time-error" class="field-error" aria-live="polite" hidden></div>
                 </div>
                 <div class="form-group">
                     <label for="input-shot-dose">Dose in</label>
-                    <input type="number" inputmode="decimal" step="0.1" id="input-shot-dose" placeholder="18.0" class="shot-preview-input">
+                    <input type="number" inputmode="decimal" step="0.1" id="input-shot-dose" placeholder="18.0" class="shot-preview-input" aria-describedby="shot-dose-error">
+                    <div id="shot-dose-error" class="field-error" aria-live="polite" hidden></div>
                 </div>
                 <div class="form-group">
                     <label for="input-shot-yield">Yield out</label>
-                    <input type="number" inputmode="decimal" enterkeyhint="done" step="0.1" id="input-shot-yield" placeholder="36.0" class="shot-preview-input" aria-describedby="shot-yield-hint">
+                    <input type="number" inputmode="decimal" enterkeyhint="done" step="0.1" id="input-shot-yield" placeholder="36.0" class="shot-preview-input" aria-describedby="shot-yield-hint shot-yield-error">
+                    <div id="shot-yield-error" class="field-error" aria-live="polite" hidden></div>
                     <div id="shot-yield-hint" class="input-hint hidden"></div>
                 </div>
             </div>
@@ -403,6 +414,7 @@
         </div>
 
         <div class="view-actions shot-actions">
+            <p id="shot-save-error" class="field-error shot-save-error" role="alert" hidden></p>
             <button class="btn" id="btn-save-shot" type="button">Save Shot</button>
             <button class="btn btn-secondary stack-action" id="btn-cancel-shot" type="button">Cancel</button>
             <button class="btn btn-danger hidden delete-shot-action" id="btn-delete-shot" type="button">Delete Log</button>
@@ -987,7 +999,7 @@
         </details>
 
         <div class="build-info">
-            Lincoln Barista 1.15.1 • Build <code data-build-commit>__BUILD_COMMIT__</code>
+            Lincoln Barista 1.16.0 • Build <code data-build-commit>__BUILD_COMMIT__</code>
         </div>
     </div>
 
@@ -1030,6 +1042,6 @@
     <button class="fab hidden" id="fab-log-shot" type="button" aria-label="Log Shot">☕</button>
 
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.15.1"></script>
+    <script type="module" src="js/app.js?v=1.16.0"></script>
 </body>
 </html>

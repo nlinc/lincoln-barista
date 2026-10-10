@@ -27,6 +27,14 @@ describe("shot analytics", () => {
 
         assert.equal(result.valid, false);
         assert.equal(result.errors.length, 3);
+        assert.deepEqual(result.fieldErrors, {
+            time: 'Time must be greater than zero.',
+            dose: 'Dose must be greater than zero.',
+            yield: 'Yield must be greater than zero.'
+        });
+        assert.deepEqual(validateShot({ grind: '', time: '30', dose: '18', yield: '36' }).fieldErrors,
+            { grind: 'Enter a valid grind setting.' });
+        assert.deepEqual(validateShot({ grind: '0', time: '30', dose: '18', yield: '36' }).fieldErrors, {});
     });
 
     it("detects weekly finer movement when lower numbers mean finer", () => {

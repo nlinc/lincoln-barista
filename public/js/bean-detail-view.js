@@ -1,9 +1,9 @@
-import { getBrewAdvice } from "./brew-advice.js?v=1.15.1";
-import { el, renderEmptyAction } from "./dom.js?v=1.15.1";
-import { validateShot } from "./shot-analytics.js?v=1.15.1";
-import { beanImpressionLabel, resolveBeanImpression } from "./collection-view.js?v=1.15.1";
-import { normalizeRoastDate } from "./bean-record.js?v=1.15.1";
-import { localDateKey } from "./machine-config.js?v=1.15.1";
+import { getBrewAdvice } from "./brew-advice.js?v=1.16.0";
+import { el, renderEmptyAction } from "./dom.js?v=1.16.0";
+import { validateShot } from "./shot-analytics.js?v=1.16.0";
+import { beanImpressionLabel, resolveBeanImpression } from "./collection-view.js?v=1.16.0";
+import { normalizeRoastDate } from "./bean-record.js?v=1.16.0";
+import { localDateKey } from "./machine-config.js?v=1.16.0";
 
 const ratioFor = (shot) => {
     const dose = parseFloat(shot?.dose);
