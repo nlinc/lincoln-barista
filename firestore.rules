@@ -114,11 +114,40 @@ service cloud.firestore {
 
     function validStartingMeasurement(data) {
       return !("startingMeasurement" in data) || (data.startingMeasurement is map &&
-        data.startingMeasurement.keys().hasOnly(["volume", "roast", "process"]) &&
+        data.startingMeasurement.keys().hasOnly(["weight", "volume", "roast", "process"]) &&
         data.startingMeasurement.keys().hasAll(["volume", "roast", "process"]) &&
-        (data.startingMeasurement.volume == null || (data.startingMeasurement.volume is number && data.startingMeasurement.volume >= 20 && data.startingMeasurement.volume <= 50)) &&
+        (data.startingMeasurement.volume == null || (data.startingMeasurement.volume is number && data.startingMeasurement.volume >= 5 && data.startingMeasurement.volume <= 50)) &&
+        (!("weight" in data.startingMeasurement) || (data.startingMeasurement.weight is number && data.startingMeasurement.weight >= 5 && data.startingMeasurement.weight <= 30)) &&
         data.startingMeasurement.roast in ["light", "medium", "dark"] &&
         data.startingMeasurement.process in ["unknown", "washed", "natural", "honey", "experimental"]);
+    }
+
+    function validBasket(id, machineId) {
+      return id in ["pullman-15", "pullman-17", "pullman-19"] ||
+        (machineId == "elizabeth" && id == "stock-elizabeth") || (machineId == "bianca" && id == "stock-bianca");
+    }
+
+    function validBrewSetup(setup, machineId) {
+      let fields = ["basketId", "dose", "ratio", "grind", "brewTemperature", "temperatureUnit", "profileUsed", "tampForceLb"];
+      return setup is map && setup.keys().hasOnly(fields) && setup.keys().hasAll(fields) &&
+        validBasket(setup.basketId, machineId) &&
+        setup.dose is number && setup.dose >= 5 && setup.dose <= 30 &&
+        setup.ratio is number && setup.ratio >= 1 && setup.ratio <= 4 &&
+        setup.grind is string && setup.grind.size() <= 30 &&
+        setup.temperatureUnit in ["F", "C"] &&
+        (setup.brewTemperature == null || (setup.brewTemperature is number &&
+          ((setup.temperatureUnit == "F" && setup.brewTemperature >= 175 && setup.brewTemperature <= 230) ||
+           (setup.temperatureUnit == "C" && setup.brewTemperature >= 80 && setup.brewTemperature <= 110)))) &&
+        (setup.tampForceLb == null || (setup.tampForceLb is number && setup.tampForceLb >= 5 && setup.tampForceLb <= 100)) &&
+        (setup.profileUsed == "manual" || (machineId == "elizabeth" && setup.profileUsed in ["p1", "p2"]) ||
+          (machineId == "bianca" && setup.profileUsed in ["bianca-standard", "bianca-low-flow", "bianca-paddle", "bianca-bloom"]));
+    }
+
+    function validBrewSetups(data) {
+      let setups = data.get("brewSetups", {});
+      return setups is map && setups.keys().hasOnly(["elizabeth", "bianca"]) &&
+        (!("elizabeth" in setups) || validBrewSetup(setups.elizabeth, "elizabeth")) &&
+        (!("bianca" in setups) || validBrewSetup(setups.bianca, "bianca"));
     }
 
     function validProfile(data) {
@@ -149,7 +178,7 @@ service cloud.firestore {
       return data.keys().hasOnly([
           "uid", "roaster", "roasterLocation", "name", "origin", "roastLevel",
           "tenBeanWeight", "tags", "rating", "impression", "image", "imageUrl", "imagePath", "currentRoastDate",
-          "createdAt", "updatedAt", "archived", "archivedAt", "startingMeasurement", "legacy"
+          "createdAt", "updatedAt", "archived", "archivedAt", "startingMeasurement", "brewSetups", "legacy"
         ]) &&
         data.keys().hasAll(["uid", "name"]) &&
         data.uid is string &&
@@ -165,7 +194,7 @@ service cloud.firestore {
         optionalString(data, "imageUrl") &&
         optionalString(data, "imagePath") &&
         (!("archived" in data) || data.archived is bool) &&
-        validStartingMeasurement(data) && validLegacyBean(data) &&
+        validStartingMeasurement(data) && validBrewSetups(data) && validLegacyBean(data) &&
         validTags(data) &&
         validRating(data) &&
         validImpression(data) &&
@@ -183,7 +212,7 @@ service cloud.firestore {
     function validBrewLog(data) {
       return data.keys().hasOnly([
           "uid", "beanId", "grind", "time", "dose", "yield", "date", "roastDate",
-          "machineId",
+          "machineId", "basketId", "tampForceLb",
           "profileUsed", "taste", "brewTemperature", "pressureObserved",
           "temperatureUnit", "firstDropSeconds", "channelingObserved", "legacy"
         ]) &&
@@ -193,6 +222,8 @@ service cloud.firestore {
         data.grind is string &&
         data.grind.size() > 0 &&
         (!("machineId" in data) || data.machineId == "elizabeth" || data.machineId == "bianca") &&
+        (!("basketId" in data) || data.basketId == "" || validBasket(data.basketId, data.get("machineId", "elizabeth"))) &&
+        (!("tampForceLb" in data) || data.tampForceLb == null || (data.tampForceLb is number && data.tampForceLb >= 5 && data.tampForceLb <= 100)) &&
         optionalNumberText(data, "time") &&
         optionalNumberText(data, "dose") &&
         optionalNumberText(data, "yield") &&

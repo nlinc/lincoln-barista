@@ -1,4 +1,4 @@
-import { normalizeStartingSetup } from "./starting-point.js?v=1.16.0";
+import { normalizeStartingSetup } from "./starting-point.js?v=1.17.0";
 
 const ELIZABETH_DEFAULTS = {
     machineVersion: "classic-v3",

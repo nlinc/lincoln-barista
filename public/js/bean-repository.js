@@ -1,7 +1,7 @@
 import { collection, deleteField, doc, getDocs, query, runTransaction, setDoc, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { deleteObject, getDownloadURL, ref as storageRef, uploadString } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { db, storage } from "./firebase-client.js?v=1.16.0";
-import { beanNormalizationPatch, normalizeBeanRecord } from "./bean-record.js?v=1.16.0";
+import { db, storage } from "./firebase-client.js?v=1.17.0";
+import { beanNormalizationPatch, normalizeBeanRecord } from "./bean-record.js?v=1.17.0";
 
 export const fetchBeansForUser = async (uid) => {
     const snapshot = await getDocs(query(collection(db, "beans"), where("uid", "==", uid)));
@@ -21,6 +21,11 @@ export const updateBean = (beanId, data) => runTransaction(db, async transaction
     cleanup.remove.forEach(field => { patch[field] = deleteField(); });
     transaction.update(reference, patch);
 });
+
+export const saveBeanBrewSetup = (beanId, machineId, setup) => {
+    if (!['elizabeth', 'bianca'].includes(machineId)) throw new Error('Choose a supported machine.');
+    return updateBean(beanId, { [`brewSetups.${machineId}`]: setup, updatedAt: new Date() });
+};
 
 export const archiveBean = async (beanId) => {
     const fields = { archived: true, archivedAt: new Date(), updatedAt: new Date() };

@@ -19,14 +19,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"></noscript>
-    <link rel="stylesheet" href="style.css?v=1.16.0">
+    <link rel="stylesheet" href="style.css?v=1.17.0">
 </head>
 <body>
 
     <div id="top-bar">
         <div class="app-brand">
             <div class="app-logo">Lincoln <span>Barista</span></div>
-            <div class="build-chip">v1.16.0 · <code data-build-commit>__BUILD_COMMIT__</code></div>
+            <div class="build-chip">v1.17.0 · <code data-build-commit>__BUILD_COMMIT__</code></div>
         </div>
         <div class="top-actions">
             <button class="btn-secondary small-btn header-nav" type="button" data-route="list">Beans</button>
@@ -270,6 +270,29 @@
             </div>
 
             <div id="machine-badge" class="machine-badge">LELIT ELIZABETH • 3/7/20 PROFILING</div>
+            <p id="recipe-setup-context" class="subtle-note"></p>
+            <details id="bag-setup-editor" class="secondary-disclosure">
+                <summary>Set up this bag</summary>
+                <form id="bag-setup-form" class="bag-setup-form">
+                    <div class="form-group"><label for="bag-setup-basket">Basket</label><select id="bag-setup-basket" required></select></div>
+                    <div class="form-grid two-col">
+                        <div class="form-group"><label for="bag-setup-dose">Settled dose (g)</label><input id="bag-setup-dose" type="number" inputmode="decimal" min="5" max="30" step="0.1" required></div>
+                        <div class="form-group"><label for="bag-setup-ratio">Target ratio (1:X)</label><input id="bag-setup-ratio" type="number" inputmode="decimal" min="1" max="4" step="0.01" required></div>
+                    </div>
+                    <details class="secondary-disclosure">
+                        <summary>Grind, machine &amp; preparation</summary>
+                        <div class="form-grid two-col">
+                            <div class="form-group"><label for="bag-setup-grind">Starting grind</label><input id="bag-setup-grind" type="number" inputmode="decimal" step="any" placeholder="Optional"></div>
+                            <div class="form-group"><label for="bag-setup-tamp">Tamper setting (lb)</label><input id="bag-setup-tamp" type="number" inputmode="decimal" min="5" max="100" step="0.5" placeholder="Optional"></div>
+                            <div class="form-group"><label for="bag-setup-temperature">Brew temp (°<span data-temperature-unit>F</span>)</label><input id="bag-setup-temperature" type="number" inputmode="decimal" min="175" max="230" step="0.1"></div>
+                            <div class="form-group"><label for="bag-setup-profile">Machine profile</label><select id="bag-setup-profile"></select></div>
+                        </div>
+                        <p class="subtle-note">Use the same distribution, level tamp and puck screen each time. Pre-infusion follows this profile’s machine settings.</p>
+                    </details>
+                    <button id="btn-save-bag-setup" class="btn-secondary small-btn" type="submit">Save setup for this bag</button>
+                    <p id="bag-setup-status" class="subtle-note" role="status"></p>
+                </form>
+            </details>
 
         </div>
 
@@ -322,6 +345,7 @@
                 <div id="log-display-date" class="primary-value"></div>
             </div>
             
+            <div class="form-group shot-basket-group"><label for="input-shot-basket">Basket used</label><select id="input-shot-basket"></select></div>
             <div class="form-grid shot-grid">
                 <div class="form-group">
                     <label for="input-shot-grind">Grind</label>
@@ -361,6 +385,7 @@
             <details class="shot-observations">
                 <summary>Machine observations (optional)</summary>
                 <div class="shot-observation-fields">
+                    <div class="form-group"><label for="input-shot-tamp">Tamper setting (lb, optional)</label><input id="input-shot-tamp" type="number" inputmode="decimal" min="5" max="100" step="0.5" placeholder="Not recorded"></div>
             <div class="shot-time-presets">
                 <span class="shot-time-presets-label">Set time from profile</span>
                 <div class="mini-actions">
@@ -999,7 +1024,7 @@
         </details>
 
         <div class="build-info">
-            Lincoln Barista 1.16.0 • Build <code data-build-commit>__BUILD_COMMIT__</code>
+            Lincoln Barista 1.17.0 • Build <code data-build-commit>__BUILD_COMMIT__</code>
         </div>
     </div>
 
@@ -1021,7 +1046,8 @@
                 <button id="btn-starting-settings" class="btn-secondary small-btn" type="button">Manage baskets in Settings</button>
                 <details class="secondary-disclosure">
                     <summary>Optional bean-volume measurement</summary>
-                <div class="form-group"><label for="starting-volume">Put 18.0g of whole beans in your Falcon tube. What volume do they reach?</label><input id="starting-volume" type="number" inputmode="decimal" min="20" max="50" step="0.1" placeholder="e.g. 48 mL (optional)"><p class="subtle-note">Use the same dry 50 mL tube and settling method each time. Read the average top level; do not compress the beans. If they overflow, leave this blank.</p></div>
+                <div class="form-group"><label for="starting-weight">Whole-bean weight used (g)</label><input id="starting-weight" type="number" inputmode="decimal" min="5" max="30" step="0.1" value="18" required></div>
+                <div class="form-group"><label for="starting-volume">Volume in your Falcon tube (mL)</label><input id="starting-volume" type="number" inputmode="decimal" min="5" max="50" step="0.1" placeholder="e.g. 48 mL (optional)"><p class="subtle-note">Use the same dry 50 mL tube and settling method each time. Read the average top level; do not compress the beans. Use a smaller weighed sample if they overflow. Whole-bean volume is a starting clue; confirm the ground coffee’s dry clearance.</p></div>
                 <button id="starting-save-measurement" class="btn btn-secondary" type="button">Save bean measurement</button>
                 </details>
             </div>
@@ -1042,6 +1068,6 @@
     <button class="fab hidden" id="fab-log-shot" type="button" aria-label="Log Shot">☕</button>
 
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.16.0"></script>
+    <script type="module" src="js/app.js?v=1.17.0"></script>
 </body>
 </html>

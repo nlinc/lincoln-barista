@@ -1,5 +1,5 @@
-import { getElizabethBaseline } from "./elizabeth-tuning.js?v=1.16.0";
-import { getBiancaBaseline } from "./bianca-tuning.js?v=1.16.0";
+import { getElizabethBaseline } from "./elizabeth-tuning.js?v=1.17.0";
+import { getBiancaBaseline } from "./bianca-tuning.js?v=1.17.0";
 
 export const STARTING_BASKETS = [
     { id: "stock-elizabeth", name: "Elizabeth stock 14–18g", min: 14, max: 18, machineId: "elizabeth" },
@@ -48,18 +48,19 @@ export const normalizeStartingSetup = (value = {}, machineId = "elizabeth") => {
     };
 };
 
-export const calculateStartingPoint = ({ setup: rawSetup, machineId = "elizabeth", machine = {}, defaultDose = 18, volume = "", roast = "medium", process = "unknown", basketId = "auto" } = {}) => {
+export const calculateStartingPoint = ({ setup: rawSetup, machineId = "elizabeth", machine = {}, defaultDose = 18, volume = "", weight = 18, roast = "medium", process = "unknown", basketId = "auto" } = {}) => {
     const setup = normalizeStartingSetup(rawSetup, machineId);
-    const measuredVolume = bounded(volume, 20, 50, null);
-    if (volume !== "" && volume !== null && volume !== undefined && measuredVolume === null) {
-        return { error: "Enter a volume from 20 to 50 mL for 18.0g of whole beans, or leave it blank." };
+    const measuredWeight = bounded(weight, 5, 30, null);
+    const measuredVolume = bounded(volume, 5, 50, null);
+    if (volume !== "" && volume !== null && volume !== undefined && (measuredVolume === null || measuredWeight === null)) {
+        return { error: "Enter the actual sample weight (5–30g) and volume (5–50 mL), or leave volume blank." };
     }
     const owned = STARTING_BASKETS.filter(basket => setup.ownedBasketIds.includes(basket.id));
     const candidates = basketId === "auto" ? owned : owned.filter(basket => basket.id === basketId);
     if (!candidates.length) return { error: "Select your baskets in Settings → My Baskets." };
-    const density = measuredVolume === null ? null : 18 / measuredVolume;
+    const density = measuredVolume === null ? null : measuredWeight / measuredVolume;
     // A bounded dose heuristic, not a conversion from whole beans to tamped grounds.
-    const relativeDensity = measuredVolume === null ? 1 : (setup.referenceVolume || 40) / measuredVolume;
+    const relativeDensity = measuredVolume === null ? 1 : (setup.referenceVolume || 40) * measuredWeight / (18 * measuredVolume);
     const preferredDose = clamp(bounded(defaultDose, 5, 30, 18) * clamp(relativeDensity, 0.9, 1.1), setup.doseMin, setup.doseMax);
     const options = candidates.map(basket => {
         const min = Math.max(basket.min, setup.doseMin);
@@ -85,7 +86,7 @@ export const calculateStartingPoint = ({ setup: rawSetup, machineId = "elizabeth
     const reasons = [];
     const notes = [];
     if (density !== null) {
-        reasons.push(`18g occupies ${measuredVolume} mL: apparent whole-bean bulk density ${density.toFixed(3)} g/mL. ${relativeDensity < 0.98 ? "Puffier than" : relativeDensity > 1.02 ? "Denser than" : "Close to"} the ${setup.referenceVolume ? "saved" : "assumed"} 18g / ${setup.referenceVolume || 40} mL baseline.`);
+        reasons.push(`${measuredWeight}g occupies ${measuredVolume} mL: apparent whole-bean bulk density ${density.toFixed(3)} g/mL. ${relativeDensity < 0.98 ? "Puffier than" : relativeDensity > 1.02 ? "Denser than" : "Close to"} the ${setup.referenceVolume ? "saved" : "assumed"} 18g / ${setup.referenceVolume || 40} mL baseline.`);
         notes.push("Whole-bean packing, grind and tamp all affect this proxy. The uncalibrated dose adjustment is capped at ±10%; verify dry clearance before brewing.");
     } else reasons.push("No Falcon measurement: using your preferred dose and nominal basket ranges.");
     reasons.push(`${basketId === "auto" ? "Auto selected" : "You selected"} ${choice.basket.name}, with ${choice.dose}g inside both your preferred range and its nominal capacity.`);

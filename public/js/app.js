@@ -3,8 +3,8 @@
  * Modularized and Optimized for Mobile. v1.3.5 - UI Logic Refinement.
  */
 
-import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.16.0";
-import { chartOptions, renderAnalyticsMetrics, renderPatternList } from "./analytics-view.js?v=1.16.0";
+import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.17.0";
+import { chartOptions, renderAnalyticsMetrics, renderPatternList } from "./analytics-view.js?v=1.17.0";
 import {
     archiveBean,
     createBean,
@@ -12,9 +12,10 @@ import {
     deleteBeanPhoto,
     fetchBeansForUser,
     restoreBean,
+    saveBeanBrewSetup,
     updateBean,
     uploadBeanPhoto
-} from "./bean-repository.js?v=1.16.0";
+} from "./bean-repository.js?v=1.17.0";
 import {
     chooseCurrentRecipe,
     renderBeanAge,
@@ -23,22 +24,22 @@ import {
     renderDialInSummary as renderDialInSummaryView,
     renderMachineBadge,
     renderShotHistory
-} from "./bean-detail-view.js?v=1.16.0";
-import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.16.0";
-import { renderBeanCollection, resolveBeanImpression } from "./collection-view.js?v=1.16.0";
-import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.16.0";
-import { normalizeBeanRecord, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.16.0";
-import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.16.0";
-import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.16.0";
-import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.16.0";
-import { navigate } from "./router.js?v=1.16.0";
-import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.16.0";
-import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.16.0";
-import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.16.0";
-import { getBrewAdvice } from "./brew-advice.js?v=1.16.0";
-import { summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.16.0";
-import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.16.0";
-import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.16.0";
+} from "./bean-detail-view.js?v=1.17.0";
+import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.17.0";
+import { renderBeanCollection, resolveBeanImpression } from "./collection-view.js?v=1.17.0";
+import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.17.0";
+import { normalizeBeanRecord, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.17.0";
+import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.17.0";
+import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.17.0";
+import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.17.0";
+import { navigate } from "./router.js?v=1.17.0";
+import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.17.0";
+import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.17.0";
+import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.17.0";
+import { getBrewAdvice } from "./brew-advice.js?v=1.17.0";
+import { summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.17.0";
+import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.17.0";
+import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.17.0";
 import {
     createDefaultUserProfile,
     localDateKey,
@@ -48,12 +49,15 @@ import {
     normalizeUserProfile,
     presetDueDate,
     recordMachineId
-} from "./machine-config.js?v=1.16.0";
+} from "./machine-config.js?v=1.17.0";
 
-import { calculateStartingPoint, normalizeStartingSetup } from "./starting-point.js?v=1.16.0";
-import { readStartingSetup, renderStartingBasketOptions, renderStartingBeans, renderStartingResult, renderStartingSetup } from "./starting-point-view.js?v=1.16.0";
+import { calculateStartingPoint, normalizeStartingSetup } from "./starting-point.js?v=1.17.0";
+import { readStartingSetup, renderStartingBasketOptions, renderStartingBeans, renderStartingResult, renderStartingSetup } from "./starting-point-view.js?v=1.17.0";
 
-import { readShotMeasurements, renderShotFieldErrors, renderShotSaveError } from "./shot-form-view.js?v=1.16.0";
+import { readShotMeasurements, renderShotFieldErrors, renderShotSaveError } from "./shot-form-view.js?v=1.17.0";
+
+import { bagBrewSetup, basketFor, setupRecipe } from "./brew-setup.js?v=1.17.0";
+import { readBagSetup, renderBagSetup, renderShotBaskets } from "./brew-setup-view.js?v=1.17.0";
 
 // App State
 let currentUser = null;
@@ -518,14 +522,6 @@ const app = {
             app.renderHistory();
             app.renderDialInSummary();
             app.renderCurrentRecipe();
-
-            renderMachineBadge({
-                b1: userProfile.b1,
-                machineId: activeMachineId(),
-                machineName: userProfile.machineName,
-                machineVersion: activeMachineProfile().machineVersion
-            });
-
         } catch(e) {
             console.error("Detail error:", e);
             if (currentActiveBean?.id === id) renderEmptyAction(document.getElementById("history-container"), "History unavailable", "Your saved recipe could not be loaded right now.", "Retry", () => app.loadBeanDetail(id));
@@ -533,9 +529,38 @@ const app = {
     },
 
     renderCurrentRecipe: () => {
-        const recipe = chooseCurrentRecipe(logsCache, currentActiveBean?.roastLevel);
+        const saved = bagBrewSetup(currentActiveBean, activeMachineId());
+        const recipe = setupRecipe(saved) || chooseCurrentRecipe(logsCache.filter(log => recordMachineId(log) === activeMachineId()), currentActiveBean?.roastLevel);
         currentRecipeShot = recipe?.shot || null;
         renderCurrentRecipeView(recipe);
+        renderMachineBadge({ b1: userProfile.b1, b2: userProfile.b2, profileUsed: recipe?.shot.profileUsed,
+            machineId: activeMachineId(), machineName: userProfile.machineName, machineVersion: activeMachineProfile().machineVersion });
+        if (currentActiveBean?.archived !== true) document.getElementById('dial-in-console').classList.remove('hidden');
+        document.querySelector('#dial-in-console .recipe-grid').classList.toggle('hidden', !recipe);
+        renderBagSetup({ bean: currentActiveBean, machineId: activeMachineId(), machine: activeMachineProfile(),
+            ownedIds: userProfile.startingPoints[activeMachineId()].ownedBasketIds, saved, recipe: recipe?.shot, defaultDose: userProfile.defaultDose });
+    },
+
+    saveBagSetup: async () => {
+        const bean = currentActiveBean;
+        const machineId = activeMachineId();
+        const form = document.getElementById('bag-setup-form');
+        const button = document.getElementById('btn-save-bag-setup');
+        if (!bean || bean.archived || button.disabled || !form.reportValidity()) return;
+        const setup = readBagSetup(machineId, activeMachineProfile().temperatureUnit || 'F');
+        const status = document.getElementById('bag-setup-status');
+        if (!setup) { status.textContent = 'Check the basket, dose and optional settings.'; return; }
+        button.disabled = true;
+        status.textContent = 'Saving setup…';
+        try {
+            await saveBeanBrewSetup(bean.id, machineId, setup);
+            bean.brewSetups = { ...bean.brewSetups, [machineId]: setup };
+            if (currentActiveBean?.id === bean.id && activeMachineId() === machineId) {
+                app.renderCurrentRecipe();
+                status.textContent = 'Setup saved. Log measured yield and time after brewing.';
+            }
+        } catch (error) { status.textContent = 'Setup could not be saved. Your inputs are still here; try again.'; }
+        finally { button.disabled = false; }
     },
 
     renderHistory: () => {
@@ -691,13 +716,16 @@ const app = {
         renderShotFieldErrors();
         renderShotSaveError();
     },
-    openLogShot: () => {
+    openLogShot: (useSavedSetup = true) => {
         if (currentActiveBean?.archived === true) return app.newBagFromBean(currentActiveBean.id);
         haptic('light');
         app.resetShotErrors();
         const machineProfile = activeMachineProfile();
         const isBianca = activeMachineId() === "bianca";
-        const recipeShot = currentRecipeShot;
+        const saved = useSavedSetup ? bagBrewSetup(currentActiveBean, activeMachineId()) : null;
+        const recipeShot = saved ? setupRecipe(saved).shot : currentRecipeShot;
+        renderShotBaskets(activeMachineId(), userProfile.startingPoints[activeMachineId()].ownedBasketIds, saved?.basketId || '');
+        document.getElementById('input-shot-tamp').value = saved ? saved.tampForceLb ?? '' : 25;
         updateTemperatureUnitLabels(machineProfile.temperatureUnit);
         app.applyMachineUi();
         document.getElementById('log-shot-title').innerText = recipeShot ? "New Shot from Recipe" : "Log Shot";
@@ -713,8 +741,9 @@ const app = {
         yieldInput.placeholder = recipeShot?.yield || defDose * 2;
         yieldHint.textContent = recipeShot?.yield ? `Recipe target: ${recipeShot.yield}g. Enter the actual yield.` : '';
         yieldHint.classList.toggle('hidden', !recipeShot?.yield);
-        document.getElementById('input-shot-grind').value = recipeShot?.grind || logsCache[0]?.grind || '';
-        document.getElementById('input-shot-time').value = recipeShot?.time || '';
+        document.getElementById('input-shot-grind').value = recipeShot?.grind || logsCache.find(log => recordMachineId(log) === activeMachineId())?.grind || '';
+        document.getElementById('input-shot-time').value = '';
+        document.getElementById('input-shot-time').placeholder = recipeShot?.time || '30';
         const requestedProfile = recipeShot?.profileUsed || 'manual';
         document.getElementById('input-shot-profile').value = [...document.getElementById('input-shot-profile').options].some(option => option.value === requestedProfile && !option.hidden) ? requestedProfile : 'manual';
         document.getElementById('input-shot-taste').value = '';
@@ -782,7 +811,9 @@ const app = {
             const sId = document.getElementById('input-log-shot-id').value;
             const data = {
                 beanId: bId, uid: currentUser.uid,
-                machineId: activeMachineId(),
+                machineId: sId ? recordMachineId(logsCache.find(log => log.id === sId)) : activeMachineId(),
+                basketId: document.getElementById('input-shot-basket').value,
+                tampForceLb: document.getElementById('input-shot-tamp').value === '' ? null : Number(document.getElementById('input-shot-tamp').value),
                 grind: document.getElementById('input-shot-grind').value.trim(),
                 time: document.getElementById('input-shot-time').value.trim(),
                 dose: document.getElementById('input-shot-dose').value.trim(),
@@ -796,6 +827,8 @@ const app = {
                 channelingObserved: document.getElementById('input-shot-channeling').checked,
                 date: new Date()
             };
+            const tamp = document.getElementById('input-shot-tamp');
+            if (!tamp.checkValidity()) { tamp.closest('details').open = true; tamp.reportValidity(); return; }
             const validation = validateShot(data);
             shotValidationShown = true;
             renderShotFieldErrors(validation.fieldErrors, !validation.valid);
@@ -815,6 +848,8 @@ const app = {
     openEditShot: (sId) => {
         const log = logsCache.find(l => l.id === sId); if(!log) return;
         app.resetShotErrors();
+        renderShotBaskets(recordMachineId(log), userProfile.startingPoints[recordMachineId(log)].ownedBasketIds, log.basketId || '');
+        document.getElementById('input-shot-tamp').value = log.tampForceLb ?? '';
         document.getElementById('log-shot-title').innerText = "Edit Log";
         document.getElementById('log-bean-name').innerText = [currentActiveBean?.roaster, currentActiveBean?.name].filter(Boolean).join(" · ");
         document.getElementById('input-log-bean-id').value = currentActiveBean?.id || log.beanId;
@@ -1014,6 +1049,7 @@ const app = {
             logsCache = currentActiveBean ? app.logsForBean(currentActiveBean.id) : [];
         }
         app.applyMachineUi();
+        if (currentActiveBean) app.renderCurrentRecipe();
         app.renderCareHome();
         status.textContent = 'Settings saved.';
     },
@@ -1033,6 +1069,7 @@ const app = {
         document.getElementById('starting-roast').value = measurement?.roast || tuningRoast(bean);
         document.getElementById('starting-process').value = measurement?.process || 'unknown';
         document.getElementById('starting-volume').value = measurement?.volume ?? '';
+        document.getElementById('starting-weight').value = measurement?.weight ?? 18;
         document.getElementById('starting-save-measurement').disabled = !bean;
         document.getElementById('starting-save-status').textContent = '';
         app.renderStartingPoint();
@@ -1047,6 +1084,7 @@ const app = {
             machine: activeMachineProfile(),
             defaultDose: userProfile.defaultDose,
             volume: document.getElementById('starting-volume').value,
+            weight: document.getElementById('starting-weight').value,
             roast: document.getElementById('starting-roast').value,
             process: document.getElementById('starting-process').value,
             basketId: document.getElementById('starting-basket').value
@@ -1055,9 +1093,9 @@ const app = {
     },
     saveStartingMeasurement: async () => {
         const bean = beans.find(item => item.id === document.getElementById('starting-bean').value && !item.archived);
-        if (!bean || !document.getElementById('starting-volume').reportValidity()) return;
+        if (!bean || !document.getElementById('starting-weight').reportValidity() || !document.getElementById('starting-volume').reportValidity()) return;
         const volume = document.getElementById('starting-volume').value;
-        const measurement = { volume: volume === '' ? null : Number(volume), roast: document.getElementById('starting-roast').value, process: document.getElementById('starting-process').value };
+        const measurement = { weight: Number(document.getElementById('starting-weight').value), volume: volume === '' ? null : Number(volume), roast: document.getElementById('starting-roast').value, process: document.getElementById('starting-process').value };
         const button = document.getElementById('starting-save-measurement');
         button.disabled = true;
         const status = document.getElementById('starting-save-status');
@@ -1082,8 +1120,9 @@ const app = {
             await app.loadBeanDetail(bean.id);
             const savedRecipe = currentRecipeShot;
             currentRecipeShot = null;
-            app.openLogShot();
+            app.openLogShot(false);
             currentRecipeShot = savedRecipe;
+            document.getElementById('input-shot-basket').value = plan.basket.id;
             document.getElementById('input-shot-dose').value = plan.dose;
             document.getElementById('input-shot-yield').value = '';
             document.getElementById('input-shot-yield').placeholder = plan.yield;
@@ -1139,7 +1178,7 @@ const app = {
         const plan = prefix === 'bianca-tuning'
             ? diagnoseBiancaShot(context)
             : diagnoseElizabethShot(context);
-        app.openLogShot();
+        app.openLogShot(false);
         currentRecipeShot = savedRecipe;
         document.getElementById('input-shot-dose').value = context.dose;
         document.getElementById('input-shot-time').value = '';
@@ -1425,10 +1464,10 @@ const app = {
             app.fetchMaintenance()
         ]);
         const beanLookup = new Map(beanSnap.map(bean => [bean.id, bean]));
-        const rows = [["date", "machine", "bean", "roaster", "roast_date", "grind", "time", "dose", "yield", "machine_profile", "taste", "brew_temperature", "temperature_unit", "shot_gauge_bar", "first_drop_seconds", "channeling_observed"]];
+        const rows = [["date", "machine", "bean", "roaster", "roast_date", "grind", "time", "dose", "yield", "machine_profile", "taste", "brew_temperature", "temperature_unit", "shot_gauge_bar", "first_drop_seconds", "channeling_observed", "basket", "tamper_setting_lb"]];
         logs.forEach(log => {
             const bean = beanLookup.get(log.beanId) || beans.find(b => b.id === log.beanId) || {};
-            rows.push([formatDate(log.date), recordMachineId(log), bean.name || log.beanId, bean.roaster || "", log.roastDate || "", log.grind, log.time, log.dose, log.yield, log.profileUsed || "", log.taste || "", log.brewTemperature || "", log.temperatureUnit || activeMachineProfile().temperatureUnit || "F", log.pressureObserved || "", log.firstDropSeconds || "", log.channelingObserved === true]);
+            rows.push([formatDate(log.date), recordMachineId(log), bean.name || log.beanId, bean.roaster || "", log.roastDate || "", log.grind, log.time, log.dose, log.yield, log.profileUsed || "", log.taste || "", log.brewTemperature || "", log.temperatureUnit || activeMachineProfile().temperatureUnit || "F", log.pressureObserved || "", log.firstDropSeconds || "", log.channelingObserved === true, basketFor(log.basketId, recordMachineId(log))?.name || "", log.tampForceLb ?? ""]);
         });
         downloadCsv("lincoln-barista-export.csv", rows);
         const maintenanceRows = [["completed_date", "machine", "service", "next_due_date", "notes"]];
@@ -1531,6 +1570,8 @@ const revealInvalidField = event => {
     }
 };
 document.getElementById('starting-form').addEventListener('invalid', revealInvalidField, true);
+document.getElementById('bag-setup-form').addEventListener('invalid', revealInvalidField, true);
+on('bag-setup-form', 'submit', event => { event.preventDefault(); app.saveBagSetup(); });
 document.getElementById('gear-form').addEventListener('invalid', revealInvalidField, true);
 on("gear-form", "submit", event => { event.preventDefault(); app.saveProfile(); });
 on("starting-form", "submit", event => { event.preventDefault(); app.renderStartingPoint(); });

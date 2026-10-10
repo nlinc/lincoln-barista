@@ -19,6 +19,19 @@ describe("new bean starting point", () => {
         assert.match(puffy.notes.join(" "), /assum|calibration|proxy/);
     });
 
+    it('uses actual sample weight and preserves old 18g calculations', () => {
+        const old = calculateStartingPoint({ setup, volume: 45 });
+        const smaller = calculateStartingPoint({ setup, weight: 16, volume: 40 });
+        assert.equal(smaller.density, 0.4);
+        assert.equal(smaller.dose, old.dose);
+        assert.equal(smaller.basket.id, old.basket.id);
+        assert.match(smaller.reasons[0], /16g occupies 40 mL/);
+        for (const weight of [0, 31, 'bad', Infinity]) assert.ok(calculateStartingPoint({ setup, weight, volume: 40 }).error);
+        assert.equal(calculateStartingPoint({ setup, weight: 16, volume: 50 }).density, 0.32);
+        const calibrated = { ...setup, referenceVolume: 45, calibrations: { 'pullman-17': { referenceDose: 18, puckDepth: 12, clearance: 14 } } };
+        assert.equal(calculateStartingPoint({ setup: calibrated, weight: 16, volume: 40, basketId: 'pullman-17' }).headspace, 2);
+    });
+
     it("honors manual selection and never recommends an unowned basket", () => {
         const plan = calculateStartingPoint({ setup, volume: 48, basketId: "pullman-17" });
         assert.equal(plan.basket.id, "pullman-17");

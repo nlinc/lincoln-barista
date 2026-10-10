@@ -1,9 +1,10 @@
-import { getBrewAdvice } from "./brew-advice.js?v=1.16.0";
-import { el, renderEmptyAction } from "./dom.js?v=1.16.0";
-import { validateShot } from "./shot-analytics.js?v=1.16.0";
-import { beanImpressionLabel, resolveBeanImpression } from "./collection-view.js?v=1.16.0";
-import { normalizeRoastDate } from "./bean-record.js?v=1.16.0";
-import { localDateKey } from "./machine-config.js?v=1.16.0";
+import { getBrewAdvice } from "./brew-advice.js?v=1.17.0";
+import { el, renderEmptyAction } from "./dom.js?v=1.17.0";
+import { validateShot } from "./shot-analytics.js?v=1.17.0";
+import { beanImpressionLabel, resolveBeanImpression } from "./collection-view.js?v=1.17.0";
+import { normalizeRoastDate } from "./bean-record.js?v=1.17.0";
+import { localDateKey, recordMachineId } from "./machine-config.js?v=1.17.0";
+import { basketFor } from "./brew-setup.js?v=1.17.0";
 
 const ratioFor = (shot) => {
     const dose = parseFloat(shot?.dose);
@@ -81,10 +82,14 @@ export const renderBeanAge = (roastDate) => {
 
 export const renderCurrentRecipe = (recipe) => {
     const consoleElement = document.getElementById("dial-in-console");
+    const saved = recipe?.status === 'Saved';
+    consoleElement.querySelector('.console-title').textContent = saved ? 'Saved recipe targets' : 'Current Recipe';
+    consoleElement.querySelector('.recipe-grid').classList.toggle('saved-setup', saved);
+    document.getElementById('recipe-time').closest('.recipe-item').classList.toggle('hidden', saved);
+    document.getElementById("recipe-status").textContent = recipe?.status || 'Not set';
+    document.getElementById("recipe-status").className = "console-status" + (recipe ? " status-" + recipe.status.toLowerCase() : '');
     if (!recipe?.shot) { consoleElement.classList.add("hidden"); return; }
     const shot = recipe.shot;
-    document.getElementById("recipe-status").textContent = recipe.status;
-    document.getElementById("recipe-status").className = "console-status status-" + recipe.status.toLowerCase();
     document.getElementById("recipe-grind").textContent = shot.grind || "--";
     document.getElementById("recipe-dose").textContent = shot.dose ? shot.dose + "g" : "--";
     document.getElementById("recipe-yield").textContent = shot.yield ? shot.yield + "g" : "--";
@@ -132,6 +137,8 @@ export const renderShotHistory = ({ bean, expanded, logs, onEdit, onLog, onToggl
         const taste = log.channelingObserved ? "channeling" : log.taste;
         const adviceText = validation.valid && tasteLabels[taste] ? `Taste: ${tasteLabels[taste]}` : advice.text;
         row.append(metrics, el("div", "advice-text", adviceText));
+        const basket = basketFor(log.basketId, recordMachineId(log));
+        if (basket) row.append(el('div', 'log-setup-context', basket.name + (log.tampForceLb ? ` · ${log.tampForceLb} lb tamper` : '')));
         const edit = () => onEdit(log.id);
         row.addEventListener("click", edit);
         row.addEventListener("keydown", event => {
@@ -172,9 +179,12 @@ export const renderDialInSummary = (logs) => {
     }));
 };
 
-export const renderMachineBadge = ({ b1, machineId, machineName, machineVersion }) => {
+export const renderMachineBadge = ({ b1, b2, profileUsed, machineId, machineName, machineVersion }) => {
+    const preset = profileUsed === 'p2' ? b2 : b1;
     const context = machineId === "bianca"
-        ? `${machineVersion.toUpperCase()} • paddle flow`
-        : `${(parseInt(b1?.infusion) || 0) + (parseInt(b1?.bloom) || 0)}s P1 pre-infusion`;
+        ? `${machineVersion.toUpperCase()} • ${(profileUsed || 'manual').replace('bianca-', '').replaceAll('-', ' ')}`
+        : profileUsed === 'p1' || profileUsed === 'p2'
+            ? `${(parseInt(preset?.infusion) || 0) + (parseInt(preset?.bloom) || 0)}s ${profileUsed.toUpperCase()} pre-infusion`
+            : 'Manual · machine settings';
     document.getElementById("machine-badge").textContent = (machineName || "Espresso machine") + " • " + context;
 };

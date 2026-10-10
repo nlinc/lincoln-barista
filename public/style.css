@@ -312,6 +312,7 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
 .shot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .form-group { margin-bottom: 1rem; }
 .finished-search-controls label,
+#view-detail .bag-setup-form label,
 #view-edit-bean label,
 #view-log-shot label,
 #view-settings label,
@@ -322,6 +323,8 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
     display: block; color: var(--text-muted); font-size: 0.72rem; font-weight: 850;
     text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;
 }
+#view-detail .bag-setup-form input,
+#view-detail .bag-setup-form select,
 #finished-search,
 #view-edit-bean input:not([type="hidden"]):not([type="file"]),
 #view-edit-bean select,
@@ -343,6 +346,8 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
     background: rgba(0,0,0,0.28); color: var(--text-main); padding: 0 0.9rem; font: inherit;
     outline: none; appearance: none;
 }
+#view-detail .bag-setup-form input:focus,
+#view-detail .bag-setup-form select:focus,
 #finished-search:focus,
 #view-edit-bean input:focus,
 #view-edit-bean select:focus,
@@ -935,3 +940,14 @@ body[data-view="settings"] #btn-open-settings { border-color: var(--roast-light)
 .field-error { color: var(--error-text); font-size: 0.8rem; line-height: 1.4; margin-top: 0.4rem; }
 #view-log-shot input[aria-invalid="true"] { border-color: var(--error-text); }
 .shot-save-error { grid-column: 1 / -1; margin: 0; }
+
+/* Repeatable bag setup lives inside the recipe card. */
+.bag-setup-form { margin-top: 1rem; }
+.bag-setup-form .secondary-disclosure { margin-bottom: 1rem; }
+.bag-setup-form details[open] > .form-grid { margin-top: 1rem; }
+#bag-setup-editor[hidden] { display: none; }
+.console-status.status-saved { color: var(--accent-amber); border: 1px solid var(--accent-amber); }
+.shot-basket-group { margin-top: 1rem; }
+.log-setup-context { color: var(--text-muted); font-size: 0.72rem; margin-top: 0.5rem; }
+
+.recipe-grid.saved-setup { grid-template-columns: repeat(3, minmax(0, 1fr)); }

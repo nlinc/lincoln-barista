@@ -23,7 +23,8 @@ This repo is a small Firebase/static PWA for tracking espresso beans, brew logs,
 - Bean and machine scoping for guided tuning: `public/js/tuning-session.js`.
 - Shared DOM and navigation helpers: `public/js/dom.js` and `public/js/router.js`.
 - Basket ownership, grinder preferences, and calibration have one editor in Settings (My Baskets), saved with the machine profile. First-shot recipes consume that saved setup; optional tools stay behind disclosures. Home leads with machine care and three recent beans; Show all expands the filtered/sorted collection.
-- New bean dose/basket heuristics and calibration: `public/js/starting-point.js`; presentation: `public/js/starting-point-view.js`. Setup is saved per machine in `user_profiles.startingPoints`; fixed 18g Falcon measurements belong to the individual bag in `beans.startingMeasurement`.
+- New bean dose/basket heuristics and calibration: `public/js/starting-point.js`; presentation: `public/js/starting-point-view.js`. Setup is saved per machine in `user_profiles.startingPoints`; Falcon weight/volume measurements belong to the individual bag (legacy records without weight mean 18g) in `beans.startingMeasurement`.
+- Repeatable per-bag/per-machine targets: `public/js/brew-setup.js` and `brew-setup-view.js`, saved under `beans.brewSetups`. Saves patch only the selected machine. New shots record basket and optional tamper setting; legacy shots stay unknown. New-bag reuse never copies setups or measurements. Saved targets stay stable until explicitly edited; new shot yield/time remain blank.
 - Brew advice rules: `public/js/brew-advice.js`.
 - Elizabeth machine profiles and tuning rules: `public/js/elizabeth-tuning.js`.
 - Bianca machine profiles and flow-tuning rules: `public/js/bianca-tuning.js`.
