@@ -3,8 +3,8 @@
  * Modularized and Optimized for Mobile. v1.3.5 - UI Logic Refinement.
  */
 
-import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.15.0";
-import { chartOptions, renderAnalyticsMetrics, renderPatternList } from "./analytics-view.js?v=1.15.0";
+import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.15.1";
+import { chartOptions, renderAnalyticsMetrics, renderPatternList } from "./analytics-view.js?v=1.15.1";
 import {
     archiveBean,
     createBean,
@@ -14,7 +14,7 @@ import {
     restoreBean,
     updateBean,
     uploadBeanPhoto
-} from "./bean-repository.js?v=1.15.0";
+} from "./bean-repository.js?v=1.15.1";
 import {
     chooseCurrentRecipe,
     renderBeanAge,
@@ -23,22 +23,22 @@ import {
     renderDialInSummary as renderDialInSummaryView,
     renderMachineBadge,
     renderShotHistory
-} from "./bean-detail-view.js?v=1.15.0";
-import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.15.0";
-import { renderBeanCollection, resolveBeanImpression } from "./collection-view.js?v=1.15.0";
-import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.15.0";
-import { normalizeBeanRecord, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.15.0";
-import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.15.0";
-import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.15.0";
-import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.15.0";
-import { navigate } from "./router.js?v=1.15.0";
-import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.15.0";
-import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.15.0";
-import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.15.0";
-import { getBrewAdvice } from "./brew-advice.js?v=1.15.0";
-import { summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.15.0";
-import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.15.0";
-import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.15.0";
+} from "./bean-detail-view.js?v=1.15.1";
+import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.15.1";
+import { renderBeanCollection, resolveBeanImpression } from "./collection-view.js?v=1.15.1";
+import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.15.1";
+import { normalizeBeanRecord, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.15.1";
+import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.15.1";
+import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.15.1";
+import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.15.1";
+import { navigate } from "./router.js?v=1.15.1";
+import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.15.1";
+import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.15.1";
+import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.15.1";
+import { getBrewAdvice } from "./brew-advice.js?v=1.15.1";
+import { summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.15.1";
+import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.15.1";
+import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.15.1";
 import {
     createDefaultUserProfile,
     localDateKey,
@@ -48,10 +48,10 @@ import {
     normalizeUserProfile,
     presetDueDate,
     recordMachineId
-} from "./machine-config.js?v=1.15.0";
+} from "./machine-config.js?v=1.15.1";
 
-import { calculateStartingPoint, normalizeStartingSetup } from "./starting-point.js?v=1.15.0";
-import { readStartingSetup, renderStartingBasketOptions, renderStartingBeans, renderStartingResult, renderStartingSetup } from "./starting-point-view.js?v=1.15.0";
+import { calculateStartingPoint, normalizeStartingSetup } from "./starting-point.js?v=1.15.1";
+import { readStartingSetup, renderStartingBasketOptions, renderStartingBeans, renderStartingResult, renderStartingSetup } from "./starting-point-view.js?v=1.15.1";
 
 // App State
 let currentUser = null;
@@ -200,7 +200,7 @@ const app = {
     router: (view, addToHistory) => {
         navigate(view, addToHistory);
         if (view === 'detail' && currentActiveBean?.archived === true) document.getElementById('fab-log-shot').classList.add('hidden');
-        if (view === 'list' && currentUser) { app.renderBeanList(); app.renderCareHome(); }
+        if (view === 'list' && currentUser) app.renderBeanList();
     },
 
     // --- AUTH ---
@@ -281,6 +281,7 @@ const app = {
             records: activeMaintenanceRecords(),
             loaded: maintenanceLoaded,
             error: maintenanceLoadError,
+            compact: collectionScope === 'finished' || beans.length <= 1,
             pending: maintenancePending,
             onQuickAction: (preset, button) => app.saveMaintenancePreset(preset, button),
             onOpen: () => app.openMaintenance()
@@ -333,12 +334,14 @@ const app = {
             notice: collectionNotice,
             onUndo: beanId => app.setBagFinished(beanId, false),
             onAdd: () => { app.resetBeanForm(); app.router("edit-bean"); },
+            onShowFinished: () => app.setCollectionScope('finished'),
             onOpen: beanId => app.loadBeanDetail(beanId),
             onEdit: beanId => app.editBean(beanId),
             onFinish: beanId => app.setBagFinished(beanId, true),
             onRestore: beanId => app.setBagFinished(beanId, false),
             onReuse: beanId => app.newBagFromBean(beanId)
         });
+        app.renderCareHome();
     },
 
     setSort: (value) => { currentSort = value; app.renderBeanList(); },

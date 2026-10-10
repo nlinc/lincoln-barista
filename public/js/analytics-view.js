@@ -1,4 +1,4 @@
-import { el } from "./dom.js?v=1.15.0";
+import { el } from "./dom.js?v=1.15.1";
 
 export const chartOptions = (xTitle, yTitle, { showLegend = false } = {}) => ({
     responsive: true,

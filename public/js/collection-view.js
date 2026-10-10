@@ -1,7 +1,7 @@
-import { normalizeBeanRecord, recordTime, resolveBeanImpression } from "./bean-record.js?v=1.15.0";
-export { resolveBeanImpression } from "./bean-record.js?v=1.15.0";
+import { normalizeBeanRecord, recordTime, resolveBeanImpression } from "./bean-record.js?v=1.15.1";
+export { resolveBeanImpression } from "./bean-record.js?v=1.15.1";
 
-import { el, renderEmptyAction } from "./dom.js?v=1.15.0";
+import { el, renderEmptyAction } from "./dom.js?v=1.15.1";
 
 const roastColor = (level = "Medium") => ({
     Light: "#f59e0b",
@@ -58,7 +58,7 @@ export const swipeAction = (deltaX, deltaY) => {
     return deltaX < 0 ? 'open' : 'close';
 };
 
-export const renderBeanCollection = ({ beans, activeFilters, currentSort, expanded = false, scope = 'current', pending = new Set(), notice, onUndo, onAdd, onOpen, onEdit, onFinish, onRestore, onReuse }) => {
+export const renderBeanCollection = ({ beans, activeFilters, currentSort, expanded = false, scope = 'current', pending = new Set(), notice, onUndo, onAdd, onShowFinished, onOpen, onEdit, onFinish, onRestore, onReuse }) => {
     const container = document.getElementById("bean-list-container");
     if (!container) return;
     const preview = collectionPreview(beansForScope(beans, scope), activeFilters, currentSort, expanded);
@@ -67,7 +67,8 @@ export const renderBeanCollection = ({ beans, activeFilters, currentSort, expand
     toggle.hidden = preview.total <= 3;
     toggle.textContent = expanded ? "Show fewer beans" : `Show all ${preview.total} beans`;
     toggle.setAttribute("aria-expanded", String(expanded));
-    document.getElementById("collection-count").textContent = preview.total ? `${visibleBeans.length} of ${preview.total}` : "";
+    document.getElementById("collection-count").textContent = preview.total > 1 ? `${visibleBeans.length} of ${preview.total}` : "";
+    document.getElementById('input-sort-beans').hidden = preview.total <= 1;
     container.classList.toggle("collection-preview", !expanded);
     if (document.body.dataset.view === 'list') document.getElementById('fab-add-bean').classList.remove('hidden');
     for (const value of ['current', 'finished']) {
@@ -94,9 +95,15 @@ export const renderBeanCollection = ({ beans, activeFilters, currentSort, expand
     }
 
     if (!visibleBeans.length) {
-        renderEmptyAction(container, scope === 'finished' ? 'No finished bags yet' : 'No coffee found',
-            scope === 'finished' ? 'Finish a bag when you’re done. Its coffee details and shots stay here.' : 'Add a bag to start logging shots.',
-            scope === 'finished' ? null : 'Add Bean', onAdd);
+        const hasCurrent = beansForScope(beans).length > 0;
+        const hasFinished = beansForScope(beans, 'finished').length > 0;
+        if (scope === 'finished') {
+            renderEmptyAction(container, 'No finished bags yet', 'Finish a bag when you’re done. Its coffee details and shots stay here.');
+        } else if (!hasCurrent && hasFinished) {
+            renderEmptyAction(container, 'No current bags', 'Your finished coffees and shot history are saved. Choose a coffee to start a new bag.', 'Choose a past coffee', onShowFinished);
+        } else {
+            renderEmptyAction(container, hasCurrent ? 'No coffee found' : 'No current bags', hasCurrent ? 'Try another filter or add a bag.' : 'Add a bag to start logging shots.', 'Add Bean', onAdd);
+        }
         return;
     }
 

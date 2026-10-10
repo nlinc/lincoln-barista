@@ -877,6 +877,9 @@ body[data-view="settings"] #btn-open-settings { border-color: var(--roast-light)
 .care-machine-label { display: block; color: var(--text-muted); font-size: 0.75rem; margin-top: 0.35rem; }
 .care-home-next { color: var(--text-secondary); font-size: 0.75rem; line-height: 1.5; margin: 0.9rem 0 0; }
 .care-home-next:empty { display: none; }
+.care-home-details { margin-top: 0.8rem; }
+.care-home-details > summary { color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; cursor: pointer; padding: 0.4rem 0; }
+.collection-count:empty, .sort-select[hidden] { display: none; }
 .collection-count { display: block; color: var(--text-muted); font-size: 0.75rem; margin-top: 0.35rem; }
 .collection-toggle { display: block; width: 100%; min-height: 44px; margin-top: 1rem; padding: 0.8rem; }
 .collection-toggle[hidden] { display: none; }
@@ -889,6 +892,13 @@ body[data-view="settings"] #btn-open-settings { border-color: var(--roast-light)
 .collection-preview .bean-card:hover { transform: none; }
 @media (min-width: 601px) {
     .care-home-heading .section-title { font-size: 1.7rem; }
+}
+@media (max-width: 600px) {
+    #view-list { padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
+    .collection-toggle { width: calc(100% - 76px); }
+}
+@media (max-width: 360px) {
+    .care-home-heading .section-title { font-size: 1.1rem; }
 }
 
 /* Finished bags keep their history and stay available for the next purchase. */

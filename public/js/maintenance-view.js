@@ -1,13 +1,19 @@
-import { el, renderEmpty } from "./dom.js?v=1.15.0";
-import { localDateKey, maintenanceDueState, maintenancePresetsFor, parseDateKey } from "./machine-config.js?v=1.15.0";
-import { careChecklist, homeCareSummary, latestCareRecords } from "./care-status.js?v=1.15.0";
+import { el, renderEmpty } from "./dom.js?v=1.15.1";
+import { localDateKey, maintenanceDueState, maintenancePresetsFor, parseDateKey } from "./machine-config.js?v=1.15.1";
+import { careChecklist, homeCareSummary, latestCareRecords } from "./care-status.js?v=1.15.1";
 
-export const renderCareHome = ({ machineId, records, loaded, error, pending = new Set(), onQuickAction, onOpen }) => {
+export const renderCareHome = ({ machineId, records, loaded, error, compact = false, pending = new Set(), onQuickAction, onOpen }) => {
     const card = document.getElementById("care-home-card");
     const summary = document.getElementById("care-home-summary");
     const list = document.getElementById("care-home-list");
     const next = document.getElementById("care-home-next");
     if (!card) return;
+    const details = document.getElementById('care-home-details');
+    const mode = compact ? 'compact' : 'full';
+    if (details.dataset.mode !== mode) {
+        details.open = !compact;
+        details.dataset.mode = mode;
+    }
     document.getElementById("care-home-machine").textContent = machineId === 'bianca' ? 'Bianca' : 'Elizabeth';
     next.textContent = '';
     card.classList.toggle("hidden", !machineId);
