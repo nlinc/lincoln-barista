@@ -1,4 +1,40 @@
-import { el } from "./dom.js?v=1.17.0";
+import { el } from "./dom.js?v=1.18.0";
+import { STARTING_BASKETS } from "./starting-point.js?v=1.18.0";
+import { basketFor } from "./brew-setup.js?v=1.18.0";
+
+export const renderAnalyticsFilters = ({ logs, machineId, ownedIds, basketId, roast }) => {
+    const picker = document.getElementById('analytics-basket');
+    const available = STARTING_BASKETS.filter(basket => (!basket.machineId || basket.machineId === machineId) &&
+        (ownedIds.includes(basket.id) || logs.some(log => log.basketId === basket.id)));
+    const choices = [{ id: 'all', name: 'All baskets' }, ...available, { id: 'unknown', name: 'Not recorded' }];
+    picker.replaceChildren(...choices.map(choice => {
+        const option = el('option', '', choice.name);
+        option.value = choice.id;
+        return option;
+    }));
+    picker.value = choices.some(choice => choice.id === basketId) ? basketId : 'all';
+    document.getElementById('analytics-roast').value = roast;
+    return picker.value;
+};
+
+export const renderBasketComparison = (rows, machineId, ownedIds, selectedId) => {
+    const body = document.getElementById('basket-comparison-body');
+    const results = [...rows];
+    for (const id of ownedIds) {
+        const basket = basketFor(id, machineId);
+        if (basket && !results.some(row => row.id === id)) results.push({ id, label: basket.name, count: 0 });
+    }
+    body.replaceChildren(...results.map(result => {
+        const row = el('tr', result.id === selectedId ? 'summary-best-row' : '');
+        const label = el('th', '', result.label);
+        label.scope = 'row';
+        const value = (key, suffix = '') => result.count ? Number(result[key].toFixed(2)) + suffix : '—';
+        row.append(label, el('td', '', result.count), el('td', '', value('grind')), el('td', '', value('dose', 'g')),
+            el('td', '', value('yield', 'g')), el('td', '', value('time', 's')), el('td', '', result.count ? '1:' + Number(result.ratio.toFixed(2)) : '—'),
+            el('td', '', result.count ? `${result.balanced}/${result.count}` : '—'));
+        return row;
+    }));
+};
 
 export const chartOptions = (xTitle, yTitle, { showLegend = false } = {}) => ({
     responsive: true,

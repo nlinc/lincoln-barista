@@ -3,8 +3,8 @@
  * Modularized and Optimized for Mobile. v1.3.5 - UI Logic Refinement.
  */
 
-import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.17.0";
-import { chartOptions, renderAnalyticsMetrics, renderPatternList } from "./analytics-view.js?v=1.17.0";
+import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.18.0";
+import { chartOptions, renderAnalyticsFilters, renderAnalyticsMetrics, renderBasketComparison, renderPatternList } from "./analytics-view.js?v=1.18.0";
 import {
     archiveBean,
     createBean,
@@ -15,7 +15,7 @@ import {
     saveBeanBrewSetup,
     updateBean,
     uploadBeanPhoto
-} from "./bean-repository.js?v=1.17.0";
+} from "./bean-repository.js?v=1.18.0";
 import {
     chooseCurrentRecipe,
     renderBeanAge,
@@ -24,22 +24,22 @@ import {
     renderDialInSummary as renderDialInSummaryView,
     renderMachineBadge,
     renderShotHistory
-} from "./bean-detail-view.js?v=1.17.0";
-import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.17.0";
-import { renderBeanCollection, resolveBeanImpression } from "./collection-view.js?v=1.17.0";
-import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.17.0";
-import { normalizeBeanRecord, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.17.0";
-import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.17.0";
-import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.17.0";
-import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.17.0";
-import { navigate } from "./router.js?v=1.17.0";
-import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.17.0";
-import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.17.0";
-import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.17.0";
-import { getBrewAdvice } from "./brew-advice.js?v=1.17.0";
-import { summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.17.0";
-import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.17.0";
-import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.17.0";
+} from "./bean-detail-view.js?v=1.18.0";
+import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.18.0";
+import { renderBeanCollection, resolveBeanImpression, selectHomeBean, selectVisibleBeans } from "./collection-view.js?v=1.18.0";
+import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.18.0";
+import { normalizeBeanRecord, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.18.0";
+import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.18.0";
+import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.18.0";
+import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.18.0";
+import { navigate } from "./router.js?v=1.18.0";
+import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.18.0";
+import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.18.0";
+import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.18.0";
+import { getBrewAdvice } from "./brew-advice.js?v=1.18.0";
+import { filterShotTrends, recommendStartingGrind, summarizeBasketResults, summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.18.0";
+import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.18.0";
+import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.18.0";
 import {
     createDefaultUserProfile,
     localDateKey,
@@ -49,15 +49,15 @@ import {
     normalizeUserProfile,
     presetDueDate,
     recordMachineId
-} from "./machine-config.js?v=1.17.0";
+} from "./machine-config.js?v=1.18.0";
 
-import { calculateStartingPoint, normalizeStartingSetup } from "./starting-point.js?v=1.17.0";
-import { readStartingSetup, renderStartingBasketOptions, renderStartingBeans, renderStartingResult, renderStartingSetup } from "./starting-point-view.js?v=1.17.0";
+import { calculateStartingPoint, normalizeStartingSetup } from "./starting-point.js?v=1.18.0";
+import { readStartingSetup, renderStartingBasketOptions, renderStartingBeans, renderStartingResult, renderStartingSetup } from "./starting-point-view.js?v=1.18.0";
 
-import { readShotMeasurements, renderShotFieldErrors, renderShotSaveError } from "./shot-form-view.js?v=1.17.0";
+import { readShotMeasurements, renderShotFieldErrors, renderShotSaveError } from "./shot-form-view.js?v=1.18.0";
 
-import { bagBrewSetup, basketFor, setupRecipe } from "./brew-setup.js?v=1.17.0";
-import { readBagSetup, renderBagSetup, renderShotBaskets } from "./brew-setup-view.js?v=1.17.0";
+import { bagBrewSetup, basketFor, setupRecipe } from "./brew-setup.js?v=1.18.0";
+import { readBagSetup, renderBagSetup, renderGrindSuggestion, renderHomeBrewSetup, renderShotBaskets } from "./brew-setup-view.js?v=1.18.0";
 
 // App State
 let currentUser = null;
@@ -81,10 +81,13 @@ let currentEditingImagePath = null;
 let currentRecipeShot = null;
 let analyticsScope = 'all';
 let analyticsReturnView = 'list';
+let analyticsBasketId = 'all';
+let analyticsRoast = 'all';
 let legacyMigrationStarted = false;
 let historyExpanded = false;
 let collectionExpanded = false;
 let collectionScope = 'current';
+let homeSetupBeanId = '';
 let finishedSearch = '';
 let shotValidationShown = false;
 let collectionNotice = null;
@@ -248,6 +251,7 @@ const app = {
         logsLoadPromise = fetchShotsForUser(currentUser.uid).then(logs => {
             allLogsCache = newestFirst(logs);
             allLogsLoaded = true;
+            if (document.body.dataset.view === 'list') app.renderBeanList();
             return allLogsCache;
         }).finally(() => { logsLoadPromise = null; });
         return logsLoadPromise;
@@ -351,7 +355,32 @@ const app = {
             onRestore: beanId => app.setBagFinished(beanId, false),
             onReuse: beanId => app.newBagFromBean(beanId)
         });
+        app.renderHomeSetup();
         app.renderCareHome();
+    },
+
+    renderHomeSetup: () => {
+        const bean = collectionScope === 'current' ? selectHomeBean(catalogBeans, homeSetupBeanId) : null;
+        if (collectionScope === 'current') homeSetupBeanId = bean?.id || '';
+        renderHomeBrewSetup({
+            bean,
+            beans: selectVisibleBeans(beans),
+            machineId: activeMachineId(),
+            suggestion: app.grindSuggestion(bean, bagBrewSetup(bean, activeMachineId())),
+            onSelect: beanId => { homeSetupBeanId = beanId; app.renderHomeSetup(); },
+            onSetup: async beanId => {
+                await app.loadBeanDetail(beanId);
+                if (currentActiveBean?.id !== beanId || document.body.dataset.view !== 'detail') return;
+                const editor = document.getElementById('bag-setup-editor');
+                editor.open = true;
+                editor.scrollIntoView({ block: 'start', behavior: 'smooth' });
+                document.getElementById('bag-setup-basket').focus({ preventScroll: true });
+            },
+            onLog: async beanId => {
+                await app.loadBeanDetail(beanId);
+                if (currentActiveBean?.id === beanId && document.body.dataset.view === 'detail') app.openLogShot();
+            }
+        });
     },
 
     setSort: (value) => { currentSort = value; app.renderBeanList(); },
@@ -499,6 +528,7 @@ const app = {
         try {
             currentActiveBean = catalogBeans.find(b => b.id === id);
             if(!currentActiveBean) return app.router('list');
+            if (currentActiveBean.archived !== true) homeSetupBeanId = id;
 
             const roastDate = currentActiveBean.currentRoastDate || "Unknown";
             renderBeanIdentity(currentActiveBean);
@@ -539,6 +569,39 @@ const app = {
         document.querySelector('#dial-in-console .recipe-grid').classList.toggle('hidden', !recipe);
         renderBagSetup({ bean: currentActiveBean, machineId: activeMachineId(), machine: activeMachineProfile(),
             ownedIds: userProfile.startingPoints[activeMachineId()].ownedBasketIds, saved, recipe: recipe?.shot, defaultDose: userProfile.defaultDose });
+        app.updateGrindSuggestion('bag-setup');
+    },
+
+    grindSuggestion: (bean, setup) => setup && allLogsLoaded ? recommendStartingGrind({
+        logs: allLogsCache, beans: catalogBeans, bean, machineId: activeMachineId(),
+        basketId: setup.basketId, dose: setup.dose, ratio: setup.ratio
+    }) : null,
+
+    formGrindSuggestion: (prefix) => {
+        const isSetup = prefix === 'bag-setup';
+        const saved = bagBrewSetup(currentActiveBean, activeMachineId());
+        return app.grindSuggestion(currentActiveBean, {
+            basketId: document.getElementById(isSetup ? 'bag-setup-basket' : 'input-shot-basket').value,
+            dose: document.getElementById(isSetup ? 'bag-setup-dose' : 'input-shot-dose').value,
+            ratio: isSetup ? document.getElementById('bag-setup-ratio').value : saved?.ratio ||
+                (Number(currentRecipeShot?.yield) / Number(currentRecipeShot?.dose)) || 2
+        });
+    },
+
+    updateGrindSuggestion: (prefix) => renderGrindSuggestion(prefix, app.formGrindSuggestion(prefix), {
+        loading: !allLogsLoaded,
+        editing: prefix === 'shot' && Boolean(document.getElementById('input-log-shot-id').value)
+    }),
+
+    useSuggestedGrind: (prefix) => {
+        if (prefix === 'shot' && document.getElementById('input-log-shot-id').value) return;
+        const suggestion = app.formGrindSuggestion(prefix);
+        if (!suggestion) return;
+        const input = document.getElementById(prefix === 'bag-setup' ? 'bag-setup-grind' : 'input-shot-grind');
+        input.value = suggestion.grind;
+        if (prefix === 'bag-setup') input.closest('details').open = true;
+        else app.renderExtractionPreview();
+        input.focus();
     },
 
     saveBagSetup: async () => {
@@ -741,7 +804,9 @@ const app = {
         yieldInput.placeholder = recipeShot?.yield || defDose * 2;
         yieldHint.textContent = recipeShot?.yield ? `Recipe target: ${recipeShot.yield}g. Enter the actual yield.` : '';
         yieldHint.classList.toggle('hidden', !recipeShot?.yield);
-        document.getElementById('input-shot-grind').value = recipeShot?.grind || logsCache.find(log => recordMachineId(log) === activeMachineId())?.grind || '';
+        const suggestion = app.grindSuggestion(currentActiveBean, saved);
+        document.getElementById('input-shot-grind').value = saved ? saved.grind || (suggestion?.grind ?? '')
+            : recipeShot?.grind || logsCache.find(log => recordMachineId(log) === activeMachineId())?.grind || '';
         document.getElementById('input-shot-time').value = '';
         document.getElementById('input-shot-time').placeholder = recipeShot?.time || '30';
         const requestedProfile = recipeShot?.profileUsed || 'manual';
@@ -764,6 +829,7 @@ const app = {
         document.getElementById('btn-delete-shot').classList.add('hidden');
         app.renderExtractionPreview();
         app.router('log-shot');
+        app.updateGrindSuggestion('shot');
     },
     setTimeFromProfile: (n) => {
         let t = 30;
@@ -875,6 +941,7 @@ const app = {
         document.getElementById('btn-delete-shot').classList.remove('hidden');
         app.renderExtractionPreview();
         app.router('log-shot');
+        app.updateGrindSuggestion('shot');
     },
     deleteShot: async () => { if(confirm("Delete log?")) { const sId = document.getElementById('input-log-shot-id').value; const bId = document.getElementById('input-log-bean-id').value; await deleteShotRecord(sId); app.removeCachedLog(sId); await app.loadBeanDetail(bId); } },
     fetchProfile: async () => {
@@ -1363,8 +1430,13 @@ const app = {
         try {
             const useCurrentBean = analyticsScope === "current" && currentActiveBean?.id;
             const loadedLogs = (await app.fetchAllLogs()).filter(log => recordMachineId(log) === activeMachineId());
-            const logs = (useCurrentBean ? loadedLogs.filter(log => log.beanId === currentActiveBean.id) : loadedLogs)
+            const ownedIds = userProfile.startingPoints[activeMachineId()].ownedBasketIds;
+            analyticsBasketId = renderAnalyticsFilters({ logs: loadedLogs, machineId: activeMachineId(), ownedIds, basketId: analyticsBasketId, roast: analyticsRoast });
+            const scopedLogs = filterShotTrends(useCurrentBean ? loadedLogs.filter(log => log.beanId === currentActiveBean.id) : loadedLogs,
+                catalogBeans, { machineId: activeMachineId(), roast: analyticsRoast });
+            const logs = filterShotTrends(scopedLogs, catalogBeans, { machineId: activeMachineId(), basketId: analyticsBasketId })
                 .slice().sort((a, b) => logTime(a) - logTime(b));
+            renderBasketComparison(summarizeBasketResults(scopedLogs, catalogBeans), activeMachineId(), ownedIds, analyticsBasketId);
             try { await loadChartLibrary(); }
             catch (error) { console.warn("Chart loading skipped:", error); }
             app.renderAnalytics(logs);
@@ -1395,9 +1467,10 @@ const app = {
         distEmpty.textContent = hasChartLibrary ? "Log a few shots to see distribution." : "Charts could not be loaded. Pattern cards are still available.";
         trendEmpty.classList.toggle("hidden", canChart);
         distEmpty.classList.toggle("hidden", canChart);
-        document.getElementById("age-chart-note").textContent = summary.isSingleBean
+        document.getElementById("age-chart-note").textContent = summary.hasMultipleBaskets
+            ? 'Select one basket to estimate age drift without mixing basket changes into the trend.' : summary.isSingleBean
             ? "Dots are this bean's actual settings. The line estimates whether you usually move finer or coarser as it ages."
-            : "Above 0 means finer and below 0 means coarser than each bean's first shot. Use the line as a starting adjustment, then stop by taste.";
+            : "Above 0 means finer and below 0 means coarser than each bean's first shot with this basket. Use the line as a starting adjustment, then stop by taste.";
         document.getElementById("analytics-insight-text").innerText = hasData
             ? `Readout based on ${summary.metrics.shots} complete shot${summary.metrics.shots === 1 ? "" : "s"}. Patterns describe correlation, not causation.`
             : "Complete grind, dose, yield, and time values will unlock pattern analysis.";
@@ -1521,6 +1594,7 @@ observeAuthState(async u => {
     beanActionsPending.clear();
     catalogBeans = [];
     currentActiveBean = null;
+    homeSetupBeanId = '';
     currentRecipeShot = null;
     logsCache = [];
     maintenanceRecords = [];
@@ -1572,6 +1646,10 @@ const revealInvalidField = event => {
 document.getElementById('starting-form').addEventListener('invalid', revealInvalidField, true);
 document.getElementById('bag-setup-form').addEventListener('invalid', revealInvalidField, true);
 on('bag-setup-form', 'submit', event => { event.preventDefault(); app.saveBagSetup(); });
+for (const id of ['bag-setup-basket', 'bag-setup-dose', 'bag-setup-ratio']) on(id, 'input', () => app.updateGrindSuggestion('bag-setup'));
+for (const id of ['input-shot-basket', 'input-shot-dose']) on(id, 'input', () => app.updateGrindSuggestion('shot'));
+on('bag-setup-use-grind', 'click', () => app.useSuggestedGrind('bag-setup'));
+on('shot-use-grind', 'click', () => app.useSuggestedGrind('shot'));
 document.getElementById('gear-form').addEventListener('invalid', revealInvalidField, true);
 on("gear-form", "submit", event => { event.preventDefault(); app.saveProfile(); });
 on("starting-form", "submit", event => { event.preventDefault(); app.renderStartingPoint(); });
@@ -1581,6 +1659,8 @@ on("starting-log-shot", "click", () => app.logStartingShot());
 on("btn-open-detail-analytics", "click", () => app.openAnalytics("current", "detail"));
 on("btn-analytics-current", "click", () => app.openAnalytics("current"));
 on("btn-analytics-all", "click", () => app.openAnalytics("all"));
+on('analytics-basket', 'change', event => { analyticsBasketId = event.target.value; app.openAnalytics(); });
+on('analytics-roast', 'change', event => { analyticsRoast = event.target.value; app.openAnalytics(); });
 on("btn-back-analytics", "click", () => app.router(analyticsReturnView === "detail" && currentActiveBean ? "detail" : "list"));
 document.querySelectorAll("[data-route]").forEach(b => b.onclick = () => app.router(b.dataset.route));
 on("btn-time-1", "click", () => app.setTimeFromProfile(1)); on("btn-time-2", "click", () => app.setTimeFromProfile(2));

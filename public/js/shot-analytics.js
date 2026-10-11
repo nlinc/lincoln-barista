@@ -1,4 +1,6 @@
-import { getBrewAdvice } from "./brew-advice.js?v=1.17.0";
+import { getBrewAdvice } from "./brew-advice.js?v=1.18.0";
+import { basketFor } from "./brew-setup.js?v=1.18.0";
+import { recordMachineId } from "./machine-config.js?v=1.18.0";
 
 const DAY_MS = 86400000;
 
@@ -109,6 +111,53 @@ export const summarizeGrindFrequency = (shots) => {
         .map(([grind, count]) => ({ label: String(grind), grind, count }));
 };
 
+export const filterShotTrends = (logs, beans, { machineId, basketId = 'all', roast = 'all' }) => {
+    const beanLookup = new Map(beans.map(bean => [bean.id, bean]));
+    return logs.filter(log => recordMachineId(log) === machineId &&
+        (basketId === 'all' || (basketId === 'unknown' ? !basketFor(log.basketId, machineId) : log.basketId === basketId)) &&
+        (roast === 'all' || beanLookup.get(log.beanId)?.roastLevel?.toLowerCase() === roast));
+};
+
+export const summarizeBasketResults = (logs, beans) => {
+    const groups = new Map();
+    for (const shot of summarizeShotPatterns(logs, beans).usable) {
+        const basket = basketFor(shot.basketId, recordMachineId(shot));
+        const id = basket?.id || 'unknown';
+        if (!groups.has(id)) groups.set(id, { id, label: basket?.name || 'Not recorded', shots: [] });
+        groups.get(id).shots.push(shot);
+    }
+    return [...groups.values()].sort((a, b) => a.label.localeCompare(b.label)).map(({ id, label, shots }) => ({
+        id, label, count: shots.length,
+        grind: median(shots.map(shot => shot.grind)),
+        dose: median(shots.map(shot => shot.dose)),
+        yield: median(shots.map(shot => shot.yield)),
+        time: median(shots.map(shot => shot.time)),
+        ratio: median(shots.map(shot => shot.ratio)),
+        balanced: shots.filter(shot => shot.taste === 'balanced' && shot.channelingObserved !== true).length
+    }));
+};
+
+export const recommendStartingGrind = ({ logs, beans, bean, machineId, basketId, dose, ratio, now = new Date() }) => {
+    if (!bean || !basketFor(basketId, machineId) || toNumber(dose) === null || toNumber(ratio) === null) return null;
+    const roast = String(bean.roastLevel || '').toLowerCase();
+    if (!['light', 'medium', 'dark', 'espresso'].includes(roast)) return null;
+    const candidates = summarizeShotPatterns(filterShotTrends(logs, beans, { machineId, basketId, roast }), beans).usable
+        .filter(shot => shot.shotDate <= now && now - shot.shotDate <= 90 * DAY_MS &&
+            Math.abs(shot.dose - Number(dose)) <= 1 && Math.abs(shot.ratio - Number(ratio)) <= 0.25 &&
+            shot.channelingObserved !== true &&
+            (shot.taste === 'balanced' || (!shot.taste && shot.status === 'good')));
+    const sameBean = candidates.filter(shot => shot.beanId === bean.id);
+    const scope = sameBean.length >= 3 ? 'bean' : 'roast';
+    const matches = (scope === 'bean' ? sameBean : candidates).slice(-20);
+    if (scope === 'roast' && (matches.length < 5 || new Set(matches.map(shot => shot.beanId)).size < 2)) return null;
+    return {
+        grind: Math.round(median(matches.map(shot => shot.grind)) * 100) / 100,
+        count: matches.length, scope, roast,
+        min: Math.min(...matches.map(shot => shot.grind)),
+        max: Math.max(...matches.map(shot => shot.grind))
+    };
+};
+
 export const summarizeShotPatterns = (logs, beans = [], options = {}) => {
     const beanLookup = new Map(beans.map(bean => [bean.id, bean]));
     const finerDirection = options.finerDirection === "higher" ? "higher" : "lower";
@@ -136,8 +185,9 @@ export const summarizeShotPatterns = (logs, beans = [], options = {}) => {
     const isSingleBean = beanIds.size === 1;
     const baselines = new Map();
     usable.forEach(shot => {
-        if (!baselines.has(shot.beanId)) baselines.set(shot.beanId, shot.grind);
-        shot.grindDelta = shot.grind - baselines.get(shot.beanId);
+        const key = JSON.stringify([shot.beanId, recordMachineId(shot), shot.basketId || 'unknown']);
+        if (!baselines.has(key)) baselines.set(key, shot.grind);
+        shot.grindDelta = shot.grind - baselines.get(key);
         shot.grindMovement = shot.grindDelta === 0 ? 0 : (finerDirection === "higher" ? shot.grindDelta : -shot.grindDelta);
     });
 
@@ -155,8 +205,9 @@ export const summarizeShotPatterns = (logs, beans = [], options = {}) => {
     const ageSpan = agePoints.length
         ? Math.max(...agePoints.map(point => point.x)) - Math.min(...agePoints.map(point => point.x))
         : 0;
-    const ageRegression = agePoints.length >= 4 && ageSpan >= 7 ? regression(agePoints) : null;
-    const flowRegression = flowPoints.length >= 4 && ageSpan >= 7 ? regression(flowPoints) : null;
+    const hasMultipleBaskets = new Set(usable.map(shot => shot.basketId || 'unknown')).size > 1;
+    const ageRegression = !hasMultipleBaskets && agePoints.length >= 4 && ageSpan >= 7 ? regression(agePoints) : null;
+    const flowRegression = !hasMultipleBaskets && flowPoints.length >= 4 && ageSpan >= 7 ? regression(flowPoints) : null;
     const ratios = usable.map(shot => shot.ratio);
     const goodShots = usable.filter(shot => shot.status === "good");
     const dialedPercent = usable.length ? Math.round(goodShots.length / usable.length * 100) : 0;
@@ -188,7 +239,7 @@ export const summarizeShotPatterns = (logs, beans = [], options = {}) => {
     } else {
         insights.push({
             title: "Age compensation",
-            text: agePoints.length < 4 || ageSpan < 7
+            text: hasMultipleBaskets ? 'Select one basket to estimate grind drift with bean age.' : agePoints.length < 4 || ageSpan < 7
                 ? "More shots across at least a week are needed to estimate grind drift."
                 : "There is no clear grind-setting drift with bean age yet.",
             tone: "neutral"
@@ -205,7 +256,7 @@ export const summarizeShotPatterns = (logs, beans = [], options = {}) => {
     } else {
         insights.push({
             title: "Flow drift",
-            text: usable.length >= 4 ? "Flow rate is fairly stable across the observed age range." : "Log more complete shots to measure flow drift.",
+            text: hasMultipleBaskets ? 'Select one basket to estimate flow drift with bean age.' : usable.length >= 4 ? "Flow rate is fairly stable across the observed age range." : "Log more complete shots to measure flow drift.",
             tone: "neutral"
         });
     }
@@ -238,6 +289,7 @@ export const summarizeShotPatterns = (logs, beans = [], options = {}) => {
             ageSpan
         },
         insights,
-        isSingleBean
+        isSingleBean,
+        hasMultipleBaskets
     };
 };

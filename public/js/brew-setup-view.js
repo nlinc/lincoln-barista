@@ -1,7 +1,7 @@
-import { el } from "./dom.js?v=1.17.0";
-import { basketFor, normalizeBrewSetup, profilesFor } from "./brew-setup.js?v=1.17.0";
-import { STARTING_BASKETS } from "./starting-point.js?v=1.17.0";
-import { convertTemperature } from "./elizabeth-tuning.js?v=1.17.0";
+import { el } from "./dom.js?v=1.18.0";
+import { basketFor, normalizeBrewSetup, profilesFor } from "./brew-setup.js?v=1.18.0";
+import { STARTING_BASKETS } from "./starting-point.js?v=1.18.0";
+import { convertTemperature } from "./elizabeth-tuning.js?v=1.18.0";
 
 export const renderShotBaskets = (machineId, ownedIds, selectedId = '') => {
     const picker = document.getElementById('input-shot-basket');
@@ -64,3 +64,63 @@ export const readBagSetup = (machineId, temperatureUnit) => normalizeBrewSetup({
     profileUsed: document.getElementById('bag-setup-profile').value,
     tampForceLb: document.getElementById('bag-setup-tamp').value
 }, machineId);
+
+export const grindSuggestionText = suggestion => suggestion
+    ? `Try grind ${suggestion.grind} · ${suggestion.count} matching shots ${suggestion.scope === 'bean' ? 'from this bean' : `across ${suggestion.roast} beans`} in the last 90 days (range ${suggestion.min}–${suggestion.max}). Similar dose and ratio; assumes the same grinder. Bean age can shift the setting. Dial by taste.`
+    : 'Collect 3 successful shots for this bean, or 5 across at least 2 beans of the same roast, with this basket and a similar dose and ratio. Stock and Pullman history stay separate.';
+
+export const renderGrindSuggestion = (prefix, suggestion, { editing = false, loading = false } = {}) => {
+    const note = document.getElementById(`${prefix}-grind-suggestion`);
+    const button = document.getElementById(`${prefix}-use-grind`);
+    note.hidden = editing;
+    note.textContent = loading ? 'Shot history is not available yet.' : grindSuggestionText(suggestion);
+    button.hidden = editing || !suggestion;
+    button.textContent = suggestion ? `Use grind ${suggestion.grind}` : 'Use suggested grind';
+};
+
+export const renderHomeBrewSetup = ({ bean, beans, machineId, suggestion, onSelect, onSetup, onLog }) => {
+    const panel = document.getElementById('home-shot-setup');
+    const restoreFocus = document.activeElement?.id === 'home-setup-bean';
+    panel.hidden = !bean;
+    panel.replaceChildren();
+    if (!bean) return;
+    const setup = normalizeBrewSetup(bean.brewSetups?.[machineId], machineId);
+    panel.append(el('h2', 'home-setup-title', 'Shot setup'));
+    if (beans.length > 1) {
+        const field = el('div', 'home-setup-picker');
+        const label = el('label', '', 'Bean');
+        label.htmlFor = 'home-setup-bean';
+        const picker = el('select');
+        picker.id = 'home-setup-bean';
+        picker.append(...beans.map(item => {
+            const option = el('option', '', [item.roaster, item.name].filter(Boolean).join(' · '));
+            option.value = item.id;
+            return option;
+        }));
+        picker.value = bean.id;
+        picker.addEventListener('change', () => onSelect(picker.value));
+        field.append(label, picker);
+        panel.append(field);
+        if (restoreFocus) picker.focus({ preventScroll: true });
+    } else panel.append(el('div', 'home-setup-bean-name', [bean.roaster, bean.name].filter(Boolean).join(' · ')));
+    panel.append(el('div', 'home-setup-copy', `${bean.roastLevel} roast`));
+    if (setup) {
+        panel.append(el('div', 'home-setup-copy', `${basketFor(setup.basketId, machineId).name} · ${setup.dose}g → ${Math.round(setup.dose * setup.ratio * 10) / 10}g · 1:${setup.ratio}`));
+        panel.append(el('div', 'home-setup-copy', setup.grind ? `Saved grind ${setup.grind}`
+            : suggestion ? `Suggested grind ${suggestion.grind} · ${suggestion.count} matching shots` : 'Starting grind: collecting matching shots'));
+    } else panel.append(el('div', 'home-setup-copy', 'Choose a basket, dose and ratio for this bag.'));
+    const actions = el('div', 'home-setup-actions');
+    const edit = el('button', 'btn-secondary small-btn', setup ? 'Edit setup' : 'Set up shot');
+    edit.type = 'button';
+    edit.setAttribute('aria-label', `${setup ? 'Edit setup' : 'Set up shot'}: ${bean.name}`);
+    edit.addEventListener('click', () => onSetup(bean.id));
+    actions.append(edit);
+    if (setup) {
+        const log = el('button', 'btn-secondary small-btn', 'Log shot');
+        log.type = 'button';
+        log.setAttribute('aria-label', `Log shot: ${bean.name}`);
+        log.addEventListener('click', () => onLog(bean.id));
+        actions.append(log);
+    }
+    panel.append(actions);
+};

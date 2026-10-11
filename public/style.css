@@ -312,10 +312,12 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
 .shot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .form-group { margin-bottom: 1rem; }
 .finished-search-controls label,
+.home-setup-picker label,
 #view-detail .bag-setup-form label,
 #view-edit-bean label,
 #view-log-shot label,
 #view-settings label,
+#view-analytics label,
 #view-maintenance label,
 #view-starting-point .form-group label,
 .form-label,
@@ -325,6 +327,7 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
 }
 #view-detail .bag-setup-form input,
 #view-detail .bag-setup-form select,
+.home-setup-picker select,
 #finished-search,
 #view-edit-bean input:not([type="hidden"]):not([type="file"]),
 #view-edit-bean select,
@@ -332,6 +335,7 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
 #view-log-shot select,
 #view-settings input:not([type="checkbox"]),
 #view-settings select,
+#view-analytics select,
 #view-starting-point input:not([type="checkbox"]),
 #view-starting-point select,
 #view-tuning input,
@@ -348,6 +352,7 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
 }
 #view-detail .bag-setup-form input:focus,
 #view-detail .bag-setup-form select:focus,
+.home-setup-picker select:focus,
 #finished-search:focus,
 #view-edit-bean input:focus,
 #view-edit-bean select:focus,
@@ -355,6 +360,7 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
 #view-log-shot select:focus,
 #view-settings input:focus,
 #view-settings select:focus,
+#view-analytics select:focus,
 #view-starting-point input:focus,
 #view-starting-point select:focus,
 #view-tuning input:focus,
@@ -496,6 +502,13 @@ input.visually-hidden {
 .chart-area-short { height: 200px; }
 .chart-note { color: var(--text-muted); font-size: 0.78rem; line-height: 1.45; margin: -0.35rem 0 1rem; }
 .analytics-scope { display: flex; gap: 0.75rem; flex-wrap: wrap; margin: 0 0 1rem; }
+.analytics-filters { margin-bottom: 1rem; }
+.grind-suggestion-action[hidden] { display: none; }
+.basket-comparison-scroll { overflow-x: auto; }
+.basket-comparison { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.basket-comparison th, .basket-comparison td { padding: 0.7rem 0.5rem; text-align: left; border-bottom: 1px solid var(--panel-border); white-space: nowrap; }
+.basket-comparison th { color: var(--text-muted); }
+.basket-comparison caption { text-align: left; caption-side: bottom; padding-top: 0.6rem; }
 .scope-btn.active { background: var(--primary); border-color: transparent; color: white; }
 .scope-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .analytics-metrics {
@@ -918,6 +931,13 @@ body[data-view="settings"] #btn-open-settings { border-color: var(--roast-light)
 .collection-feedback[hidden] { display: none; }
 .collection-feedback button { flex: 0 0 auto; min-height: 44px; }
 .bean-tile { position: relative; min-width: 0; align-self: start; }
+.home-brew-setup { padding: 0.9rem; border: 1px solid var(--panel-border); border-radius: var(--radius-sm); background: var(--panel-bg); margin-bottom: 1.5rem; }
+.home-brew-setup[hidden] { display: none; }
+.home-setup-title { font-weight: 700; font-size: 1rem; margin: 0 0 0.5rem; }
+.home-setup-picker { margin-bottom: 0.5rem; }
+.home-setup-bean-name { font-size: 0.85rem; font-weight: 700; overflow-wrap: anywhere; margin-bottom: 0.3rem; }
+.home-setup-copy { color: var(--text-muted); font-size: 0.78rem; line-height: 1.5; overflow-wrap: anywhere; }
+.home-setup-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
 .bean-tile .bean-card { touch-action: pan-y pinch-zoom; }
 .bean-tile .bean-card-body, .collection-preview .bean-tile .bean-card-body { padding-right: 3rem; }
 .bean-actions-toggle { position: absolute; top: 0.3rem; right: 0.2rem; width: 44px; height: 44px; border: 0; border-radius: var(--radius-sm); background: rgba(28,25,23,0.85); color: var(--text-main); font-size: 1.5rem; cursor: pointer; }

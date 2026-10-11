@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { beanImpressionLabel, beansForScope, collectionPreview, resolveBeanImpression, selectVisibleBeans, swipeAction } from "../public/js/collection-view.js";
+import { beanImpressionLabel, beansForScope, collectionPreview, resolveBeanImpression, selectHomeBean, selectVisibleBeans, swipeAction } from "../public/js/collection-view.js";
 
 const beans = [
     { id: "1", name: "Zulu", roaster: "North", origin: "Kenya", roastLevel: "Light", impression: "meh", tags: ["berry"], createdAt: { seconds: 1 } },
@@ -9,6 +9,17 @@ const beans = [
 ];
 
 describe("collection view model", () => {
+    it('keeps the selected Home bean until it finishes, then falls back to the most recent current bag', () => {
+        const collection = [...beans, { id: 'finished', archived: true, createdAt: { seconds: 100 } }];
+        assert.equal(selectHomeBean(collection)?.id, '2');
+        assert.equal(selectHomeBean(collection, '1')?.id, '1');
+        assert.equal(selectHomeBean([...collection].reverse(), '1')?.id, '1');
+        assert.equal(selectHomeBean(collection, 'finished')?.id, '2');
+        assert.equal(selectHomeBean(collection.map(bean => ({ ...bean, archived: bean.id === '1' || bean.archived })), '1')?.id, '2');
+        assert.equal(selectHomeBean(collection.map(bean => ({ ...bean, archived: true })), '1'), null);
+        assert.equal(selectHomeBean([], '1'), null);
+        assert.equal(collection[0].archived, undefined);
+    });
     it('separates current and finished bags without merging or rewriting their identities', () => {
         const finished = { id: 'finished', name: 'Alpha', archived: true, imagePath: 'original-photo' };
         const collection = [...beans, finished];

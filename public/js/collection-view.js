@@ -1,7 +1,7 @@
-import { normalizeBeanRecord, recordTime, resolveBeanImpression } from "./bean-record.js?v=1.17.0";
-export { resolveBeanImpression } from "./bean-record.js?v=1.17.0";
+import { normalizeBeanRecord, recordTime, resolveBeanImpression } from "./bean-record.js?v=1.18.0";
+export { resolveBeanImpression } from "./bean-record.js?v=1.18.0";
 
-import { el, renderEmptyAction } from "./dom.js?v=1.17.0";
+import { el, renderEmptyAction } from "./dom.js?v=1.18.0";
 
 const roastColor = (level = "Medium") => ({
     Light: "#f59e0b",
@@ -57,6 +57,11 @@ export const collectionPreview = (beans, activeFilters, currentSort, expanded = 
 };
 
 export const beansForScope = (beans, scope = 'current') => beans.filter(bean => (bean.archived === true) === (scope === 'finished'));
+
+export const selectHomeBean = (beans, selectedId) => {
+    const current = selectVisibleBeans(beansForScope(beans));
+    return current.find(bean => bean.id === selectedId) || current[0] || null;
+};
 
 export const swipeAction = (deltaX, deltaY) => {
     if (Math.abs(deltaX) < 55 || Math.abs(deltaX) < Math.abs(deltaY) * 1.5) return null;
