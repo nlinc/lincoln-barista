@@ -1,7 +1,9 @@
 import { collection, deleteField, doc, getDocs, query, runTransaction, setDoc, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { deleteObject, getDownloadURL, ref as storageRef, uploadString } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { db, storage } from "./firebase-client.js?v=1.18.0";
-import { beanNormalizationPatch, normalizeBeanRecord } from "./bean-record.js?v=1.18.0";
+import { db, storage } from "./firebase-client.js?v=1.18.1";
+import { beanNormalizationPatch, normalizeBeanRecord } from "./bean-record.js?v=1.18.1";
+import { bagBrewSetup } from "./brew-setup.js?v=1.18.1";
+import { bestShotFor } from "./best-shot.js?v=1.18.1";
 
 export const fetchBeansForUser = async (uid) => {
     const snapshot = await getDocs(query(collection(db, "beans"), where("uid", "==", uid)));
@@ -25,6 +27,24 @@ export const updateBean = (beanId, data) => runTransaction(db, async transaction
 export const saveBeanBrewSetup = (beanId, machineId, setup) => {
     if (!['elizabeth', 'bianca'].includes(machineId)) throw new Error('Choose a supported machine.');
     return updateBean(beanId, { [`brewSetups.${machineId}`]: setup, updatedAt: new Date() });
+};
+
+export const saveBeanBestGrind = (beanId, machineId, logs) => {
+    if (!['elizabeth', 'bianca'].includes(machineId)) throw new Error('Choose a supported machine.');
+    return runTransaction(db, async transaction => {
+        const reference = doc(db, 'beans', beanId);
+        const snapshot = await transaction.get(reference);
+        if (!snapshot.exists()) throw new Error('This bean is no longer available.');
+        const bean = normalizeBeanRecord({ ...snapshot.data(), id: beanId });
+        const setup = bagBrewSetup(bean, machineId);
+        const best = bestShotFor(bean, logs, machineId);
+        if (!setup || best?.status !== 'Best' || setup.grind === String(best.shot.grind)) return setup;
+        const cleanup = beanNormalizationPatch(snapshot.data());
+        const patch = { ...cleanup.fields, [`brewSetups.${machineId}.grind`]: String(best.shot.grind), updatedAt: new Date() };
+        cleanup.remove.forEach(field => { patch[field] = deleteField(); });
+        transaction.update(reference, patch);
+        return { ...setup, grind: String(best.shot.grind) };
+    });
 };
 
 export const archiveBean = async (beanId) => {

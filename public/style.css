@@ -162,7 +162,7 @@ h1, h2, h3, h4, .app-logo { font-family: 'Outfit', sans-serif; margin: 0; }
 .console-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
 .console-title { font-size: 0.7rem; font-weight: 850; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.1em; }
 .console-status { padding: 4px 12px; border-radius: 6px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; }
-.status-dialed { background: var(--success-bg); color: var(--success-text); border: 1px solid var(--success-text); }
+.status-dialed, .status-best { background: var(--success-bg); color: var(--success-text); border: 1px solid var(--success-text); }
 .status-resume { background: var(--warning-bg); color: var(--warning-text); border: 1px solid var(--warning-text); }
 
 .recipe-grid { 

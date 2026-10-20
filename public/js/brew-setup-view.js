@@ -1,7 +1,8 @@
-import { el } from "./dom.js?v=1.18.0";
-import { basketFor, normalizeBrewSetup, profilesFor } from "./brew-setup.js?v=1.18.0";
-import { STARTING_BASKETS } from "./starting-point.js?v=1.18.0";
-import { convertTemperature } from "./elizabeth-tuning.js?v=1.18.0";
+import { el } from "./dom.js?v=1.18.1";
+import { basketFor, normalizeBrewSetup, profilesFor, setupRecipe } from "./brew-setup.js?v=1.18.1";
+import { recipeWithBestGrind } from "./best-shot.js?v=1.18.1";
+import { STARTING_BASKETS } from "./starting-point.js?v=1.18.1";
+import { convertTemperature } from "./elizabeth-tuning.js?v=1.18.1";
 
 export const renderShotBaskets = (machineId, ownedIds, selectedId = '') => {
     const picker = document.getElementById('input-shot-basket');
@@ -35,7 +36,7 @@ export const renderBagSetup = ({ bean, machineId, machine, ownedIds, saved, reci
     const source = saved || recipe || {};
     document.getElementById('bag-setup-dose').value = source.dose || defaultDose;
     document.getElementById('bag-setup-ratio').value = saved?.ratio || (Math.round(Number(recipe?.yield) / Number(recipe?.dose) * 100) / 100) || 2;
-    document.getElementById('bag-setup-grind').value = source.grind || '';
+    document.getElementById('bag-setup-grind').value = source.grind ?? '';
     document.getElementById('bag-setup-tamp').value = saved ? saved.tampForceLb ?? '' : 25;
     document.getElementById('bag-setup-temperature').value = source.brewTemperature
         ? convertTemperature(source.brewTemperature, source.temperatureUnit || machine.temperatureUnit, machine.temperatureUnit) : machine.brewTemperature || '';
@@ -78,13 +79,14 @@ export const renderGrindSuggestion = (prefix, suggestion, { editing = false, loa
     button.textContent = suggestion ? `Use grind ${suggestion.grind}` : 'Use suggested grind';
 };
 
-export const renderHomeBrewSetup = ({ bean, beans, machineId, suggestion, onSelect, onSetup, onLog }) => {
+export const renderHomeBrewSetup = ({ bean, beans, machineId, logs = [], suggestion, onSelect, onSetup, onLog }) => {
     const panel = document.getElementById('home-shot-setup');
     const restoreFocus = document.activeElement?.id === 'home-setup-bean';
     panel.hidden = !bean;
     panel.replaceChildren();
     if (!bean) return;
     const setup = normalizeBrewSetup(bean.brewSetups?.[machineId], machineId);
+    const recipe = recipeWithBestGrind(bean, logs, machineId, setupRecipe(setup));
     panel.append(el('h2', 'home-setup-title', 'Shot setup'));
     if (beans.length > 1) {
         const field = el('div', 'home-setup-picker');
@@ -106,16 +108,16 @@ export const renderHomeBrewSetup = ({ bean, beans, machineId, suggestion, onSele
     panel.append(el('div', 'home-setup-copy', `${bean.roastLevel} roast`));
     if (setup) {
         panel.append(el('div', 'home-setup-copy', `${basketFor(setup.basketId, machineId).name} · ${setup.dose}g → ${Math.round(setup.dose * setup.ratio * 10) / 10}g · 1:${setup.ratio}`));
-        panel.append(el('div', 'home-setup-copy', setup.grind ? `Saved grind ${setup.grind}`
+        panel.append(el('div', 'home-setup-copy', recipe.bestShotId ? `Best shot grind ${recipe.shot.grind}` : setup.grind ? `Saved grind ${setup.grind}`
             : suggestion ? `Suggested grind ${suggestion.grind} · ${suggestion.count} matching shots` : 'Starting grind: collecting matching shots'));
-    } else panel.append(el('div', 'home-setup-copy', 'Choose a basket, dose and ratio for this bag.'));
+    } else panel.append(el('div', 'home-setup-copy', recipe ? `${recipe.status === 'Best' ? 'Best' : 'Latest'} shot grind ${recipe.shot.grind}` : 'Choose a basket, dose and ratio for this bag.'));
     const actions = el('div', 'home-setup-actions');
     const edit = el('button', 'btn-secondary small-btn', setup ? 'Edit setup' : 'Set up shot');
     edit.type = 'button';
     edit.setAttribute('aria-label', `${setup ? 'Edit setup' : 'Set up shot'}: ${bean.name}`);
     edit.addEventListener('click', () => onSetup(bean.id));
     actions.append(edit);
-    if (setup) {
+    if (setup || recipe) {
         const log = el('button', 'btn-secondary small-btn', 'Log shot');
         log.type = 'button';
         log.setAttribute('aria-label', `Log shot: ${bean.name}`);

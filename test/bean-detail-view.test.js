@@ -8,7 +8,7 @@ describe("bean detail view model", () => {
             { grind: "5", dose: "18", yield: "42", time: "22", taste: "sour" },
             { grind: "4", dose: "18", yield: "36", time: "30", taste: "balanced" }
         ];
-        assert.deepEqual(chooseCurrentRecipe(logs, "Medium"), { shot: logs[1], status: "Dialed" });
+        assert.deepEqual(chooseCurrentRecipe(logs, "Medium"), { shot: logs[1], status: "Best" });
     });
 
     it("summarizes valid shots by grind and ranks ratios nearest 1:2 first", () => {

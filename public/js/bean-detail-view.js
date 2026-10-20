@@ -1,22 +1,16 @@
-import { getBrewAdvice } from "./brew-advice.js?v=1.18.0";
-import { el, renderEmptyAction } from "./dom.js?v=1.18.0";
-import { validateShot } from "./shot-analytics.js?v=1.18.0";
-import { beanImpressionLabel, resolveBeanImpression } from "./collection-view.js?v=1.18.0";
-import { normalizeRoastDate } from "./bean-record.js?v=1.18.0";
-import { localDateKey, recordMachineId } from "./machine-config.js?v=1.18.0";
-import { basketFor } from "./brew-setup.js?v=1.18.0";
+import { getBrewAdvice } from "./brew-advice.js?v=1.18.1";
+import { el, renderEmptyAction } from "./dom.js?v=1.18.1";
+import { validateShot } from "./shot-analytics.js?v=1.18.1";
+import { beanImpressionLabel, resolveBeanImpression } from "./collection-view.js?v=1.18.1";
+import { normalizeRoastDate } from "./bean-record.js?v=1.18.1";
+import { localDateKey, recordMachineId } from "./machine-config.js?v=1.18.1";
+import { basketFor } from "./brew-setup.js?v=1.18.1";
+export { chooseBestShot as chooseCurrentRecipe } from "./best-shot.js?v=1.18.1";
 
 const ratioFor = (shot) => {
     const dose = parseFloat(shot?.dose);
     const yieldValue = parseFloat(shot?.yield);
     return dose && Number.isFinite(yieldValue) ? yieldValue / dose : null;
-};
-
-export const chooseCurrentRecipe = (logs, roastLevel) => {
-    const complete = logs.filter(log => validateShot(log).valid);
-    if (!complete.length) return null;
-    const latestGood = complete.find(log => getBrewAdvice(log, roastLevel).status === "good" && !log.channelingObserved && (!log.taste || log.taste === "balanced"));
-    return { shot: latestGood || complete[0], status: latestGood ? "Dialed" : "Resume" };
 };
 
 export const summarizeDialIn = (logs) => {
@@ -86,11 +80,11 @@ export const renderCurrentRecipe = (recipe) => {
     consoleElement.querySelector('.console-title').textContent = saved ? 'Saved recipe targets' : 'Current Recipe';
     consoleElement.querySelector('.recipe-grid').classList.toggle('saved-setup', saved);
     document.getElementById('recipe-time').closest('.recipe-item').classList.toggle('hidden', saved);
-    document.getElementById("recipe-status").textContent = recipe?.status || 'Not set';
+    document.getElementById("recipe-status").textContent = recipe?.bestShotId ? 'Best shot' : recipe?.status || 'Not set';
     document.getElementById("recipe-status").className = "console-status" + (recipe ? " status-" + recipe.status.toLowerCase() : '');
     if (!recipe?.shot) { consoleElement.classList.add("hidden"); return; }
     const shot = recipe.shot;
-    document.getElementById("recipe-grind").textContent = shot.grind || "--";
+    document.getElementById("recipe-grind").textContent = shot.grind ?? "--";
     document.getElementById("recipe-dose").textContent = shot.dose ? shot.dose + "g" : "--";
     document.getElementById("recipe-yield").textContent = shot.yield ? shot.yield + "g" : "--";
     document.getElementById("recipe-time").textContent = shot.time ? shot.time + "s" : "--";
