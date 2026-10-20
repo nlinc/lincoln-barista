@@ -29,6 +29,7 @@ import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUs
 import { renderBeanCollection, resolveBeanImpression, selectHomeBean, selectVisibleBeans } from "./collection-view.js?v=1.18.1";
 import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.18.1";
 import { csvText, shotExportRow } from "./csv-export.js?v=1.18.1";
+import { saveBeanPhotoChange } from "./bean-photo-save.js?v=1.18.1";
 import { normalizeBeanRecord, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.18.1";
 import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.18.1";
 import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.18.1";
@@ -475,9 +476,14 @@ const app = {
             if(!data.name) throw new Error("Bean name is required.");
 
             const imageFields = await app.prepareBeanImageFields(beanId, existingBean);
-            
-            if(id) await updateBean(beanId, { ...data, ...imageFields, currentRoastDate: manualRoastDate });
-            else await createBean(beanId, { ...data, ...imageFields, currentRoastDate: manualRoastDate, createdAt: new Date() });
+            await saveBeanPhotoChange({
+                previousPath: existingBean?.imagePath,
+                nextPath: imageFields.imagePath,
+                save: () => id
+                    ? updateBean(beanId, { ...data, ...imageFields, currentRoastDate: manualRoastDate })
+                    : createBean(beanId, { ...data, ...imageFields, currentRoastDate: manualRoastDate, createdAt: new Date() }),
+                removePhoto: app.deleteStoredImage
+            });
             if (!id) { collectionScope = 'current'; collectionNotice = null; }
             
             await app.fetchBeans();
@@ -680,15 +686,11 @@ const app = {
     },
     prepareBeanImageFields: async (beanId, existingBean) => {
         if (!currentEditingImage) {
-            await app.deleteStoredImage(existingBean?.imagePath);
             return { image: null, imageUrl: null, imagePath: null };
         }
 
         if (isDataUrl(currentEditingImage)) {
             const uploaded = await app.uploadBeanImage(beanId, currentEditingImage);
-            if (existingBean?.imagePath && existingBean.imagePath !== uploaded.imagePath) {
-                await app.deleteStoredImage(existingBean.imagePath);
-            }
             return uploaded;
         }
 

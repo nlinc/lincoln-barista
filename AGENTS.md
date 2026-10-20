@@ -12,6 +12,10 @@ This repo is a small Firebase/static PWA for tracking espresso beans, brew logs,
 - Main orchestration and event wiring: `public/js/app.js`.
 - Firebase initialization: `public/js/firebase-client.js`.
 - Firebase persistence boundaries: `public/js/*-repository.js`.
+- Bean-photo save ordering: `public/js/bean-photo-save.js`. Save the bean record
+  before deleting a removed/replaced stored photo. Failed or ambiguous record
+  writes preserve the old photo; storage cleanup failure cannot invalidate a
+  successful save. Keep this helper in the service-worker app shell.
 - Bag compatibility and normalization: `public/js/bean-record.js`; historical shot metadata: `public/js/shot-record.js`. Bean and shot edits use transactions to preserve retired values under `legacy` before removing unsupported root fields.
 - Owner-scoped offline data audit and concurrency-protected cleanup plans: `scripts/audit-data.mjs`. Keep source snapshots, plans, and receipts outside the repository; deploy matching rules and validate preservation before applying a plan.
 - Feature presentation modules: `public/js/*-view.js`.
