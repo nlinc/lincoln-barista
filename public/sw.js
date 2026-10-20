@@ -6,6 +6,7 @@ const APP_SHELL = [
     "/js/app.js?v=1.18.0",
     "/js/bean-catalog-view.js?v=1.18.0",
     "/js/bean-record.js?v=1.18.0",
+    "/js/csv-export.js?v=1.18.0",
     "/js/shot-record.js?v=1.18.0",
     "/js/brew-setup.js?v=1.18.0",
     "/js/brew-setup-view.js?v=1.18.0",

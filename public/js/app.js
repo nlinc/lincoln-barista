@@ -28,6 +28,7 @@ import {
 import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.18.0";
 import { renderBeanCollection, resolveBeanImpression, selectHomeBean, selectVisibleBeans } from "./collection-view.js?v=1.18.0";
 import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.18.0";
+import { csvText, shotExportRow } from "./csv-export.js?v=1.18.0";
 import { normalizeBeanRecord, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.18.0";
 import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.18.0";
 import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.18.0";
@@ -135,10 +136,7 @@ const formatDate = (dateLike) => {
 };
 
 const downloadCsv = (filename, rows) => {
-    const csv = rows.map(row => row.map(value => {
-        const text = String(value ?? "");
-        return /[",\n]/.test(text) ? '"' + text.replaceAll('"', '""') + '"' : text;
-    }).join(",")).join("\n");
+    const csv = csvText(rows);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
@@ -1540,7 +1538,7 @@ const app = {
         const rows = [["date", "machine", "bean", "roaster", "roast_date", "grind", "time", "dose", "yield", "machine_profile", "taste", "brew_temperature", "temperature_unit", "shot_gauge_bar", "first_drop_seconds", "channeling_observed", "basket", "tamper_setting_lb"]];
         logs.forEach(log => {
             const bean = beanLookup.get(log.beanId) || beans.find(b => b.id === log.beanId) || {};
-            rows.push([formatDate(log.date), recordMachineId(log), bean.name || log.beanId, bean.roaster || "", log.roastDate || "", log.grind, log.time, log.dose, log.yield, log.profileUsed || "", log.taste || "", log.brewTemperature || "", log.temperatureUnit || activeMachineProfile().temperatureUnit || "F", log.pressureObserved || "", log.firstDropSeconds || "", log.channelingObserved === true, basketFor(log.basketId, recordMachineId(log))?.name || "", log.tampForceLb ?? ""]);
+            rows.push(shotExportRow(log, bean, formatDate(log.date), activeMachineProfile().temperatureUnit));
         });
         downloadCsv("lincoln-barista-export.csv", rows);
         const maintenanceRows = [["completed_date", "machine", "service", "next_due_date", "notes"]];

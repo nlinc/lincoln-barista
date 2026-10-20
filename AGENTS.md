@@ -32,6 +32,7 @@ This repo is a small Firebase/static PWA for tracking espresso beans, brew logs,
 - Machine profile defaults, normalization, and maintenance schedules: `public/js/machine-config.js`.
 - Firebase browser config: `public/js/firebase-config.js`.
 - Tests: Node tests under `test/`, including pure domain/view-model tests and `test/ui-smoke.test.js` architecture guardrails.
+- CSV serialization and shot row mapping: `public/js/csv-export.js`. Preserve recorded zero values as zero, missing measurements as blank, and quote commas, quotes, CR and LF without changing stored records. Behavioral coverage: `test/csv-export.test.js`.
 - Storage rules: `storage.rules`.
 
 This is not a React, Vite, Next.js, or bundled frontend project. Do not add a build system unless explicitly asked.
