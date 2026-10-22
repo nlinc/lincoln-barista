@@ -3,8 +3,8 @@
  * Modularized and Optimized for Mobile. v1.3.5 - UI Logic Refinement.
  */
 
-import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.18.1";
-import { chartOptions, renderAnalyticsFilters, renderAnalyticsMetrics, renderBasketComparison, renderPatternList } from "./analytics-view.js?v=1.18.1";
+import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.18.2";
+import { chartOptions, renderAnalyticsFilters, renderAnalyticsMetrics, renderBasketComparison, renderPatternList } from "./analytics-view.js?v=1.18.2";
 import {
     archiveBean,
     createBean,
@@ -16,7 +16,7 @@ import {
     saveBeanBrewSetup,
     updateBean,
     uploadBeanPhoto
-} from "./bean-repository.js?v=1.18.1";
+} from "./bean-repository.js?v=1.18.2";
 import {
     renderBeanAge,
     renderBeanIdentity,
@@ -24,24 +24,24 @@ import {
     renderDialInSummary as renderDialInSummaryView,
     renderMachineBadge,
     renderShotHistory
-} from "./bean-detail-view.js?v=1.18.1";
-import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.18.1";
-import { renderBeanCollection, resolveBeanImpression, selectHomeBean, selectVisibleBeans } from "./collection-view.js?v=1.18.1";
-import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.18.1";
-import { csvText, shotExportRow } from "./csv-export.js?v=1.18.1";
-import { saveBeanPhotoChange } from "./bean-photo-save.js?v=1.18.1";
-import { normalizeBeanRecord, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.18.1";
-import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.18.1";
-import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.18.1";
-import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.18.1";
-import { navigate } from "./router.js?v=1.18.1";
-import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.18.1";
-import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.18.1";
-import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.18.1";
-import { getBrewAdvice } from "./brew-advice.js?v=1.18.1";
-import { filterShotTrends, recommendStartingGrind, summarizeBasketResults, summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.18.1";
-import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.18.1";
-import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.18.1";
+} from "./bean-detail-view.js?v=1.18.2";
+import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.18.2";
+import { renderBeanCollection, resolveBeanImpression, selectHomeBean, selectVisibleBeans } from "./collection-view.js?v=1.18.2";
+import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.18.2";
+import { csvText, shotExportRow } from "./csv-export.js?v=1.18.2";
+import { saveBeanPhotoChange } from "./bean-photo-save.js?v=1.18.2";
+import { normalizeBeanRecord, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.18.2";
+import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.18.2";
+import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.18.2";
+import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.18.2";
+import { navigate } from "./router.js?v=1.18.2";
+import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.18.2";
+import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.18.2";
+import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.18.2";
+import { getBrewAdvice } from "./brew-advice.js?v=1.18.2";
+import { filterShotTrends, recommendStartingGrind, summarizeBasketResults, summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.18.2";
+import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.18.2";
+import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.18.2";
 import {
     createDefaultUserProfile,
     localDateKey,
@@ -51,16 +51,16 @@ import {
     normalizeUserProfile,
     presetDueDate,
     recordMachineId
-} from "./machine-config.js?v=1.18.1";
+} from "./machine-config.js?v=1.18.2";
 
-import { calculateStartingPoint, normalizeStartingSetup } from "./starting-point.js?v=1.18.1";
-import { readStartingSetup, renderStartingBasketOptions, renderStartingBeans, renderStartingResult, renderStartingSetup } from "./starting-point-view.js?v=1.18.1";
+import { calculateStartingPoint, normalizeStartingSetup } from "./starting-point.js?v=1.18.2";
+import { readStartingSetup, renderStartingBasketOptions, renderStartingBeans, renderStartingResult, renderStartingSetup } from "./starting-point-view.js?v=1.18.2";
 
-import { readShotMeasurements, renderShotFieldErrors, renderShotSaveError } from "./shot-form-view.js?v=1.18.1";
+import { applyProgrammedShotTime, clearProgrammedShotTime, programmedShotSeconds, readShotMeasurements, renderShotFieldErrors, renderShotSaveError } from "./shot-form-view.js?v=1.18.2";
 
-import { bagBrewSetup, basketFor, setupRecipe } from "./brew-setup.js?v=1.18.1";
-import { recipeWithBestGrind } from "./best-shot.js?v=1.18.1";
-import { readBagSetup, renderBagSetup, renderGrindSuggestion, renderHomeBrewSetup, renderShotBaskets } from "./brew-setup-view.js?v=1.18.1";
+import { bagBrewSetup, basketFor, setupRecipe } from "./brew-setup.js?v=1.18.2";
+import { recipeWithBestGrind } from "./best-shot.js?v=1.18.2";
+import { readBagSetup, renderBagSetup, renderGrindSuggestion, renderHomeBrewSetup, renderShotBaskets } from "./brew-setup-view.js?v=1.18.2";
 
 // App State
 let currentUser = null;
@@ -787,7 +787,6 @@ const app = {
         haptic('light');
         app.resetShotErrors();
         const machineProfile = activeMachineProfile();
-        const isBianca = activeMachineId() === "bianca";
         const saved = useSavedSetup ? bagBrewSetup(currentActiveBean, activeMachineId()) : null;
         const recipeShot = recipeWithBestGrind(currentActiveBean, logsCache, activeMachineId(),
             saved ? setupRecipe(saved) : currentRecipeShot && { shot: currentRecipeShot })?.shot;
@@ -811,6 +810,7 @@ const app = {
         const suggestion = app.grindSuggestion(currentActiveBean, saved);
         document.getElementById('input-shot-grind').value = recipeShot?.grind === '' ? suggestion?.grind ?? ''
             : recipeShot?.grind ?? logsCache.find(log => recordMachineId(log) === activeMachineId())?.grind ?? '';
+        clearProgrammedShotTime();
         document.getElementById('input-shot-time').value = '';
         document.getElementById('input-shot-time').placeholder = recipeShot?.time || '30';
         const requestedProfile = recipeShot?.profileUsed || 'manual';
@@ -823,25 +823,31 @@ const app = {
         document.getElementById('input-shot-pressure').value = machineProfile.observedPressure;
         document.getElementById('input-shot-first-drop').value = '';
         document.getElementById('input-shot-channeling').checked = false;
-        const b1T = userProfile.b1 ? (parseInt(userProfile.b1.infusion)||0) + (parseInt(userProfile.b1.bloom)||0) + (parseInt(userProfile.b1.brew)||0) : 30;
-        const b2T = userProfile.b2 ? (parseInt(userProfile.b2.infusion)||0) + (parseInt(userProfile.b2.bloom)||0) + (parseInt(userProfile.b2.brew)||0) : 30;
-        document.getElementById('btn-time-1').innerText = "P1 (" + b1T + "s)";
-        document.getElementById('btn-time-2').innerText = "P2 (" + b2T + "s)";
-        document.getElementById('btn-time-1').classList.toggle('hidden', isBianca);
-        document.getElementById('btn-time-2').classList.toggle('hidden', isBianca);
+        app.renderShotTimeProfiles(activeMachineId());
+        app.syncTimeFromProfile();
         document.getElementById('btn-save-shot').innerText = "Save Shot";
         document.getElementById('btn-delete-shot').classList.add('hidden');
         app.renderExtractionPreview();
         app.router('log-shot');
         app.updateGrindSuggestion('shot');
     },
-    setTimeFromProfile: (n) => {
-        let t = 30;
-        if(n === 1 && userProfile.b1) t = (parseInt(userProfile.b1.infusion)||0) + (parseInt(userProfile.b1.bloom)||0) + (parseInt(userProfile.b1.brew)||0);
-        else if(n === 2 && userProfile.b2) t = (parseInt(userProfile.b2.infusion)||0) + (parseInt(userProfile.b2.bloom)||0) + (parseInt(userProfile.b2.brew)||0);
-        document.getElementById('input-shot-time').value = t;
-        document.getElementById('input-shot-profile').value = n === 1 ? "p1" : "p2";
+    renderShotTimeProfiles: (machineId) => {
+        for (const n of [1, 2]) {
+            const seconds = programmedShotSeconds(`p${n}`, machineId, userProfile);
+            const button = document.getElementById(`btn-time-${n}`);
+            button.innerText = seconds === null ? `P${n} (time not set)` : `P${n} (${seconds}s)`;
+            button.classList.toggle('hidden', machineId !== 'elizabeth');
+        }
+    },
+    syncTimeFromProfile: () => {
+        const shotId = document.getElementById('input-log-shot-id').value;
+        const machineId = shotId ? recordMachineId(logsCache.find(log => log.id === shotId)) : activeMachineId();
+        applyProgrammedShotTime(document.getElementById('input-shot-profile').value, machineId, userProfile);
         app.renderExtractionPreview();
+    },
+    setTimeFromProfile: (n) => {
+        document.getElementById('input-shot-profile').value = n === 1 ? 'p1' : 'p2';
+        app.syncTimeFromProfile();
     },
     renderExtractionPreview: () => {
         if (shotValidationShown) renderShotFieldErrors(validateShot(readShotMeasurements()).fieldErrors);
@@ -934,7 +940,9 @@ const app = {
         document.getElementById('input-log-shot-id').value = sId;
         document.getElementById('log-display-date').innerText = log.roastDate;
         document.getElementById('input-shot-grind').value = log.grind;
+        clearProgrammedShotTime();
         document.getElementById('input-shot-time').value = log.time;
+        app.renderShotTimeProfiles(recordMachineId(log));
         document.getElementById('input-shot-dose').value = log.dose;
         document.getElementById('input-shot-yield').value = log.yield;
         document.getElementById('shot-yield-hint').classList.add('hidden');
@@ -1677,6 +1685,8 @@ on("btn-back-analytics", "click", () => app.router(analyticsReturnView === "deta
 document.querySelectorAll("[data-route]").forEach(b => b.onclick = () => app.router(b.dataset.route));
 on("btn-time-1", "click", () => app.setTimeFromProfile(1)); on("btn-time-2", "click", () => app.setTimeFromProfile(2));
 document.querySelectorAll(".shot-preview-input").forEach(input => input.addEventListener("input", () => app.renderExtractionPreview()));
+on("input-shot-profile", "change", () => app.syncTimeFromProfile());
+on("input-shot-time", "input", () => clearProgrammedShotTime());
 on("input-shot-taste", "change", () => app.renderExtractionPreview()); on("input-shot-pressure", "input", () => app.renderExtractionPreview()); on("input-shot-channeling", "change", () => app.renderExtractionPreview());
 document.querySelectorAll("#view-settings input[type='number']").forEach(input => input.addEventListener("input", () => app.updateSettingsDisplay()));
 on("profile-temperature-unit", "change", event => app.updateTemperatureSettings(event.target.value));

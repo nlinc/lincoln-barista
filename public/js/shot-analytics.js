@@ -1,6 +1,6 @@
-import { getBrewAdvice } from "./brew-advice.js?v=1.18.1";
-import { basketFor } from "./brew-setup.js?v=1.18.1";
-import { recordMachineId } from "./machine-config.js?v=1.18.1";
+import { getBrewAdvice } from "./brew-advice.js?v=1.18.2";
+import { basketFor } from "./brew-setup.js?v=1.18.2";
+import { recordMachineId } from "./machine-config.js?v=1.18.2";
 
 const DAY_MS = 86400000;
 

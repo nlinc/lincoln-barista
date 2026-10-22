@@ -1,6 +1,6 @@
-import { el } from "./dom.js?v=1.18.1";
-import { STARTING_BASKETS } from "./starting-point.js?v=1.18.1";
-import { basketFor } from "./brew-setup.js?v=1.18.1";
+import { el } from "./dom.js?v=1.18.2";
+import { STARTING_BASKETS } from "./starting-point.js?v=1.18.2";
+import { basketFor } from "./brew-setup.js?v=1.18.2";
 
 export const renderAnalyticsFilters = ({ logs, machineId, ownedIds, basketId, roast }) => {
     const picker = document.getElementById('analytics-basket');
