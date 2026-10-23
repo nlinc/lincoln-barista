@@ -15,9 +15,16 @@ This repo is a small Firebase/static PWA for tracking espresso beans, brew logs,
 - Bean-photo save ordering: `public/js/bean-photo-save.js`. Save the bean record
   before deleting a removed/replaced stored photo. Failed or ambiguous record
   writes preserve the old photo; storage cleanup failure cannot invalidate a
-  successful save. Keep this helper in the service-worker app shell.
+  successful save. The active bean editor retains a completed replacement upload
+  for retries of the exact owner/bag/image after a rejected or ambiguous record
+  save. Clear that in-memory reuse when editing a bag anew, removing/resetting
+  the photo or changing auth. No abandoned-object cleanup is implied; new-bag
+  retries and failed upload/download-URL acknowledgement remain separate limits.
+  Keep this helper in the service-worker app shell.
 - Bag compatibility and normalization: `public/js/bean-record.js`; historical shot metadata: `public/js/shot-record.js`. Bean and shot edits use transactions to preserve retired values under `legacy` before removing unsupported root fields.
 - Owner-scoped offline data audit and concurrency-protected cleanup plans: `scripts/audit-data.mjs`. Keep source snapshots, plans, and receipts outside the repository; deploy matching rules and validate preservation before applying a plan.
+- Bag photo capture stays visible near the top of the new/edit bean form, outside
+  optional details. Preserve the rear-camera file input and editable preview/removal.
 - Feature presentation modules: `public/js/*-view.js`.
 - Private coffee library suggestions and repeat-profile helpers: `public/js/bean-catalog-view.js` (derived from owned beans, including archives; no shared catalog collection).
 - Home care checklist and latest-record selection: `public/js/care-status.js`.

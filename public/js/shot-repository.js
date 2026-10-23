@@ -1,6 +1,6 @@
 import { addDoc, collection, deleteDoc, deleteField, doc, getDocs, query, runTransaction, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { db } from "./firebase-client.js?v=1.18.2";
-import { shotNormalizationPatch } from "./shot-record.js?v=1.18.2";
+import { db } from "./firebase-client.js?v=1.18.3";
+import { shotNormalizationPatch } from "./shot-record.js?v=1.18.3";
 
 export const fetchShotsForUser = async (uid) => {
     const snapshot = await getDocs(query(collection(db, "brew_logs"), where("uid", "==", uid)));

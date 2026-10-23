@@ -1,5 +1,5 @@
-import { el } from "./dom.js?v=1.18.2";
-import { STARTING_BASKETS, normalizeStartingSetup } from "./starting-point.js?v=1.18.2";
+import { el } from "./dom.js?v=1.18.3";
+import { STARTING_BASKETS, normalizeStartingSetup } from "./starting-point.js?v=1.18.3";
 
 export const renderStartingBeans = (beans, selectedId) => {
     const picker = document.getElementById("starting-bean");

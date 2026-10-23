@@ -1,8 +1,8 @@
-import { normalizeRoastDate, recordTime } from "./bean-record.js?v=1.18.2";
-import { bagBrewSetup } from "./brew-setup.js?v=1.18.2";
-import { getBrewAdvice } from "./brew-advice.js?v=1.18.2";
-import { recordMachineId } from "./machine-config.js?v=1.18.2";
-import { validateShot } from "./shot-analytics.js?v=1.18.2";
+import { normalizeRoastDate, recordTime } from "./bean-record.js?v=1.18.3";
+import { bagBrewSetup } from "./brew-setup.js?v=1.18.3";
+import { getBrewAdvice } from "./brew-advice.js?v=1.18.3";
+import { recordMachineId } from "./machine-config.js?v=1.18.3";
+import { validateShot } from "./shot-analytics.js?v=1.18.3";
 
 export const chooseBestShot = (logs, roastLevel, targetRatio = 2) => {
     const complete = logs.filter(log => validateShot(log).valid)
