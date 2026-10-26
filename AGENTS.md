@@ -95,6 +95,8 @@ npm test
 - The floating add/log buttons are route-aware.
 - The app uses Google sign-in and routes by hash/history state.
 - CSV export should work from Settings without requiring extra dependencies.
+- Editing a shot preserves recorded zero gauge pressure and first-drop seconds;
+  missing observations remain blank. Do not turn a recorded zero into missing data.
 - Machine care is model-specific and one-tap: preserve the Elizabeth schedule and the Bianca manual's daily/weekly, 70-liter/four-month filter, and annual technician-service schedules. Custom logs stay secondary.
 - Machine care records show only the latest reminder for each service type as active; older reminders remain visible as history. Manual-based weekly/monthly tasks calculate their next due date automatically.
 

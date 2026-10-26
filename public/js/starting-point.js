@@ -1,5 +1,5 @@
-import { getElizabethBaseline } from "./elizabeth-tuning.js?v=1.18.3";
-import { getBiancaBaseline } from "./bianca-tuning.js?v=1.18.3";
+import { getElizabethBaseline } from "./elizabeth-tuning.js?v=1.18.4";
+import { getBiancaBaseline } from "./bianca-tuning.js?v=1.18.4";
 
 export const STARTING_BASKETS = [
     { id: "stock-elizabeth", name: "Elizabeth stock 14–18g", min: 14, max: 18, machineId: "elizabeth" },

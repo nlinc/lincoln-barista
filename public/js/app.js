@@ -3,8 +3,8 @@
  * Modularized and Optimized for Mobile. v1.3.5 - UI Logic Refinement.
  */
 
-import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.18.3";
-import { chartOptions, renderAnalyticsFilters, renderAnalyticsMetrics, renderBasketComparison, renderPatternList } from "./analytics-view.js?v=1.18.3";
+import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.18.4";
+import { chartOptions, renderAnalyticsFilters, renderAnalyticsMetrics, renderBasketComparison, renderPatternList } from "./analytics-view.js?v=1.18.4";
 import {
     archiveBean,
     createBean,
@@ -16,7 +16,7 @@ import {
     saveBeanBrewSetup,
     updateBean,
     uploadBeanPhoto
-} from "./bean-repository.js?v=1.18.3";
+} from "./bean-repository.js?v=1.18.4";
 import {
     renderBeanAge,
     renderBeanIdentity,
@@ -24,24 +24,24 @@ import {
     renderDialInSummary as renderDialInSummaryView,
     renderMachineBadge,
     renderShotHistory
-} from "./bean-detail-view.js?v=1.18.3";
-import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.18.3";
-import { renderBeanCollection, resolveBeanImpression, selectHomeBean, selectVisibleBeans } from "./collection-view.js?v=1.18.3";
-import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.18.3";
-import { csvText, shotExportRow } from "./csv-export.js?v=1.18.3";
-import { saveBeanPhotoChange } from "./bean-photo-save.js?v=1.18.3";
-import { normalizeBeanRecord, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.18.3";
-import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.18.3";
-import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.18.3";
-import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.18.3";
-import { navigate } from "./router.js?v=1.18.3";
-import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.18.3";
-import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.18.3";
-import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.18.3";
-import { getBrewAdvice } from "./brew-advice.js?v=1.18.3";
-import { filterShotTrends, recommendStartingGrind, summarizeBasketResults, summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.18.3";
-import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.18.3";
-import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.18.3";
+} from "./bean-detail-view.js?v=1.18.4";
+import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.18.4";
+import { renderBeanCollection, resolveBeanImpression, selectHomeBean, selectVisibleBeans } from "./collection-view.js?v=1.18.4";
+import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.18.4";
+import { csvText, shotExportRow } from "./csv-export.js?v=1.18.4";
+import { saveBeanPhotoChange } from "./bean-photo-save.js?v=1.18.4";
+import { normalizeBeanRecord, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.18.4";
+import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.18.4";
+import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.18.4";
+import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.18.4";
+import { navigate } from "./router.js?v=1.18.4";
+import { createShot, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.18.4";
+import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.18.4";
+import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.18.4";
+import { getBrewAdvice } from "./brew-advice.js?v=1.18.4";
+import { filterShotTrends, recommendStartingGrind, summarizeBasketResults, summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.18.4";
+import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.18.4";
+import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.18.4";
 import {
     createDefaultUserProfile,
     localDateKey,
@@ -51,16 +51,16 @@ import {
     normalizeUserProfile,
     presetDueDate,
     recordMachineId
-} from "./machine-config.js?v=1.18.3";
+} from "./machine-config.js?v=1.18.4";
 
-import { calculateStartingPoint, normalizeStartingSetup } from "./starting-point.js?v=1.18.3";
-import { readStartingSetup, renderStartingBasketOptions, renderStartingBeans, renderStartingResult, renderStartingSetup } from "./starting-point-view.js?v=1.18.3";
+import { calculateStartingPoint, normalizeStartingSetup } from "./starting-point.js?v=1.18.4";
+import { readStartingSetup, renderStartingBasketOptions, renderStartingBeans, renderStartingResult, renderStartingSetup } from "./starting-point-view.js?v=1.18.4";
 
-import { applyProgrammedShotTime, clearProgrammedShotTime, programmedShotSeconds, readShotMeasurements, renderShotFieldErrors, renderShotSaveError } from "./shot-form-view.js?v=1.18.3";
+import { applyProgrammedShotTime, clearProgrammedShotTime, programmedShotSeconds, readShotMeasurements, renderShotFieldErrors, renderShotSaveError } from "./shot-form-view.js?v=1.18.4";
 
-import { bagBrewSetup, basketFor, setupRecipe } from "./brew-setup.js?v=1.18.3";
-import { recipeWithBestGrind } from "./best-shot.js?v=1.18.3";
-import { readBagSetup, renderBagSetup, renderGrindSuggestion, renderHomeBrewSetup, renderShotBaskets } from "./brew-setup-view.js?v=1.18.3";
+import { bagBrewSetup, basketFor, setupRecipe } from "./brew-setup.js?v=1.18.4";
+import { recipeWithBestGrind } from "./best-shot.js?v=1.18.4";
+import { readBagSetup, renderBagSetup, renderGrindSuggestion, renderHomeBrewSetup, renderShotBaskets } from "./brew-setup-view.js?v=1.18.4";
 
 // App State
 let currentUser = null;
@@ -966,8 +966,8 @@ const app = {
             ? convertTemperature(log.brewTemperature, log.temperatureUnit, profileUnit)
             : log.brewTemperature;
         document.getElementById('input-shot-temperature').value = loggedTemperature || activeMachineProfile().brewTemperature || '';
-        document.getElementById('input-shot-pressure').value = log.pressureObserved || '';
-        document.getElementById('input-shot-first-drop').value = log.firstDropSeconds || '';
+        document.getElementById('input-shot-pressure').value = log.pressureObserved ?? '';
+        document.getElementById('input-shot-first-drop').value = log.firstDropSeconds ?? '';
         document.getElementById('input-shot-channeling').checked = log.channelingObserved === true;
         document.getElementById('btn-save-shot').innerText = "Update Log";
         document.getElementById('btn-delete-shot').classList.remove('hidden');
