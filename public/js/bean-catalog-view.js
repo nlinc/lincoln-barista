@@ -1,6 +1,6 @@
-import { el } from "./dom.js?v=1.18.3";
+import { el } from "./dom.js?v=1.18.4";
 
-import { cleanBeanText, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.18.3";
+import { cleanBeanText, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.18.4";
 
 export const cleanCatalogText = cleanBeanText;
 const catalogKey = (value) => cleanCatalogText(value).toLocaleLowerCase();

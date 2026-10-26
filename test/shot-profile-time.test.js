@@ -98,3 +98,36 @@ test('invalid or unavailable programmed settings do not invent a duration', () =
     assert.equal(form.programmedShotSeconds('manual', 'elizabeth', profile), null);
     assert.equal(form.programmedShotSeconds('p1', 'elizabeth', { b1: { infusion: '4', bloom: '6', brew: '25' } }), 35);
 });
+
+test('editing a shot retains numeric and string zero observations', t => {
+    for (const value of [0, '0']) {
+        const { app, document, context } = controller(t);
+        const log = { id: 'zero-shot', beanId: 'bag', machineId: 'elizabeth', time: '30', dose: '16', yield: '32', grind: '6.2',
+            pressureObserved: value, firstDropSeconds: value };
+        context.logsCache.push(log);
+        const start = source.indexOf('    openEditShot:');
+        const end = source.indexOf('    deleteShot:', start);
+        app.openEditShot = vm.runInNewContext('({' + source.slice(start, end) + '})', context).openEditShot;
+        app.openEditShot(log.id);
+        assert.equal(String(document.getElementById('input-shot-pressure').value), '0');
+        assert.equal(String(document.getElementById('input-shot-first-drop').value), '0');
+        assert.equal(log.pressureObserved, value);
+        assert.equal(log.firstDropSeconds, value);
+    }
+});
+
+test('editing keeps missing observations blank and recorded positive values intact', t => {
+    for (const value of [undefined, null, '', 9, '7.5']) {
+        const { app, document, context } = controller(t);
+        const log = { id: 'observed-shot', beanId: 'bag', machineId: 'bianca', time: '29', dose: '16', yield: '32', grind: '12',
+            pressureObserved: value, firstDropSeconds: value };
+        context.logsCache.push(log);
+        const start = source.indexOf('    openEditShot:');
+        const end = source.indexOf('    deleteShot:', start);
+        app.openEditShot = vm.runInNewContext('({' + source.slice(start, end) + '})', context).openEditShot;
+        app.openEditShot(log.id);
+        const expected = String(value ?? '');
+        assert.equal(String(document.getElementById('input-shot-pressure').value), expected);
+        assert.equal(String(document.getElementById('input-shot-first-drop').value), expected);
+    }
+});
