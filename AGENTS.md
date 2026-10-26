@@ -18,8 +18,10 @@ This repo is a small Firebase/static PWA for tracking espresso beans, brew logs,
   successful save. The active bean editor retains a completed replacement upload
   for retries of the exact owner/bag/image after a rejected or ambiguous record
   save. Clear that in-memory reuse when editing a bag anew, removing/resetting
-  the photo or changing auth. No abandoned-object cleanup is implied; new-bag
-  retries and failed upload/download-URL acknowledgement remain separate limits.
+  the photo or changing auth. Same-owner, same-form new-bag retries reuse the
+  draft bag ID and completed photo upload. A refresh before acknowledgement,
+  failed upload/download-URL acknowledgement, and abandoned-object cleanup
+  remain separate limits.
   Keep this helper in the service-worker app shell.
 - Bag compatibility and normalization: `public/js/bean-record.js`; historical shot metadata: `public/js/shot-record.js`. Bean and shot edits use transactions to preserve retired values under `legacy` before removing unsupported root fields.
 - Owner-scoped offline data audit and concurrency-protected cleanup plans: `scripts/audit-data.mjs`. Keep source snapshots, plans, and receipts outside the repository; deploy matching rules and validate preservation before applying a plan.
@@ -90,6 +92,7 @@ npm test
 - Bianca tuning must distinguish V1/V2 from V3, start with paddle fully open and automation off, treat flow and pressure as interacting measurements, and reserve pump/PID changes for advanced guidance.
 - Bean cards, log rows, shot summaries, and analytics are rendered dynamically. History shows recorded taste or concise brew advice; full tuning guidance belongs in the shot preview and tuning views.
 - Blank roast dates stay unknown. Reusing a past coffee copies descriptive details only, leaving the new bag's date, image, impression, and shots separate.
+- New-bag save retries keep one draft ID, creation date and completed photo upload for the active owner/form. A retry merges into that bag so later setup and measurement fields survive; resetting, editing another bag or changing auth starts a new draft.
 - Starting-point bulk density is a whole-bean proxy, not tamped density. Numeric headspace requires a measured baseline and basket calibration; never prescribe click offsets from density alone or record recipe targets as measured shots.
 - Guided tuning keeps intended targets separate from measured shot results and scopes history to the selected bean and machine.
 - The floating add/log buttons are route-aware.

@@ -1,9 +1,9 @@
 import { collection, deleteField, doc, getDocs, query, runTransaction, setDoc, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { deleteObject, getDownloadURL, ref as storageRef, uploadString } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { db, storage } from "./firebase-client.js?v=1.18.4";
-import { beanNormalizationPatch, normalizeBeanRecord } from "./bean-record.js?v=1.18.4";
-import { bagBrewSetup } from "./brew-setup.js?v=1.18.4";
-import { bestShotFor } from "./best-shot.js?v=1.18.4";
+import { db, storage } from "./firebase-client.js?v=1.18.5";
+import { beanNormalizationPatch, normalizeBeanRecord } from "./bean-record.js?v=1.18.5";
+import { bagBrewSetup } from "./brew-setup.js?v=1.18.5";
+import { bestShotFor } from "./best-shot.js?v=1.18.5";
 
 export const fetchBeansForUser = async (uid) => {
     const snapshot = await getDocs(query(collection(db, "beans"), where("uid", "==", uid)));
@@ -12,7 +12,7 @@ export const fetchBeansForUser = async (uid) => {
 
 export const createBeanId = () => doc(collection(db, "beans")).id;
 
-export const createBean = (beanId, data) => setDoc(doc(db, "beans", beanId), normalizeBeanRecord(data));
+export const createBean = (beanId, data) => setDoc(doc(db, "beans", beanId), normalizeBeanRecord(data), { merge: true });
 
 export const updateBean = (beanId, data) => runTransaction(db, async transaction => {
     const reference = doc(db, "beans", beanId);

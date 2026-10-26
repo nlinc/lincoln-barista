@@ -1,5 +1,5 @@
-import { basketFor } from "./brew-setup.js?v=1.18.4";
-import { recordMachineId } from "./machine-config.js?v=1.18.4";
+import { basketFor } from "./brew-setup.js?v=1.18.5";
+import { recordMachineId } from "./machine-config.js?v=1.18.5";
 
 export const csvText = (rows) => rows.map(row => row.map(value => {
     const text = String(value ?? "");
