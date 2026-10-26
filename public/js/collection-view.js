@@ -1,7 +1,7 @@
-import { normalizeBeanRecord, recordTime, resolveBeanImpression } from "./bean-record.js?v=1.18.4";
-export { resolveBeanImpression } from "./bean-record.js?v=1.18.4";
+import { normalizeBeanRecord, recordTime, resolveBeanImpression } from "./bean-record.js?v=1.18.5";
+export { resolveBeanImpression } from "./bean-record.js?v=1.18.5";
 
-import { el, renderEmptyAction } from "./dom.js?v=1.18.4";
+import { el, renderEmptyAction } from "./dom.js?v=1.18.5";
 
 const roastColor = (level = "Medium") => ({
     Light: "#f59e0b",
