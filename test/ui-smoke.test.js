@@ -255,8 +255,16 @@ describe("UI smoke guardrails", () => {
         assert.match(html, /class="build-chip">v1\.18\.5 · <code data-build-commit>__BUILD_COMMIT__</);
         assert.match(appJs, /querySelectorAll\("\[data-build-commit\]"\)/);
         assert.match(serviceWorker, /lincoln-barista-__BUILD_COMMIT__/);
-        assert.match(mergeWorkflow, /Stamp build commit/);
-        assert.match(previewWorkflow, /Stamp build commit/);
+        // Both deployment callers must use the gate that stages/stamps committed bytes.
+        for (const workflow of [mergeWorkflow, previewWorkflow]) {
+            assert.match(workflow, /uses: \.\/\.github\/workflows\/verify-process\.yml/);
+            assert.match(workflow, /needs: verify/);
+            assert.match(workflow, /hosting-release\.mjs check/);
+        }
+        const gate = readFileSync(new URL("../.github/workflows/verify-process.yml", import.meta.url), "utf8");
+        assert.match(gate, /hosting-release\.mjs candidate/);
+        const policy = JSON.parse(readFileSync(new URL("../.release-policy.json", import.meta.url), "utf8"));
+        assert.deepEqual(policy.stampFiles, ["index.html", "sw.js"]);
     });
 
     it("offers an explicit refresh when a deploy is ready", () => {

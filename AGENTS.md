@@ -4,6 +4,22 @@
 
 This repo is a small Firebase/static PWA for tracking espresso beans, brew logs, recipes, and barista advice. Keep changes conservative and preserve the existing app structure.
 
+
+## Shared workspace workflow
+
+Within Nicholas's personal workspace or its linked checkouts, also read
+`/Users/nicholaslincoln/dev/dev-hq/WORKFLOW.md`. Its verification/evidence,
+release-identity, atomic task-link, handoff/triage and recovery rules apply.
+Root AGENTS.md supplies standing authority; this app's specific safety deltas,
+paused scopes and scheduled-worker restrictions remain binding. The root
+senior-dev review-branch exception does not grant commits/main/merge/deploy,
+new resources, live-data/device operations or wider scheduled-worker powers.
+Generic push prohibitions below concern production/main; explicit narrower
+local/retired/pilot restrictions retain their own scope. Existing owner authority
+continues within its bounds; do not ask for the same approval again.
+Outside this workspace, retain the repository contract and restrictions rather
+than inventing shared services. A structural check is not app-health acceptance.
+
 ## Project Shape
 
 - Browser app files live in `public/`.
@@ -109,3 +125,12 @@ npm test
 - Match the existing naming and formatting style.
 - Keep comments sparse and useful.
 - If you add a new user-facing behavior, include the smallest practical test or manual verification note.
+
+## Portable process gate and release identity
+
+Read [the project engineering process](docs/workspace-process.md).
+`node scripts/hosting-release.mjs gate` runs this app’s declared checks plus
+source/artifact regression controls. `candidate` stages only committed reviewed
+assets after that gate; `check` and `verify-url` prove intended artifact/served
+bytes. Existing app/manual/emulator/device and private-data guards above remain
+binding. Release preparation is tooling, not a frontend framework or new backend.
