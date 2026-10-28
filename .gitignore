@@ -67,3 +67,7 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Verified Hosting preparation and mutable CLI workspace.
+/.hosting-release/
+/.hosting-deploy/

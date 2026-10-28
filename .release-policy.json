@@ -1,0 +1,178 @@
+{
+  "schema": 1,
+  "app": "lincoln-barista",
+  "assets": [
+    {
+      "source": "public/icon.svg",
+      "path": "icon.svg"
+    },
+    {
+      "source": "public/index.html",
+      "path": "index.html"
+    },
+    {
+      "source": "public/js/analytics-view.js",
+      "path": "js/analytics-view.js"
+    },
+    {
+      "source": "public/js/app.js",
+      "path": "js/app.js"
+    },
+    {
+      "source": "public/js/auth-repository.js",
+      "path": "js/auth-repository.js"
+    },
+    {
+      "source": "public/js/bean-catalog-view.js",
+      "path": "js/bean-catalog-view.js"
+    },
+    {
+      "source": "public/js/bean-detail-view.js",
+      "path": "js/bean-detail-view.js"
+    },
+    {
+      "source": "public/js/bean-photo-save.js",
+      "path": "js/bean-photo-save.js"
+    },
+    {
+      "source": "public/js/bean-record.js",
+      "path": "js/bean-record.js"
+    },
+    {
+      "source": "public/js/bean-repository.js",
+      "path": "js/bean-repository.js"
+    },
+    {
+      "source": "public/js/best-shot.js",
+      "path": "js/best-shot.js"
+    },
+    {
+      "source": "public/js/bianca-tuning.js",
+      "path": "js/bianca-tuning.js"
+    },
+    {
+      "source": "public/js/brew-advice.js",
+      "path": "js/brew-advice.js"
+    },
+    {
+      "source": "public/js/brew-setup-view.js",
+      "path": "js/brew-setup-view.js"
+    },
+    {
+      "source": "public/js/brew-setup.js",
+      "path": "js/brew-setup.js"
+    },
+    {
+      "source": "public/js/care-status.js",
+      "path": "js/care-status.js"
+    },
+    {
+      "source": "public/js/collection-view.js",
+      "path": "js/collection-view.js"
+    },
+    {
+      "source": "public/js/csv-export.js",
+      "path": "js/csv-export.js"
+    },
+    {
+      "source": "public/js/dom.js",
+      "path": "js/dom.js"
+    },
+    {
+      "source": "public/js/elizabeth-tuning.js",
+      "path": "js/elizabeth-tuning.js"
+    },
+    {
+      "source": "public/js/firebase-client.js",
+      "path": "js/firebase-client.js"
+    },
+    {
+      "source": "public/js/firebase-config.js",
+      "path": "js/firebase-config.js"
+    },
+    {
+      "source": "public/js/machine-config.js",
+      "path": "js/machine-config.js"
+    },
+    {
+      "source": "public/js/maintenance-repository.js",
+      "path": "js/maintenance-repository.js"
+    },
+    {
+      "source": "public/js/maintenance-view.js",
+      "path": "js/maintenance-view.js"
+    },
+    {
+      "source": "public/js/profile-repository.js",
+      "path": "js/profile-repository.js"
+    },
+    {
+      "source": "public/js/router.js",
+      "path": "js/router.js"
+    },
+    {
+      "source": "public/js/shot-analytics.js",
+      "path": "js/shot-analytics.js"
+    },
+    {
+      "source": "public/js/shot-form-view.js",
+      "path": "js/shot-form-view.js"
+    },
+    {
+      "source": "public/js/shot-record.js",
+      "path": "js/shot-record.js"
+    },
+    {
+      "source": "public/js/shot-repository.js",
+      "path": "js/shot-repository.js"
+    },
+    {
+      "source": "public/js/starting-point-view.js",
+      "path": "js/starting-point-view.js"
+    },
+    {
+      "source": "public/js/starting-point.js",
+      "path": "js/starting-point.js"
+    },
+    {
+      "source": "public/js/tuning-session.js",
+      "path": "js/tuning-session.js"
+    },
+    {
+      "source": "public/js/tuning-view.js",
+      "path": "js/tuning-view.js"
+    },
+    {
+      "source": "public/manifest.json",
+      "path": "manifest.json"
+    },
+    {
+      "source": "public/style.css",
+      "path": "style.css"
+    },
+    {
+      "source": "public/sw.js",
+      "path": "sw.js"
+    }
+  ],
+  "checks": [
+    [
+      "npm",
+      "run",
+      "check"
+    ],
+    [
+      "npm",
+      "test"
+    ],
+    [
+      "node",
+      "--test",
+      "scripts/hosting-release.test.mjs"
+    ]
+  ],
+  "stampFiles": [
+    "index.html",
+    "sw.js"
+  ]
+}

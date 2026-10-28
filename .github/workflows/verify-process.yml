@@ -1,0 +1,21 @@
+name: Verify project and intended Hosting artifact
+on: workflow_call
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run actual project gate and prepare committed Hosting bytes
+        run: node scripts/hosting-release.mjs candidate .hosting-release "$GITHUB_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lincoln-barista-hosting-${{ github.sha }}
+          path: .hosting-release/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
