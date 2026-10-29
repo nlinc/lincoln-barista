@@ -1,5 +1,5 @@
-import { localDateKey, maintenancePresetsFor, parseDateKey, presetDueDate } from "./machine-config.js?v=1.18.5";
-import { recordTime } from "./bean-record.js?v=1.18.5";
+import { localDateKey, maintenancePresetsFor, parseDateKey, presetDueDate } from "./machine-config.js?v=1.18.6";
+import { recordTime } from "./bean-record.js?v=1.18.6";
 
 const createdTime = (record) => {
     return recordTime(record.createdAt);

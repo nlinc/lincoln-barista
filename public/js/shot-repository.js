@@ -1,16 +1,15 @@
-import { addDoc, collection, deleteDoc, deleteField, doc, getDocs, query, runTransaction, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { db } from "./firebase-client.js?v=1.18.5";
-import { shotNormalizationPatch } from "./shot-record.js?v=1.18.5";
+import { collection, deleteDoc, deleteField, doc, getDocs, query, runTransaction, setDoc, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { db } from "./firebase-client.js?v=1.18.6";
+import { shotNormalizationPatch } from "./shot-record.js?v=1.18.6";
 
 export const fetchShotsForUser = async (uid) => {
     const snapshot = await getDocs(query(collection(db, "brew_logs"), where("uid", "==", uid)));
     return snapshot.docs.map(shotDoc => ({ id: shotDoc.id, ...shotDoc.data() }));
 };
 
-export const createShot = async (data) => {
-    const created = await addDoc(collection(db, "brew_logs"), data);
-    return created.id;
-};
+export const createShotId = () => doc(collection(db, "brew_logs")).id;
+
+export const createShot = (shotId, data) => setDoc(doc(db, "brew_logs", shotId), data, { merge: true });
 
 export const updateShot = (shotId, data) => runTransaction(db, async transaction => {
     const reference = doc(db, "brew_logs", shotId);

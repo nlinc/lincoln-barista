@@ -1,4 +1,4 @@
-import { STARTING_BASKETS } from "./starting-point.js?v=1.18.5";
+import { STARTING_BASKETS } from "./starting-point.js?v=1.18.6";
 
 export const basketFor = (id, machineId) => STARTING_BASKETS.find(basket => basket.id === id && (!basket.machineId || basket.machineId === machineId));
 

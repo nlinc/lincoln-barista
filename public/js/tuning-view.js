@@ -1,6 +1,6 @@
-import { el } from "./dom.js?v=1.18.5";
-import { BIANCA_ADVANCED_PARAMETERS, BIANCA_SOURCES, explainBiancaFlow } from "./bianca-tuning.js?v=1.18.5";
-import { ELIZABETH_ADVANCED_PARAMETERS, ELIZABETH_SOURCES, explainPreinfusionMode } from "./elizabeth-tuning.js?v=1.18.5";
+import { el } from "./dom.js?v=1.18.6";
+import { BIANCA_ADVANCED_PARAMETERS, BIANCA_SOURCES, explainBiancaFlow } from "./bianca-tuning.js?v=1.18.6";
+import { ELIZABETH_ADVANCED_PARAMETERS, ELIZABETH_SOURCES, explainPreinfusionMode } from "./elizabeth-tuning.js?v=1.18.6";
 
 const renderParameters = (targetId, parameters) => {
     document.getElementById(targetId).replaceChildren(...parameters.map(parameter => {

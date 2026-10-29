@@ -116,6 +116,10 @@ npm test
 - CSV export should work from Settings without requiring extra dependencies.
 - Editing a shot preserves recorded zero gauge pressure and first-drop seconds;
   missing observations remain blank. Do not turn a recorded zero into missing data.
+- New-shot save retries retain one draft ID, original date and roast date for the
+  active owner/bag/machine form. Merge retries into that shot; opening another
+  shot form or changing auth clears the draft, and late completion cannot adopt
+  an old shot into the new form. Refresh before acknowledgement remains a limit.
 - Machine care is model-specific and one-tap: preserve the Elizabeth schedule and the Bianca manual's daily/weekly, 70-liter/four-month filter, and annual technician-service schedules. Custom logs stay secondary.
 - Machine care records show only the latest reminder for each service type as active; older reminders remain visible as history. Manual-based weekly/monthly tasks calculate their next due date automatically.
 

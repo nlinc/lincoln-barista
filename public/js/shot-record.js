@@ -1,4 +1,4 @@
-import { normalizeRoastDate } from "./bean-record.js?v=1.18.5";
+import { normalizeRoastDate } from "./bean-record.js?v=1.18.6";
 
 export const shotNormalizationPatch = (shot) => {
     const fields = {};
