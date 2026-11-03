@@ -1,11 +1,11 @@
-import { getBrewAdvice } from "./brew-advice.js?v=1.18.6";
-import { el, renderEmptyAction } from "./dom.js?v=1.18.6";
-import { validateShot } from "./shot-analytics.js?v=1.18.6";
-import { beanImpressionLabel, resolveBeanImpression } from "./collection-view.js?v=1.18.6";
-import { normalizeRoastDate } from "./bean-record.js?v=1.18.6";
-import { localDateKey, recordMachineId } from "./machine-config.js?v=1.18.6";
-import { basketFor } from "./brew-setup.js?v=1.18.6";
-export { chooseBestShot as chooseCurrentRecipe } from "./best-shot.js?v=1.18.6";
+import { getBrewAdvice } from "./brew-advice.js?v=1.18.7";
+import { el, renderEmptyAction } from "./dom.js?v=1.18.7";
+import { validateShot } from "./shot-analytics.js?v=1.18.7";
+import { beanImpressionLabel, resolveBeanImpression } from "./collection-view.js?v=1.18.7";
+import { normalizeRoastDate } from "./bean-record.js?v=1.18.7";
+import { localDateKey, recordMachineId } from "./machine-config.js?v=1.18.7";
+import { basketFor } from "./brew-setup.js?v=1.18.7";
+export { chooseBestShot as chooseCurrentRecipe } from "./best-shot.js?v=1.18.7";
 
 const ratioFor = (shot) => {
     const dose = parseFloat(shot?.dose);

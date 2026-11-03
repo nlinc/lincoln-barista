@@ -1,3 +1,16 @@
+import { normalizeRoastDate, recordTime } from "./bean-record.js?v=1.18.7";
+import { recordMachineId } from "./machine-config.js?v=1.18.7";
+import { profilesFor } from "./brew-setup.js?v=1.18.7";
+
+export const newShotProfile = (bean, logs, machineId, recipe) => {
+    const profiles = profilesFor(machineId);
+    const latest = logs.filter(log => log.beanId === bean?.id && recordMachineId(log) === machineId &&
+        normalizeRoastDate(log.roastDate) === normalizeRoastDate(bean?.currentRoastDate) && profiles.includes(log.profileUsed))
+        .sort((a, b) => recordTime(b.date) - recordTime(a.date))[0];
+    return latest?.profileUsed || (profiles.includes(recipe?.profileUsed) ? recipe.profileUsed :
+        machineId === 'elizabeth' ? 'p1' : 'manual');
+};
+
 const measurementFields = ['grind', 'time', 'dose', 'yield'];
 
 export const readShotMeasurements = () => Object.fromEntries(measurementFields.map(field =>

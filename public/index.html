@@ -19,14 +19,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"></noscript>
-    <link rel="stylesheet" href="style.css?v=1.18.6">
+    <link rel="stylesheet" href="style.css?v=1.18.7">
 </head>
 <body>
 
     <div id="top-bar">
         <div class="app-brand">
             <div class="app-logo">Lincoln <span>Barista</span></div>
-            <div class="build-chip">v1.18.6 · <code data-build-commit>__BUILD_COMMIT__</code></div>
+            <div class="build-chip">v1.18.7 · <code data-build-commit>__BUILD_COMMIT__</code></div>
         </div>
         <div class="top-actions">
             <button class="btn-secondary small-btn header-nav" type="button" data-route="list">Beans</button>
@@ -379,23 +379,7 @@
                 </div>
             </div>
 
-                        <div class="form-group">
-                            <label for="input-shot-taste">Taste result</label>
-                            <select id="input-shot-taste">
-                                <option value="">Not assessed</option>
-                                <option value="balanced">Balanced</option>
-                                <option value="sour">Sour / sharp</option>
-                                <option value="bitter">Bitter / dry</option>
-                                <option value="astringent">Astringent</option>
-                                <option value="hollow">Weak / hollow</option>
-                                <option value="channeling">Sour + bitter / channeling</option>
-                            </select>
-                        </div>
-            <details class="shot-observations">
-                <summary>Machine observations (optional)</summary>
-                <div class="shot-observation-fields">
-                    <div class="form-group"><label for="input-shot-tamp">Tamper setting (lb, optional)</label><input id="input-shot-tamp" type="number" inputmode="decimal" min="5" max="100" step="0.5" placeholder="Not recorded"></div>
-            <div class="shot-time-presets">
+            <div id="shot-time-presets" class="shot-time-presets">
                 <span class="shot-time-presets-label">Set time from profile</span>
                 <div class="mini-actions">
                     <button id="btn-time-1" class="btn-secondary small-btn profile-time-btn" type="button" data-profile="1">P1</button>
@@ -404,21 +388,36 @@
             </div>
 
 
-                    <div class="form-grid two-col">
-                        <div class="form-group">
-                            <label for="input-shot-profile">Machine profile</label>
-                            <select id="input-shot-profile">
-                                <option value="manual">Manual</option>
-                                <option value="p1" data-machine-option="elizabeth">P1 · Classic / dark</option>
-                                <option value="p2" data-machine-option="elizabeth">P2 · Modern / light</option>
-                                <option value="bianca-standard" data-machine-option="bianca">Bianca · Standard / full paddle</option>
-                                <option value="bianca-low-flow" data-machine-option="bianca">Bianca · Programmed low flow</option>
-                                <option value="bianca-paddle" data-machine-option="bianca">Bianca · Manual paddle</option>
-                                <option value="bianca-bloom" data-machine-option="bianca">Bianca · Bloom</option>
-                            </select>
-                        </div>
-
-                    </div>
+            <div class="form-grid two-col">
+                <div class="form-group">
+                    <label for="input-shot-profile">Machine profile</label>
+                    <select id="input-shot-profile">
+                        <option value="manual">Manual</option>
+                        <option value="p1" data-machine-option="elizabeth">P1 · Classic / dark</option>
+                        <option value="p2" data-machine-option="elizabeth">P2 · Modern / light</option>
+                        <option value="bianca-standard" data-machine-option="bianca">Bianca · Standard / full paddle</option>
+                        <option value="bianca-low-flow" data-machine-option="bianca">Bianca · Programmed low flow</option>
+                        <option value="bianca-paddle" data-machine-option="bianca">Bianca · Manual paddle</option>
+                        <option value="bianca-bloom" data-machine-option="bianca">Bianca · Bloom</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="input-shot-taste">Taste result</label>
+                    <select id="input-shot-taste">
+                        <option value="">Not assessed</option>
+                        <option value="balanced">Balanced</option>
+                        <option value="sour">Sour / sharp</option>
+                        <option value="bitter">Bitter / dry</option>
+                        <option value="astringent">Astringent</option>
+                        <option value="hollow">Weak / hollow</option>
+                        <option value="channeling">Sour + bitter / channeling</option>
+                    </select>
+                </div>
+            </div>
+            <details class="shot-observations">
+                <summary>Machine observations (optional)</summary>
+                <div class="shot-observation-fields">
+                    <div class="form-group"><label for="input-shot-tamp">Tamper setting (lb, optional)</label><input id="input-shot-tamp" type="number" inputmode="decimal" min="5" max="100" step="0.5" placeholder="Not recorded"></div>
                     <div class="form-grid three-col">
                         <div class="form-group">
                             <label for="input-shot-temperature">Brew temp (°<span data-temperature-unit>F</span>)</label>
@@ -1048,7 +1047,7 @@
         </details>
 
         <div class="build-info">
-            Lincoln Barista 1.18.6 • Build <code data-build-commit>__BUILD_COMMIT__</code>
+            Lincoln Barista 1.18.7 • Build <code data-build-commit>__BUILD_COMMIT__</code>
         </div>
     </div>
 
@@ -1092,6 +1091,6 @@
     <button class="fab hidden" id="fab-log-shot" type="button" aria-label="Log Shot">☕</button>
 
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.18.6"></script>
+    <script type="module" src="js/app.js?v=1.18.7"></script>
 </body>
 </html>

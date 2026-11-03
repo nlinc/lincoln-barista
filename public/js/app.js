@@ -3,8 +3,8 @@
  * Modularized and Optimized for Mobile. v1.3.5 - UI Logic Refinement.
  */
 
-import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.18.6";
-import { chartOptions, renderAnalyticsFilters, renderAnalyticsMetrics, renderBasketComparison, renderPatternList } from "./analytics-view.js?v=1.18.6";
+import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.18.7";
+import { chartOptions, renderAnalyticsFilters, renderAnalyticsMetrics, renderBasketComparison, renderPatternList } from "./analytics-view.js?v=1.18.7";
 import {
     archiveBean,
     createBean,
@@ -16,7 +16,7 @@ import {
     saveBeanBrewSetup,
     updateBean,
     uploadBeanPhoto
-} from "./bean-repository.js?v=1.18.6";
+} from "./bean-repository.js?v=1.18.7";
 import {
     renderBeanAge,
     renderBeanIdentity,
@@ -24,24 +24,24 @@ import {
     renderDialInSummary as renderDialInSummaryView,
     renderMachineBadge,
     renderShotHistory
-} from "./bean-detail-view.js?v=1.18.6";
-import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.18.6";
-import { renderBeanCollection, resolveBeanImpression, selectHomeBean, selectVisibleBeans } from "./collection-view.js?v=1.18.6";
-import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.18.6";
-import { csvText, shotExportRow } from "./csv-export.js?v=1.18.6";
-import { saveBeanPhotoChange } from "./bean-photo-save.js?v=1.18.6";
-import { normalizeBeanRecord, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.18.6";
-import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.18.6";
-import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.18.6";
-import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.18.6";
-import { navigate } from "./router.js?v=1.18.6";
-import { createShot, createShotId, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.18.6";
-import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.18.6";
-import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.18.6";
-import { getBrewAdvice } from "./brew-advice.js?v=1.18.6";
-import { filterShotTrends, recommendStartingGrind, summarizeBasketResults, summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.18.6";
-import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.18.6";
-import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.18.6";
+} from "./bean-detail-view.js?v=1.18.7";
+import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.18.7";
+import { renderBeanCollection, resolveBeanImpression, selectHomeBean, selectVisibleBeans } from "./collection-view.js?v=1.18.7";
+import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.18.7";
+import { csvText, shotExportRow } from "./csv-export.js?v=1.18.7";
+import { saveBeanPhotoChange } from "./bean-photo-save.js?v=1.18.7";
+import { normalizeBeanRecord, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.18.7";
+import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.18.7";
+import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.18.7";
+import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.18.7";
+import { navigate } from "./router.js?v=1.18.7";
+import { createShot, createShotId, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.18.7";
+import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.18.7";
+import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.18.7";
+import { getBrewAdvice } from "./brew-advice.js?v=1.18.7";
+import { filterShotTrends, recommendStartingGrind, summarizeBasketResults, summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.18.7";
+import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.18.7";
+import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.18.7";
 import {
     createDefaultUserProfile,
     localDateKey,
@@ -51,16 +51,16 @@ import {
     normalizeUserProfile,
     presetDueDate,
     recordMachineId
-} from "./machine-config.js?v=1.18.6";
+} from "./machine-config.js?v=1.18.7";
 
-import { calculateStartingPoint, normalizeStartingSetup } from "./starting-point.js?v=1.18.6";
-import { readStartingSetup, renderStartingBasketOptions, renderStartingBeans, renderStartingResult, renderStartingSetup } from "./starting-point-view.js?v=1.18.6";
+import { calculateStartingPoint, normalizeStartingSetup } from "./starting-point.js?v=1.18.7";
+import { readStartingSetup, renderStartingBasketOptions, renderStartingBeans, renderStartingResult, renderStartingSetup } from "./starting-point-view.js?v=1.18.7";
 
-import { applyProgrammedShotTime, clearProgrammedShotTime, programmedShotSeconds, readShotMeasurements, renderShotFieldErrors, renderShotSaveError } from "./shot-form-view.js?v=1.18.6";
+import { applyProgrammedShotTime, clearProgrammedShotTime, newShotProfile, programmedShotSeconds, readShotMeasurements, renderShotFieldErrors, renderShotSaveError } from "./shot-form-view.js?v=1.18.7";
 
-import { bagBrewSetup, basketFor, setupRecipe } from "./brew-setup.js?v=1.18.6";
-import { recipeWithBestGrind } from "./best-shot.js?v=1.18.6";
-import { readBagSetup, renderBagSetup, renderGrindSuggestion, renderHomeBrewSetup, renderShotBaskets } from "./brew-setup-view.js?v=1.18.6";
+import { bagBrewSetup, basketFor, setupRecipe } from "./brew-setup.js?v=1.18.7";
+import { recipeWithBestGrind } from "./best-shot.js?v=1.18.7";
+import { readBagSetup, renderBagSetup, renderGrindSuggestion, renderHomeBrewSetup, renderShotBaskets } from "./brew-setup-view.js?v=1.18.7";
 
 // App State
 let currentUser = null;
@@ -846,7 +846,7 @@ const app = {
         clearProgrammedShotTime();
         document.getElementById('input-shot-time').value = '';
         document.getElementById('input-shot-time').placeholder = recipeShot?.time || '30';
-        const requestedProfile = recipeShot?.profileUsed || 'manual';
+        const requestedProfile = newShotProfile(currentActiveBean, logsCache, activeMachineId(), recipeShot);
         document.getElementById('input-shot-profile').value = [...document.getElementById('input-shot-profile').options].some(option => option.value === requestedProfile && !option.hidden) ? requestedProfile : 'manual';
         document.getElementById('input-shot-taste').value = '';
         const recipeTemperature = recipeShot?.brewTemperature && recipeShot.temperatureUnit && recipeShot.temperatureUnit !== machineProfile.temperatureUnit
@@ -865,6 +865,7 @@ const app = {
         app.updateGrindSuggestion('shot');
     },
     renderShotTimeProfiles: (machineId) => {
+        document.getElementById('shot-time-presets').classList.toggle('hidden', machineId !== 'elizabeth');
         for (const n of [1, 2]) {
             const seconds = programmedShotSeconds(`p${n}`, machineId, userProfile);
             const button = document.getElementById(`btn-time-${n}`);
@@ -1255,7 +1256,6 @@ const app = {
             document.getElementById('input-shot-dose').value = plan.dose;
             document.getElementById('input-shot-yield').value = '';
             document.getElementById('input-shot-yield').placeholder = plan.yield;
-            document.getElementById('input-shot-time').value = '';
             document.getElementById('input-shot-pressure').value = '';
             document.getElementById('input-shot-grind').value = userProfile.startingPoints?.[activeMachineId()]?.baselineGrind || '';
             document.getElementById('input-shot-temperature').value = plan.temperature;
@@ -1310,7 +1310,6 @@ const app = {
         app.openLogShot(false);
         currentRecipeShot = savedRecipe;
         document.getElementById('input-shot-dose').value = context.dose;
-        document.getElementById('input-shot-time').value = '';
         document.getElementById('input-shot-pressure').value = '';
         document.getElementById('input-shot-first-drop').value = '';
         document.getElementById('input-shot-taste').value = '';

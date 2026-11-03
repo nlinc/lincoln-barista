@@ -1,8 +1,8 @@
-import { el } from "./dom.js?v=1.18.6";
-import { basketFor, normalizeBrewSetup, profilesFor, setupRecipe } from "./brew-setup.js?v=1.18.6";
-import { recipeWithBestGrind } from "./best-shot.js?v=1.18.6";
-import { STARTING_BASKETS } from "./starting-point.js?v=1.18.6";
-import { convertTemperature } from "./elizabeth-tuning.js?v=1.18.6";
+import { el } from "./dom.js?v=1.18.7";
+import { basketFor, normalizeBrewSetup, profilesFor, setupRecipe } from "./brew-setup.js?v=1.18.7";
+import { recipeWithBestGrind } from "./best-shot.js?v=1.18.7";
+import { STARTING_BASKETS } from "./starting-point.js?v=1.18.7";
+import { convertTemperature } from "./elizabeth-tuning.js?v=1.18.7";
 
 export const renderShotBaskets = (machineId, ownedIds, selectedId = '') => {
     const picker = document.getElementById('input-shot-basket');
@@ -49,7 +49,7 @@ export const renderBagSetup = ({ bean, machineId, machine, ownedIds, saved, reci
         option.value = id;
         return option;
     }));
-    profile.value = profilesFor(machineId).includes(source.profileUsed) ? source.profileUsed : 'manual';
+    profile.value = profilesFor(machineId).includes(source.profileUsed) ? source.profileUsed : machineId === 'elizabeth' ? 'p1' : 'manual';
     document.getElementById('recipe-setup-context').textContent = saved
         ? `${basketFor(saved.basketId, machineId).name} · 1:${saved.ratio}${saved.tampForceLb ? ` · ${saved.tampForceLb} lb tamper` : ''}`
         : 'Choose a basket and settle on a dose for this bag. Check dry clearance with your usual puck screen.';

@@ -38,6 +38,40 @@ test('a new P1 recipe uses current programmed seconds, not the old shot time', t
     assert.equal(document.getElementById('input-shot-yield').value, '');
 });
 
+test('a new Elizabeth shot defaults to its programmed P1 duration', t => {
+    const { app, document, context } = controller(t);
+    context.recipeWithBestGrind = () => null;
+    context.userProfile.b1 = { infusion: 3, bloom: 2, brew: 25 };
+    app.openLogShot();
+    assert.equal(document.getElementById('input-shot-profile').value, 'p1');
+    assert.equal(document.getElementById('input-shot-time').value, '30');
+});
+
+test('repeat shots keep the latest button despite a manual or older saved recipe', t => {
+    for (const selected of ['manual', 'p1', undefined]) {
+        const { app, document, context } = controller(t, { selected });
+        context.currentActiveBean.currentRoastDate = '2026-10-01';
+        context.logsCache.push(
+            { beanId: 'bag', machineId: 'elizabeth', roastDate: '2026-10-01', profileUsed: 'p2', time: '47', date: '2026-10-03' },
+            { beanId: 'bag', machineId: 'elizabeth', roastDate: '2026-10-01', profileUsed: 'p1', date: '2026-10-02' },
+            { beanId: 'other', machineId: 'elizabeth', roastDate: '2026-10-01', profileUsed: 'p1', date: '2026-10-05' },
+            { beanId: 'bag', machineId: 'bianca', roastDate: '2026-10-01', profileUsed: 'manual', date: '2026-10-06' },
+            { beanId: 'bag', machineId: 'elizabeth', roastDate: '2026-09-01', profileUsed: 'manual', date: '2026-10-07' });
+        app.openLogShot();
+        assert.equal(document.getElementById('input-shot-profile').value, 'p2');
+        assert.equal(document.getElementById('input-shot-time').value, '43');
+        assert.equal(document.getElementById('input-shot-yield').value, '');
+    }
+});
+
+test('an explicitly logged manual shot remains manual on the next shot', t => {
+    const { app, document, context } = controller(t);
+    context.logsCache.push({ beanId: 'bag', machineId: 'elizabeth', profileUsed: 'manual', time: '31', date: '2026-10-03' });
+    app.openLogShot();
+    assert.equal(document.getElementById('input-shot-profile').value, 'manual');
+    assert.equal(document.getElementById('input-shot-time').value, '');
+});
+
 test('P2 selection and quick buttons read the current settings each time', t => {
     const { app, document, context } = controller(t, { selected: 'p2' });
     app.openLogShot();
@@ -88,6 +122,31 @@ test('editing a saved shot retains its recorded time even if the program changed
     assert.equal(document.getElementById('input-shot-profile').value, 'p1');
     assert.equal(document.getElementById('shot-time-hint').hidden, true);
     assert.equal(log.time, '27');
+});
+
+test('starting-point and tuning entry keep the selected program time', async t => {
+    for (const entry of ['starting', 'tuning']) {
+        const { app, document, context } = controller(t, { selected: 'p2' });
+        const bean = context.currentActiveBean;
+        context.beans = [bean];
+        context.allLogsCache = [];
+        context.startingPlan = { canLog: true, basket: { id: 'pullman-15', name: 'Pullman' }, dose: 16, yield: 32, time: '25–35s', temperature: 200 };
+        context.latestTuningShot = () => null;
+        context.diagnoseElizabethShot = () => ({ baseline: { dose: 16, yield: 32 } });
+        context.diagnoseBiancaShot = context.diagnoseElizabethShot;
+        app.loadBeanDetail = async () => {};
+        app.renderStartingPoint = () => {};
+        document.getElementById('starting-form').reportValidity = () => true;
+        document.getElementById('starting-bean').value = bean.id;
+        document.getElementById('tuning-bean').value = bean.id;
+        const start = source.indexOf(entry === 'starting' ? '    logStartingShot:' : '    logTuningShot:');
+        const end = source.indexOf(entry === 'starting' ? '    openTuning:' : '    renderTuningReference:', start);
+        Object.assign(app, vm.runInNewContext('({' + source.slice(start, end) + '})', context));
+        if (entry === 'starting') await app.logStartingShot();
+        else await app.logTuningShot('tuning');
+        assert.equal(document.getElementById('input-shot-time').value, '43', entry);
+        assert.equal(document.getElementById('input-shot-yield').value, '', entry);
+    }
 });
 
 test('invalid or unavailable programmed settings do not invent a duration', () => {
