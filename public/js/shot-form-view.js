@@ -1,6 +1,6 @@
-import { normalizeRoastDate, recordTime } from "./bean-record.js?v=1.18.7";
-import { recordMachineId } from "./machine-config.js?v=1.18.7";
-import { profilesFor } from "./brew-setup.js?v=1.18.7";
+import { normalizeRoastDate, recordTime } from "./bean-record.js?v=1.18.8";
+import { recordMachineId } from "./machine-config.js?v=1.18.8";
+import { profilesFor } from "./brew-setup.js?v=1.18.8";
 
 export const newShotProfile = (bean, logs, machineId, recipe) => {
     const profiles = profilesFor(machineId);

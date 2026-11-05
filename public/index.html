@@ -19,14 +19,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"></noscript>
-    <link rel="stylesheet" href="style.css?v=1.18.7">
+    <link rel="stylesheet" href="style.css?v=1.18.8">
 </head>
 <body>
 
     <div id="top-bar">
         <div class="app-brand">
             <div class="app-logo">Lincoln <span>Barista</span></div>
-            <div class="build-chip">v1.18.7 · <code data-build-commit>__BUILD_COMMIT__</code></div>
+            <div class="build-chip">v1.18.8 · <code data-build-commit>__BUILD_COMMIT__</code></div>
         </div>
         <div class="top-actions">
             <button class="btn-secondary small-btn header-nav" type="button" data-route="list">Beans</button>
@@ -248,6 +248,18 @@
             </div>
         </div>
 
+        <section id="first-shot-card" class="card first-shot-card" aria-labelledby="first-shot-title" hidden>
+            <h2 id="first-shot-title" class="section-title" tabindex="-1">Try this first</h2>
+            <p id="first-shot-target" class="first-shot-target"></p>
+            <p id="first-shot-grind" class="subtle-note"></p>
+            <button id="btn-log-first-shot" class="btn" type="button">Log shot</button>
+            <details class="secondary-disclosure">
+                <summary>When would I use P2?</summary>
+                <p>Keep P1 as your usual button. P2 lets you try a different program without reprogramming P1.</p>
+                <p id="first-shot-p2"></p>
+            </details>
+        </section>
+
         <div id="dial-in-console" class="console-card hidden">
             <div class="console-header">
                 <div class="console-title">Current Recipe</div>
@@ -393,8 +405,8 @@
                     <label for="input-shot-profile">Machine profile</label>
                     <select id="input-shot-profile">
                         <option value="manual">Manual</option>
-                        <option value="p1" data-machine-option="elizabeth">P1 · Classic / dark</option>
-                        <option value="p2" data-machine-option="elizabeth">P2 · Modern / light</option>
+                        <option value="p1" data-machine-option="elizabeth">P1</option>
+                        <option value="p2" data-machine-option="elizabeth">P2</option>
                         <option value="bianca-standard" data-machine-option="bianca">Bianca · Standard / full paddle</option>
                         <option value="bianca-low-flow" data-machine-option="bianca">Bianca · Programmed low flow</option>
                         <option value="bianca-paddle" data-machine-option="bianca">Bianca · Manual paddle</option>
@@ -1047,7 +1059,7 @@
         </details>
 
         <div class="build-info">
-            Lincoln Barista 1.18.7 • Build <code data-build-commit>__BUILD_COMMIT__</code>
+            Lincoln Barista 1.18.8 • Build <code data-build-commit>__BUILD_COMMIT__</code>
         </div>
     </div>
 
@@ -1091,6 +1103,6 @@
     <button class="fab hidden" id="fab-log-shot" type="button" aria-label="Log Shot">☕</button>
 
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.18.7"></script>
+    <script type="module" src="js/app.js?v=1.18.8"></script>
 </body>
 </html>

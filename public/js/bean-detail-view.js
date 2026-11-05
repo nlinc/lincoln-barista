@@ -1,11 +1,11 @@
-import { getBrewAdvice } from "./brew-advice.js?v=1.18.7";
-import { el, renderEmptyAction } from "./dom.js?v=1.18.7";
-import { validateShot } from "./shot-analytics.js?v=1.18.7";
-import { beanImpressionLabel, resolveBeanImpression } from "./collection-view.js?v=1.18.7";
-import { normalizeRoastDate } from "./bean-record.js?v=1.18.7";
-import { localDateKey, recordMachineId } from "./machine-config.js?v=1.18.7";
-import { basketFor } from "./brew-setup.js?v=1.18.7";
-export { chooseBestShot as chooseCurrentRecipe } from "./best-shot.js?v=1.18.7";
+import { getBrewAdvice } from "./brew-advice.js?v=1.18.8";
+import { el, renderEmptyAction } from "./dom.js?v=1.18.8";
+import { validateShot } from "./shot-analytics.js?v=1.18.8";
+import { beanImpressionLabel, resolveBeanImpression } from "./collection-view.js?v=1.18.8";
+import { normalizeRoastDate } from "./bean-record.js?v=1.18.8";
+import { localDateKey, recordMachineId } from "./machine-config.js?v=1.18.8";
+import { basketFor } from "./brew-setup.js?v=1.18.8";
+export { chooseBestShot as chooseCurrentRecipe } from "./best-shot.js?v=1.18.8";
 
 const ratioFor = (shot) => {
     const dose = parseFloat(shot?.dose);
@@ -30,6 +30,22 @@ export const summarizeDialIn = (logs) => {
         avgTime: grouped[grind].timeCount ? Math.round(grouped[grind].timeSum / grouped[grind].timeCount) : 0,
         count: grouped[grind].count
     })).sort((a, b) => Math.abs(a.avgRatio - 2) - Math.abs(b.avgRatio - 2));
+};
+
+export const renderFirstShot = (plan, onLog) => {
+    const card = document.getElementById("first-shot-card");
+    card.hidden = !plan;
+    const button = document.getElementById("btn-log-first-shot");
+    button.onclick = plan ? () => onLog(plan) : null;
+    if (!plan) return;
+    document.getElementById("first-shot-target").textContent =
+        `P1 · ${plan.time}s · ${plan.dose} g in · aim for ${plan.yield} g out`;
+    const grind = plan.grind !== '' ? `Start at grind ${plan.grind}.` : "Start at your usual espresso grind.";
+    document.getElementById("first-shot-grind").textContent =
+        `${plan.basket?.name || "Use your usual 16 g basket"}. ${grind} Weigh what lands in the cup.`;
+    document.getElementById("first-shot-p2").textContent = plan.dark
+        ? "If this dark roast still tastes bitter or drying at about the target yield, try a shorter brew phase on P2. Keep the dose, grind and pre-infusion steady so you can taste what changed."
+        : "Pre-infusion wets the grounds before the main brew. If a light roast keeps flowing unevenly after you’ve checked puck prep, P2 is a place to test a longer soak. If it simply runs too fast, try grinding a little finer first.";
 };
 
 export const renderBeanIdentity = (bean) => {
@@ -94,6 +110,7 @@ export const renderCurrentRecipe = (recipe) => {
 export const renderShotHistory = ({ bean, expanded, logs, onEdit, onLog, onToggle }) => {
     const container = document.getElementById("history-container");
     if (!logs.length) {
+        if (!onLog) { container.replaceChildren(); return; }
         renderEmptyAction(container, "No logs", bean.archived === true ? "No shots were logged for this bag." : "Log your first extraction.", bean.archived === true ? "New bag" : "Log Shot", onLog);
         return;
     }

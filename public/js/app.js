@@ -3,8 +3,8 @@
  * Modularized and Optimized for Mobile. v1.3.5 - UI Logic Refinement.
  */
 
-import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.18.7";
-import { chartOptions, renderAnalyticsFilters, renderAnalyticsMetrics, renderBasketComparison, renderPatternList } from "./analytics-view.js?v=1.18.7";
+import { observeAuthState, signInWithGoogle, signOutUser } from "./auth-repository.js?v=1.18.8";
+import { chartOptions, renderAnalyticsFilters, renderAnalyticsMetrics, renderBasketComparison, renderPatternList } from "./analytics-view.js?v=1.18.8";
 import {
     archiveBean,
     createBean,
@@ -16,32 +16,33 @@ import {
     saveBeanBrewSetup,
     updateBean,
     uploadBeanPhoto
-} from "./bean-repository.js?v=1.18.7";
+} from "./bean-repository.js?v=1.18.8";
 import {
     renderBeanAge,
     renderBeanIdentity,
+    renderFirstShot,
     renderCurrentRecipe as renderCurrentRecipeView,
     renderDialInSummary as renderDialInSummaryView,
     renderMachineBadge,
     renderShotHistory
-} from "./bean-detail-view.js?v=1.18.7";
-import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.18.7";
-import { renderBeanCollection, resolveBeanImpression, selectHomeBean, selectVisibleBeans } from "./collection-view.js?v=1.18.7";
-import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.18.7";
-import { csvText, shotExportRow } from "./csv-export.js?v=1.18.7";
-import { saveBeanPhotoChange } from "./bean-photo-save.js?v=1.18.7";
-import { normalizeBeanRecord, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.18.7";
-import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.18.7";
-import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.18.7";
-import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.18.7";
-import { navigate } from "./router.js?v=1.18.7";
-import { createShot, createShotId, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.18.7";
-import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.18.7";
-import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.18.7";
-import { getBrewAdvice } from "./brew-advice.js?v=1.18.7";
-import { filterShotTrends, recommendStartingGrind, summarizeBasketResults, summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.18.7";
-import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.18.7";
-import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.18.7";
+} from "./bean-detail-view.js?v=1.18.8";
+import { createMaintenanceRecord, deleteMaintenanceRecord, fetchMaintenanceForUser } from "./maintenance-repository.js?v=1.18.8";
+import { renderBeanCollection, resolveBeanImpression, selectHomeBean, selectVisibleBeans } from "./collection-view.js?v=1.18.8";
+import { cleanCatalogText, renderBeanCatalog, renderBeanMatchHint, reusableBeanDetails } from "./bean-catalog-view.js?v=1.18.8";
+import { csvText, shotExportRow } from "./csv-export.js?v=1.18.8";
+import { saveBeanPhotoChange } from "./bean-photo-save.js?v=1.18.8";
+import { normalizeBeanRecord, normalizeBeanTags, recordTime } from "./bean-record.js?v=1.18.8";
+import { el, on, renderEmpty, renderEmptyAction } from "./dom.js?v=1.18.8";
+import { renderCareHome, renderMaintenanceView } from "./maintenance-view.js?v=1.18.8";
+import { fetchUserProfile, saveUserProfile } from "./profile-repository.js?v=1.18.8";
+import { navigate } from "./router.js?v=1.18.8";
+import { createShot, createShotId, deleteShot as deleteShotRecord, fetchShotsForUser, updateShot } from "./shot-repository.js?v=1.18.8";
+import { renderBiancaPlan, renderBiancaReference, renderElizabethPlan, renderElizabethReference, renderTuningStart } from "./tuning-view.js?v=1.18.8";
+import { tuningBeans, latestTuningShot, tuningRoast } from "./tuning-session.js?v=1.18.8";
+import { getBrewAdvice } from "./brew-advice.js?v=1.18.8";
+import { filterShotTrends, recommendStartingGrind, summarizeBasketResults, summarizeGrindFrequency, summarizeShotPatterns, validateShot } from "./shot-analytics.js?v=1.18.8";
+import { convertTemperature, diagnoseElizabethShot } from "./elizabeth-tuning.js?v=1.18.8";
+import { diagnoseBiancaShot } from "./bianca-tuning.js?v=1.18.8";
 import {
     createDefaultUserProfile,
     localDateKey,
@@ -51,16 +52,16 @@ import {
     normalizeUserProfile,
     presetDueDate,
     recordMachineId
-} from "./machine-config.js?v=1.18.7";
+} from "./machine-config.js?v=1.18.8";
 
-import { calculateStartingPoint, normalizeStartingSetup } from "./starting-point.js?v=1.18.7";
-import { readStartingSetup, renderStartingBasketOptions, renderStartingBeans, renderStartingResult, renderStartingSetup } from "./starting-point-view.js?v=1.18.7";
+import { calculateStartingPoint, normalizeStartingSetup } from "./starting-point.js?v=1.18.8";
+import { readStartingSetup, renderStartingBasketOptions, renderStartingBeans, renderStartingResult, renderStartingSetup } from "./starting-point-view.js?v=1.18.8";
 
-import { applyProgrammedShotTime, clearProgrammedShotTime, newShotProfile, programmedShotSeconds, readShotMeasurements, renderShotFieldErrors, renderShotSaveError } from "./shot-form-view.js?v=1.18.7";
+import { applyProgrammedShotTime, clearProgrammedShotTime, newShotProfile, programmedShotSeconds, readShotMeasurements, renderShotFieldErrors, renderShotSaveError } from "./shot-form-view.js?v=1.18.8";
 
-import { bagBrewSetup, basketFor, setupRecipe } from "./brew-setup.js?v=1.18.7";
-import { recipeWithBestGrind } from "./best-shot.js?v=1.18.7";
-import { readBagSetup, renderBagSetup, renderGrindSuggestion, renderHomeBrewSetup, renderShotBaskets } from "./brew-setup-view.js?v=1.18.7";
+import { bagBrewSetup, basketFor, setupRecipe } from "./brew-setup.js?v=1.18.8";
+import { recipeWithBestGrind } from "./best-shot.js?v=1.18.8";
+import { readBagSetup, renderBagSetup, renderGrindSuggestion, renderHomeBrewSetup, renderShotBaskets } from "./brew-setup-view.js?v=1.18.8";
 
 // App State
 let currentUser = null;
@@ -215,8 +216,14 @@ const app = {
     // --- ROUTING ---
     router: (view, addToHistory) => {
         navigate(view, addToHistory);
-        if (view === 'detail' && currentActiveBean?.archived === true) document.getElementById('fab-log-shot').classList.add('hidden');
+        if (view === 'detail') app.syncDetailLogButton();
         if (view === 'list' && currentUser) app.renderBeanList();
+    },
+
+    syncDetailLogButton: () => {
+        if (document.body.dataset.view !== 'detail') return;
+        document.getElementById('fab-log-shot').classList.toggle('hidden',
+            currentActiveBean?.archived === true || !document.getElementById('first-shot-card').hidden);
     },
 
     // --- AUTH ---
@@ -487,12 +494,13 @@ const app = {
 
             const imageFields = await app.prepareBeanImageFields(beanId, existingBean);
             if (currentUser !== user || beanFormGeneration !== formGeneration) return;
+            const fields = { ...data, ...imageFields, currentRoastDate: manualRoastDate };
             await saveBeanPhotoChange({
                 previousPath: existingBean?.imagePath,
                 nextPath: imageFields.imagePath,
                 save: () => id
-                    ? updateBean(beanId, { ...data, ...imageFields, currentRoastDate: manualRoastDate })
-                    : createBean(beanId, { ...data, ...imageFields, currentRoastDate: manualRoastDate, createdAt: draft.createdAt }),
+                    ? updateBean(beanId, fields)
+                    : createBean(beanId, { ...fields, createdAt: draft.createdAt }),
                 removePhoto: app.deleteStoredImage
             });
             if (currentUser !== user) return;
@@ -500,7 +508,18 @@ const app = {
             
             await app.fetchBeans();
             if (!id && newBeanDraft === draft) newBeanDraft = null;
-            if (currentUser === user && beanFormGeneration === formGeneration) app.router('list');
+            if (currentUser !== user || beanFormGeneration !== formGeneration ||
+                document.body.dataset.view !== 'edit-bean') return;
+            if (id) return app.router('list');
+
+            // A successful write is enough to open this bag even if the collection read failed.
+            if (!catalogBeans.some(bean => bean.id === beanId)) {
+                const bean = normalizeBeanRecord({ ...fields, id: beanId, createdAt: draft.createdAt });
+                catalogBeans = [...catalogBeans, bean];
+                beans = catalogBeans.filter(item => item.archived !== true);
+            }
+            document.getElementById('input-bean-id').value = beanId;
+            await app.loadBeanDetail(beanId, true);
         } catch(e) { if (currentUser === user && beanFormGeneration === formGeneration) alert(e.message); }
         finally { if (currentUser === user && beanFormGeneration === formGeneration) { btn.disabled = false; btn.innerText = originalText; } }
     },
@@ -547,7 +566,7 @@ const app = {
         app.router('edit-bean');
     },
 
-    loadBeanDetail: async (id) => {
+    loadBeanDetail: async (id, newlySaved = false) => {
         try {
             currentActiveBean = catalogBeans.find(b => b.id === id);
             if(!currentActiveBean) return app.router('list');
@@ -556,7 +575,7 @@ const app = {
             const roastDate = currentActiveBean.currentRoastDate || "Unknown";
             renderBeanIdentity(currentActiveBean);
 
-            logsCache = [];
+            logsCache = app.logsForBean(id);
             currentRecipeShot = null;
             historyExpanded = false;
             document.getElementById("dial-in-console").classList.add("hidden");
@@ -564,7 +583,12 @@ const app = {
             document.getElementById("stale-warning-container").classList.add("hidden");
             renderEmpty(document.getElementById("history-container"), "Loading shot history...");
             document.getElementById("dial-in-table-body").replaceChildren();
+            document.querySelector("#first-shot-card details").open = false;
+            app.renderFirstShotCard(newlySaved || allLogsLoaded);
             app.router('detail');
+            if (newlySaved && !document.getElementById('first-shot-card').hidden) {
+                document.getElementById('first-shot-title').focus({ preventScroll: true });
+            }
 
             await app.fetchAllLogs();
             if (currentActiveBean?.id !== id) return;
@@ -572,6 +596,7 @@ const app = {
 
             renderBeanAge(roastDate);
 
+            app.renderFirstShotCard(true);
             app.renderHistory();
             app.renderDialInSummary();
             app.renderCurrentRecipe();
@@ -579,6 +604,35 @@ const app = {
             console.error("Detail error:", e);
             if (currentActiveBean?.id === id) renderEmptyAction(document.getElementById("history-container"), "History unavailable", "Your saved recipe could not be loaded right now.", "Retry", () => app.loadBeanDetail(id));
         }
+    },
+
+    renderFirstShotCard: (ready) => {
+        const bean = currentActiveBean;
+        const time = programmedShotSeconds('p1', activeMachineId(), userProfile);
+        if (!ready || !bean || bean.archived || activeMachineId() !== 'elizabeth' ||
+            activeMachineProfile().machineVersion !== 'classic-v3' || !time ||
+            bagBrewSetup(bean, 'elizabeth') || logsCache.length) {
+            renderFirstShot(null);
+            app.syncDetailLogButton();
+            return;
+        }
+
+        const dose = 16;
+        const preferences = userProfile.startingPoints.elizabeth;
+        const baskets = preferences.ownedBasketIds.map(id => basketFor(id, 'elizabeth'))
+            .filter(basket => basket && dose >= basket.min && dose <= basket.max);
+        const basket = baskets.length === 1 ? baskets[0] : null;
+        const baselineGrind = preferences.baselineGrind.trim();
+        const grind = app.grindSuggestion(bean, { basketId: basket?.id, dose, ratio: 2 })?.grind ??
+            (Number.isFinite(Number(baselineGrind)) ? baselineGrind : '');
+        renderFirstShot({
+            basket, dose, grind, time, yield: dose * 2, profileUsed: 'p1',
+            dark: /dark/i.test(bean.roastLevel)
+        }, plan => {
+            app.openLogShot(true, plan);
+            document.getElementById(plan.grind === '' ? 'input-shot-grind' : 'input-shot-yield').focus();
+        });
+        app.syncDetailLogButton();
     },
 
     renderCurrentRecipe: () => {
@@ -643,6 +697,8 @@ const app = {
             await saveBeanBrewSetup(bean.id, machineId, setup);
             bean.brewSetups = { ...bean.brewSetups, [machineId]: setup };
             if (currentActiveBean?.id === bean.id && activeMachineId() === machineId) {
+                app.renderFirstShotCard(true);
+                app.renderHistory();
                 app.renderCurrentRecipe();
                 status.textContent = 'Setup saved. Log measured yield and time after brewing.';
             }
@@ -656,7 +712,9 @@ const app = {
             expanded: historyExpanded,
             logs: logsCache,
             onEdit: shotId => app.openEditShot(shotId),
-            onLog: () => currentActiveBean?.archived === true ? app.newBagFromBean(currentActiveBean.id) : app.openLogShot(),
+            onLog: document.getElementById('first-shot-card').hidden
+                ? () => currentActiveBean?.archived === true ? app.newBagFromBean(currentActiveBean.id) : app.openLogShot()
+                : null,
             onToggle: () => {
                 historyExpanded = !historyExpanded;
                 app.renderHistory();
@@ -815,19 +873,19 @@ const app = {
         renderShotFieldErrors();
         renderShotSaveError();
     },
-    openLogShot: (useSavedSetup = true) => {
+    openLogShot: (useSavedSetup = true, firstShot = null) => {
         if (currentActiveBean?.archived === true) return app.newBagFromBean(currentActiveBean.id);
         haptic('light');
         app.resetShotErrors();
         const machineProfile = activeMachineProfile();
         const saved = useSavedSetup ? bagBrewSetup(currentActiveBean, activeMachineId()) : null;
-        const recipeShot = recipeWithBestGrind(currentActiveBean, logsCache, activeMachineId(),
+        const recipeShot = firstShot || recipeWithBestGrind(currentActiveBean, logsCache, activeMachineId(),
             saved ? setupRecipe(saved) : currentRecipeShot && { shot: currentRecipeShot })?.shot;
-        renderShotBaskets(activeMachineId(), userProfile.startingPoints[activeMachineId()].ownedBasketIds, saved?.basketId || recipeShot?.basketId || '');
+        renderShotBaskets(activeMachineId(), userProfile.startingPoints[activeMachineId()].ownedBasketIds, firstShot?.basket?.id || saved?.basketId || recipeShot?.basketId || '');
         document.getElementById('input-shot-tamp').value = saved ? saved.tampForceLb ?? '' : recipeShot?.tampForceLb ?? 25;
         updateTemperatureUnitLabels(machineProfile.temperatureUnit);
         app.applyMachineUi();
-        document.getElementById('log-shot-title').innerText = recipeShot ? "New Shot from Recipe" : "Log Shot";
+        document.getElementById('log-shot-title').innerText = recipeShot && !firstShot ? "New Shot from Recipe" : "Log Shot";
         document.getElementById('log-bean-name').innerText = [currentActiveBean?.roaster, currentActiveBean?.name].filter(Boolean).join(" · ");
         document.getElementById('input-log-bean-id').value = currentActiveBean?.id || '';
         document.getElementById('input-log-shot-id').value = '';
@@ -837,7 +895,7 @@ const app = {
         const yieldInput = document.getElementById('input-shot-yield');
         const yieldHint = document.getElementById('shot-yield-hint');
         yieldInput.value = '';
-        yieldInput.placeholder = recipeShot?.yield || defDose * 2;
+        yieldInput.placeholder = firstShot ? 'Actual g' : recipeShot?.yield || defDose * 2;
         yieldHint.textContent = recipeShot?.yield ? `Recipe target: ${recipeShot.yield}g. Enter the actual yield.` : '';
         yieldHint.classList.toggle('hidden', !recipeShot?.yield);
         const suggestion = app.grindSuggestion(currentActiveBean, saved);
@@ -846,7 +904,7 @@ const app = {
         clearProgrammedShotTime();
         document.getElementById('input-shot-time').value = '';
         document.getElementById('input-shot-time').placeholder = recipeShot?.time || '30';
-        const requestedProfile = newShotProfile(currentActiveBean, logsCache, activeMachineId(), recipeShot);
+        const requestedProfile = firstShot?.profileUsed || newShotProfile(currentActiveBean, logsCache, activeMachineId(), recipeShot);
         document.getElementById('input-shot-profile').value = [...document.getElementById('input-shot-profile').options].some(option => option.value === requestedProfile && !option.hidden) ? requestedProfile : 'manual';
         document.getElementById('input-shot-taste').value = '';
         const recipeTemperature = recipeShot?.brewTemperature && recipeShot.temperatureUnit && recipeShot.temperatureUnit !== machineProfile.temperatureUnit
@@ -862,7 +920,8 @@ const app = {
         document.getElementById('btn-delete-shot').classList.add('hidden');
         app.renderExtractionPreview();
         app.router('log-shot');
-        app.updateGrindSuggestion('shot');
+        if (firstShot) renderGrindSuggestion('shot', null, { editing: true });
+        else app.updateGrindSuggestion('shot');
     },
     renderShotTimeProfiles: (machineId) => {
         document.getElementById('shot-time-presets').classList.toggle('hidden', machineId !== 'elizabeth');

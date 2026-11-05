@@ -10,7 +10,7 @@ const repositorySource = readFileSync(new URL('../public/js/bean-repository.js',
 
 function controller({ write } = {}) {
     const nodes = new Map();
-    const document = { getElementById(id) {
+    const document = { body: { dataset: { view: "edit-bean" } }, getElementById(id) {
         if (!nodes.has(id)) nodes.set(id, { value: '', disabled: false, innerText: '', open: false,
             classList: { add() {}, remove() {} } });
         return nodes.get(id);
@@ -26,10 +26,12 @@ function controller({ write } = {}) {
             uploads.push(beanId);
             return { image: null, imageUrl: `photo:${beanId}`, imagePath: `users/owner/beans/${beanId}/photo.jpg` };
         },
-        deleteStoredImage() {}, fetchBeans: async () => {}, router() {},
+        deleteStoredImage() {}, fetchBeans: async () => {},
+        router(view) { document.body.dataset.view = view; },
+        loadBeanDetail: async (id) => app.router('detail'),
         renderEditingTags() {}, removeImage() {}, setBeanImpression() {}, renderBeanSuggestions() {}, updateBeanMatchHint() {}
     };
-    const context = { document, app, currentUser: { uid: 'owner' }, catalogBeans: [], currentEditingTags: [],
+    const context = { document, app, currentUser: { uid: 'owner' }, catalogBeans: [], beans: [], normalizeBeanRecord, currentEditingTags: [],
         currentEditingImage: 'data:image/jpeg;base64,AA==', currentEditingImagePath: null,
         currentEditingPhotoUpload: null, newBeanDraft: null, beanFormGeneration: 0, collectionScope: 'current', collectionNotice: null,
         createBeanId: () => { const id = `bag-${ids.length + 1}`; ids.push(id); return id; },
@@ -61,15 +63,20 @@ test('an unacknowledged new-bag write retries the same bag and photo upload', as
     assert.deepEqual(alerts, ['Acknowledgement lost']);
 });
 
-test('an acknowledged create remains one bag when the following collection fetch fails', async () => {
-    const { app, written, ids } = controller();
-    let fetches = 0;
-    app.fetchBeans = async () => { fetches++; if (fetches === 1) throw new Error('Collection unavailable'); };
-    await app.saveBean();
+test('an acknowledged create opens the saved bag if the collection read does not return it', async () => {
+    const { app, context, document, written, ids, alerts } = controller();
+    const opened = [];
+    app.loadBeanDetail = async (id, newlySaved) => {
+        opened.push({ id, newlySaved });
+        app.router('detail');
+    };
     await app.saveBean();
     assert.deepEqual([...written.keys()], ['bag-1']);
     assert.deepEqual(ids, ['bag-1']);
-    assert.equal(fetches, 2);
+    assert.deepEqual(opened, [{ id: 'bag-1', newlySaved: true }]);
+    assert.equal(context.catalogBeans[0].id, 'bag-1');
+    assert.equal(document.getElementById('input-bean-id').value, 'bag-1');
+    assert.deepEqual(alerts, []);
 });
 
 test('rejected writes reuse the draft, while reset and owner change start new drafts', async () => {

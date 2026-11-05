@@ -1,8 +1,8 @@
-import { el } from "./dom.js?v=1.18.7";
-import { basketFor, normalizeBrewSetup, profilesFor, setupRecipe } from "./brew-setup.js?v=1.18.7";
-import { recipeWithBestGrind } from "./best-shot.js?v=1.18.7";
-import { STARTING_BASKETS } from "./starting-point.js?v=1.18.7";
-import { convertTemperature } from "./elizabeth-tuning.js?v=1.18.7";
+import { el } from "./dom.js?v=1.18.8";
+import { basketFor, normalizeBrewSetup, profilesFor, setupRecipe } from "./brew-setup.js?v=1.18.8";
+import { recipeWithBestGrind } from "./best-shot.js?v=1.18.8";
+import { STARTING_BASKETS } from "./starting-point.js?v=1.18.8";
+import { convertTemperature } from "./elizabeth-tuning.js?v=1.18.8";
 
 export const renderShotBaskets = (machineId, ownedIds, selectedId = '') => {
     const picker = document.getElementById('input-shot-basket');
