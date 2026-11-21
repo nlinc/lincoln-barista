@@ -498,6 +498,7 @@ input.visually-hidden {
 
 /* --- ANALYTICS & SETTINGS --- */
 .chart-area { position: relative; min-height: 180px; }
+.chart-area canvas { max-width: 100%; }
 .chart-area-tall { height: 250px; }
 .chart-area-short { height: 200px; }
 .chart-note { color: var(--text-muted); font-size: 0.78rem; line-height: 1.45; margin: -0.35rem 0 1rem; }
@@ -563,6 +564,16 @@ input.visually-hidden {
 .mobile-header-kicker, .mobile-header-context { display: none; }
 .mobile-header-context { color: var(--text-secondary); font-size: 0.82rem; margin-top: 0.2rem; }
 .shot-entry-card { margin-bottom: 0.75rem; }
+.last-logged-shot {
+    border: 1px solid var(--panel-border);
+    border-radius: 0.75rem;
+    padding: 0.65rem 0.8rem;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+.last-logged-shot strong { color: var(--text-main); }
+.last-logged-shot p { margin: 0.15rem 0 0; }
 .shot-grid .form-group { margin-bottom: 0; }
 .shot-grid input { font-family: 'Outfit', sans-serif !important; font-size: 1.35rem !important; font-weight: 700; }
 .input-hint { color: var(--text-muted); font-size: 0.72rem; line-height: 1.35; margin-top: 0.4rem; }

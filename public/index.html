@@ -19,14 +19,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap"></noscript>
-    <link rel="stylesheet" href="style.css?v=1.18.8">
+    <link rel="stylesheet" href="style.css?v=1.18.9">
 </head>
 <body>
 
     <div id="top-bar">
         <div class="app-brand">
             <div class="app-logo">Lincoln <span>Barista</span></div>
-            <div class="build-chip">v1.18.8 · <code data-build-commit>__BUILD_COMMIT__</code></div>
+            <div class="build-chip">v1.18.9 · <code data-build-commit>__BUILD_COMMIT__</code></div>
         </div>
         <div class="top-actions">
             <button class="btn-secondary small-btn header-nav" type="button" data-route="list">Beans</button>
@@ -363,6 +363,10 @@
                 <div id="log-display-date" class="primary-value"></div>
             </div>
             
+            <aside id="last-logged-shot" class="last-logged-shot" aria-labelledby="last-logged-shot-label" hidden>
+                <strong id="last-logged-shot-label">Last complete shot</strong>
+                <p id="last-logged-shot-values"></p>
+            </aside>
             <div class="form-group shot-basket-group"><label for="input-shot-basket">Basket used</label><select id="input-shot-basket"></select></div>
             <p id="shot-grind-suggestion" class="subtle-note" role="status"></p>
             <button id="shot-use-grind" class="btn-secondary small-btn grind-suggestion-action" type="button" hidden>Use suggested grind</button>
@@ -1059,7 +1063,7 @@
         </details>
 
         <div class="build-info">
-            Lincoln Barista 1.18.8 • Build <code data-build-commit>__BUILD_COMMIT__</code>
+            Lincoln Barista 1.18.9 • Build <code data-build-commit>__BUILD_COMMIT__</code>
         </div>
     </div>
 
@@ -1103,6 +1107,6 @@
     <button class="fab hidden" id="fab-log-shot" type="button" aria-label="Log Shot">☕</button>
 
     <!-- Load App Logic -->
-    <script type="module" src="js/app.js?v=1.18.8"></script>
+    <script type="module" src="js/app.js?v=1.18.9"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
-import { el, renderEmpty } from "./dom.js?v=1.18.8";
-import { localDateKey, maintenanceDueState, maintenancePresetsFor, parseDateKey } from "./machine-config.js?v=1.18.8";
-import { careChecklist, homeCareSummary, latestCareRecords } from "./care-status.js?v=1.18.8";
+import { el, renderEmpty } from "./dom.js?v=1.18.9";
+import { localDateKey, maintenanceDueState, maintenancePresetsFor, parseDateKey } from "./machine-config.js?v=1.18.9";
+import { careChecklist, homeCareSummary, latestCareRecords } from "./care-status.js?v=1.18.9";
 
 export const renderCareHome = ({ machineId, records, loaded, error, compact = false, pending = new Set(), onQuickAction, onOpen }) => {
     const card = document.getElementById("care-home-card");

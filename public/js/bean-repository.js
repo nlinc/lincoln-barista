@@ -1,9 +1,9 @@
 import { collection, deleteField, doc, getDocs, query, runTransaction, setDoc, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { deleteObject, getDownloadURL, ref as storageRef, uploadString } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-import { db, storage } from "./firebase-client.js?v=1.18.8";
-import { beanNormalizationPatch, normalizeBeanRecord } from "./bean-record.js?v=1.18.8";
-import { bagBrewSetup } from "./brew-setup.js?v=1.18.8";
-import { bestShotFor } from "./best-shot.js?v=1.18.8";
+import { db, storage } from "./firebase-client.js?v=1.18.9";
+import { beanNormalizationPatch, normalizeBeanRecord } from "./bean-record.js?v=1.18.9";
+import { bagBrewSetup } from "./brew-setup.js?v=1.18.9";
+import { bestShotFor } from "./best-shot.js?v=1.18.9";
 
 export const fetchBeansForUser = async (uid) => {
     const snapshot = await getDocs(query(collection(db, "beans"), where("uid", "==", uid)));

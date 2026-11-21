@@ -38,6 +38,29 @@ test('a new P1 recipe uses current programmed seconds, not the old shot time', t
     assert.equal(document.getElementById('input-shot-yield').value, '');
 });
 
+test('a new shot shows the last complete result for this bag, roast and machine as a reference', t => {
+    const { app, document, context } = controller(t);
+    context.currentActiveBean.currentRoastDate = '2026-10-01';
+    const previous = { beanId: 'bag', machineId: 'elizabeth', roastDate: '10/1/2026',
+        grind: 0, dose: 16, yield: 34.5, time: 31, date: '2026-10-03' };
+    context.logsCache.push(previous,
+        { ...previous, date: '2026-10-04', yield: '' },
+        { ...previous, date: '2026-10-05', roastDate: '2026-09-01', grind: 9 },
+        { ...previous, date: '2026-10-06', machineId: 'bianca', grind: 10 },
+        { ...previous, date: '2026-10-07', beanId: 'other', grind: 11 });
+
+    app.openLogShot();
+    assert.equal(document.getElementById('last-logged-shot').hidden, false);
+    assert.equal(document.getElementById('last-logged-shot-values').textContent, 'Grind 0 · 16 g in · 34.5 g out · 31 s');
+    assert.equal(document.getElementById('input-shot-yield').value, '');
+    assert.equal(String(document.getElementById('input-shot-time').value), '35');
+
+    context.currentActiveBean = { id: 'new-bag', currentRoastDate: '2026-10-01' };
+    app.openLogShot();
+    assert.equal(document.getElementById('last-logged-shot').hidden, true);
+    assert.equal(document.getElementById('last-logged-shot-values').textContent, '');
+});
+
 test('a new Elizabeth shot defaults to its programmed P1 duration', t => {
     const { app, document, context } = controller(t);
     context.recipeWithBestGrind = () => null;

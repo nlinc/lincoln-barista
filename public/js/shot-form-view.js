@@ -1,11 +1,26 @@
-import { normalizeRoastDate, recordTime } from "./bean-record.js?v=1.18.8";
-import { recordMachineId } from "./machine-config.js?v=1.18.8";
-import { profilesFor } from "./brew-setup.js?v=1.18.8";
+import { normalizeRoastDate, recordTime } from "./bean-record.js?v=1.18.9";
+import { recordMachineId } from "./machine-config.js?v=1.18.9";
+import { profilesFor } from "./brew-setup.js?v=1.18.9";
+import { validateShot } from "./shot-analytics.js?v=1.18.9";
+
+const shotMatchesBatch = (shot, bean, machineId) => shot.beanId === bean.id && recordMachineId(shot) === machineId &&
+    normalizeRoastDate(shot.roastDate) === normalizeRoastDate(bean.currentRoastDate);
+
+export const lastLoggedShot = (bean, logs, machineId) => bean ? logs.filter(shot =>
+    shotMatchesBatch(shot, bean, machineId) && recordTime(shot.date) && validateShot(shot).valid)
+    .sort((a, b) => recordTime(b.date) - recordTime(a.date))[0] : null;
+
+export const renderLastLoggedShot = (shot) => {
+    const reference = document.getElementById('last-logged-shot');
+    reference.hidden = !shot;
+    document.getElementById('last-logged-shot-values').textContent = shot
+        ? `Grind ${Number(shot.grind)} · ${Number(shot.dose)} g in · ${Number(shot.yield)} g out · ${Number(shot.time)} s`
+        : '';
+};
 
 export const newShotProfile = (bean, logs, machineId, recipe) => {
     const profiles = profilesFor(machineId);
-    const latest = logs.filter(log => log.beanId === bean?.id && recordMachineId(log) === machineId &&
-        normalizeRoastDate(log.roastDate) === normalizeRoastDate(bean?.currentRoastDate) && profiles.includes(log.profileUsed))
+    const latest = bean && logs.filter(log => shotMatchesBatch(log, bean, machineId) && profiles.includes(log.profileUsed))
         .sort((a, b) => recordTime(b.date) - recordTime(a.date))[0];
     return latest?.profileUsed || (profiles.includes(recipe?.profileUsed) ? recipe.profileUsed :
         machineId === 'elizabeth' ? 'p1' : 'manual');
